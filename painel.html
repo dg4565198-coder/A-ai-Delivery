@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rotta do Açaí | Painel de Gestão & Pedidos ao Vivo</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            acai: {
+              50: '#fdf8ff',
+              100: '#f5e8fd',
+              500: '#8b1bb7',
+              600: '#6c1090',
+              700: '#4c0867',
+              800: '#320444',
+              900: '#1e022b',
+            },
+            gold: {
+              300: '#fde047',
+              400: '#facc15',
+              500: '#f5a623',
+              600: '#d97706',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Estilos Customizados -->
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col antialiased">
+
+  <!-- =====================================================================
+       TOPBAR DO PAINEL DA LOJISTA
+       ===================================================================== -->
+  <header class="bg-acai-900 text-white sticky top-0 z-40 border-b border-acai-700/80 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Identificação da Loja -->
+      <div class="flex items-center space-x-3">
+        <img src="assets/logo.jpg" alt="Rotta do Açaí" class="w-10 h-10 rounded-full border-2 border-gold-500 object-cover shadow">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-extrabold text-base text-white">Rotta do Açaí</h1>
+            <span class="text-[11px] bg-purple-800/80 text-gold-400 font-semibold px-2 py-0.5 rounded border border-purple-600">
+              Painel de Gestão
+            </span>
+          </div>
+          <p class="text-xs text-purple-200">Controle de Pedidos & Cozinha</p>
+        </div>
+      </div>
+
+      <!-- Controles Rápidos do Cabeçalho -->
+      <div class="flex items-center space-x-3">
+        <!-- Chave Liga/Desliga Loja Aberta -->
+        <button id="btn-toggle-store-status" onclick="toggleStoreOpenStatus()" class="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow transition">
+          <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+          <span id="store-status-text">Loja Aberta</span>
+        </button>
+
+        <!-- Testar Alerta Sonoro -->
+        <button onclick="testAudioAlert()" title="Testar toque de novo pedido" class="px-3 py-1.5 rounded-xl bg-acai-800 hover:bg-acai-700 text-gold-400 border border-acai-600 text-xs font-semibold flex items-center space-x-1.5 transition">
+          <span>🔔</span>
+          <span class="hidden sm:inline">Testar Som</span>
+        </button>
+
+        <!-- Abrir Cardápio do Cliente -->
+        <a href="index.html" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-acai-950 font-extrabold text-xs shadow flex items-center space-x-1.5 transition">
+          <span>📱</span>
+          <span>Ver Cardápio</span>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Navegação por Abas -->
+    <div class="max-w-7xl mx-auto px-4 flex space-x-1 overflow-x-auto border-t border-acai-800 pt-1 pb-1">
+      <button onclick="switchTab('kanban')" id="tab-btn-kanban" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition bg-acai-800 text-gold-400 flex items-center space-x-2">
+        <span>📋 Pedidos ao Vivo</span>
+        <span id="kanban-new-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.2 rounded-full hidden">0</span>
+      </button>
+      <button onclick="switchTab('estoque')" id="tab-btn-estoque" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+        <span>🥣 Cardápio & Estoque</span>
+      </button>
+      <button onclick="switchTab('caixa')" id="tab-btn-caixa" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+        <span>📊 Caixa do Dia</span>
+      </button>
+      <button onclick="switchTab('config')" id="tab-btn-config" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+        <span>⚙️ Configurações</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       CONTEÚDO PRINCIPAL (ABAS)
+       ===================================================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+
+    <!-- ===================================================================
+         ABA 1: KANBAN DE PEDIDOS AO VIVO
+         =================================================================== -->
+    <div id="tab-content-kanban" class="space-y-4">
+      
+      <!-- Barra de Ações Rápidas do Kanban -->
+      <div class="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+          <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Monitorando Pedidos em Tempo Real</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="renderKanbanBoard()" class="text-xs text-acai-700 hover:text-acai-900 font-bold px-3 py-1.5 rounded-lg border border-purple-200 hover:bg-purple-50 transition">
+            🔄 Atualizar
+          </button>
+          <button onclick="confirmClearOrders()" class="text-xs text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition">
+            🗑️ Limpar Concluídos
+          </button>
+        </div>
+      </div>
+
+      <!-- Grade Kanban (4 Colunas) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+
+        <!-- Coluna 1: Novos Pedidos -->
+        <div class="kanban-column bg-white rounded-2xl border-2 border-amber-300 shadow-sm flex flex-col overflow-hidden">
+          <div class="bg-amber-100/80 px-4 py-3 border-b border-amber-200 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-base">📥</span>
+              <h3 class="font-extrabold text-amber-900 text-xs uppercase tracking-wider">Novos Pedidos</h3>
+            </div>
+            <span id="count-col-novo" class="w-6 h-6 rounded-full bg-amber-500 text-white font-extrabold text-xs flex items-center justify-center shadow">
+              0
+            </span>
+          </div>
+          <div id="column-novo" class="p-3 space-y-3 min-h-[450px] overflow-y-auto">
+            <!-- Inserido dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Coluna 2: Em Preparo -->
+        <div class="kanban-column bg-white rounded-2xl border-2 border-blue-200 shadow-sm flex flex-col overflow-hidden">
+          <div class="bg-blue-100/80 px-4 py-3 border-b border-blue-200 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-base">🥣</span>
+              <h3 class="font-extrabold text-blue-900 text-xs uppercase tracking-wider">Em Preparo</h3>
+            </div>
+            <span id="count-col-preparo" class="w-6 h-6 rounded-full bg-blue-500 text-white font-extrabold text-xs flex items-center justify-center shadow">
+              0
+            </span>
+          </div>
+          <div id="column-preparo" class="p-3 space-y-3 min-h-[450px] overflow-y-auto">
+            <!-- Inserido dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Coluna 3: Saiu para Entrega -->
+        <div class="kanban-column bg-white rounded-2xl border-2 border-purple-200 shadow-sm flex flex-col overflow-hidden">
+          <div class="bg-purple-100/80 px-4 py-3 border-b border-purple-200 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-base">🛵</span>
+              <h3 class="font-extrabold text-purple-900 text-xs uppercase tracking-wider">A Caminho</h3>
+            </div>
+            <span id="count-col-entrega" class="w-6 h-6 rounded-full bg-purple-600 text-white font-extrabold text-xs flex items-center justify-center shadow">
+              0
+            </span>
+          </div>
+          <div id="column-entrega" class="p-3 space-y-3 min-h-[450px] overflow-y-auto">
+            <!-- Inserido dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Coluna 4: Finalizados -->
+        <div class="kanban-column bg-white rounded-2xl border-2 border-emerald-200 shadow-sm flex flex-col overflow-hidden">
+          <div class="bg-emerald-100/80 px-4 py-3 border-b border-emerald-200 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="text-base">✅</span>
+              <h3 class="font-extrabold text-emerald-900 text-xs uppercase tracking-wider">Concluídos</h3>
+            </div>
+            <span id="count-col-concluido" class="w-6 h-6 rounded-full bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center shadow">
+              0
+            </span>
+          </div>
+          <div id="column-concluido" class="p-3 space-y-3 min-h-[450px] overflow-y-auto">
+            <!-- Inserido dinamicamente -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===================================================================
+         ABA 2: GESTÃO DE CARDÁPIO & ESTOQUE RÁPIDO
+         =================================================================== -->
+    <div id="tab-content-estoque" class="hidden space-y-6">
+      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+          <div>
+            <h2 class="text-base font-extrabold text-gray-900">Gerenciador de Itens & Estoque</h2>
+            <p class="text-xs text-gray-500">Se algum ingrediente ou fruta acabar no dia, desative-o aqui com um clique.</p>
+          </div>
+          <span class="text-xs font-bold text-acai-700 bg-purple-50 px-3 py-1 rounded-lg">Atualização Imediata</span>
+        </div>
+
+        <!-- Seções de Produtos, Bases, Acompanhamentos e Adicionais -->
+        <div class="space-y-6">
+          
+          <!-- 1. Copos & Produtos -->
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-acai-800 mb-3 flex items-center gap-1.5">
+              <span>🍧</span> Copos e Produtos Principais
+            </h3>
+            <div id="stock-products-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Inserido dinamicamente -->
+            </div>
+          </div>
+
+          <!-- 2. Adicionais Pagos / Gourmet -->
+          <div class="pt-4 border-t border-gray-100">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-700 mb-3 flex items-center gap-1.5">
+              <span>🍓</span> Adicionais Gourmet & Frutas (Extras)
+            </h3>
+            <div id="stock-addons-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Inserido dinamicamente -->
+            </div>
+          </div>
+
+          <!-- 3. Acompanhamentos Grátis -->
+          <div class="pt-4 border-t border-gray-100">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-3 flex items-center gap-1.5">
+              <span>🥣</span> Acompanhamentos Tradicionais Grátis
+            </h3>
+            <div id="stock-toppings-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <!-- Inserido dinamicamente -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================================================================
+         ABA 3: CAIXA DO DIA & RELATÓRIOS
+         =================================================================== -->
+    <div id="tab-content-caixa" class="hidden space-y-6">
+      
+      <!-- Cards de Métricas Principais -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        
+        <!-- Faturamento Hoje -->
+        <div class="bg-gradient-to-br from-acai-800 to-acai-900 text-white p-5 rounded-2xl shadow-lg border border-acai-700">
+          <span class="text-xs font-semibold text-purple-200 block uppercase tracking-wider">Faturamento Hoje</span>
+          <span id="metric-revenue-today" class="text-3xl font-black text-gold-400 mt-2 block">R$ 0,00</span>
+          <span class="text-[11px] text-purple-300 mt-1 block">Somatório de todos os pedidos finalizados</span>
+        </div>
+
+        <!-- Total de Pedidos -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+          <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wider">Total de Pedidos</span>
+          <span id="metric-orders-count" class="text-3xl font-black text-acai-900 mt-2 block">0</span>
+          <span class="text-[11px] text-gray-400 mt-1 block">Pedidos recebidos no sistema</span>
+        </div>
+
+        <!-- Ticket Médio -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+          <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wider">Ticket Médio</span>
+          <span id="metric-average-ticket" class="text-3xl font-black text-emerald-600 mt-2 block">R$ 0,00</span>
+          <span class="text-[11px] text-gray-400 mt-1 block">Média gasta por cliente</span>
+        </div>
+
+      </div>
+
+      <!-- Detalhamento por Forma de Pagamento -->
+      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+        <h3 class="text-sm font-bold text-gray-900 mb-3">Vendas por Forma de Pagamento</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-purple-50/70 p-3.5 rounded-xl border border-purple-100 flex items-center justify-between">
+            <div>
+              <span class="text-xs text-gray-600 font-medium block">💠 Pix</span>
+              <span id="metric-pix-total" class="text-base font-extrabold text-acai-900">R$ 0,00</span>
+            </div>
+            <span id="metric-pix-count" class="text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">0 ped</span>
+          </div>
+
+          <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-100 flex items-center justify-between">
+            <div>
+              <span class="text-xs text-gray-600 font-medium block">💳 Cartão</span>
+              <span id="metric-card-total" class="text-base font-extrabold text-blue-900">R$ 0,00</span>
+            </div>
+            <span id="metric-card-count" class="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">0 ped</span>
+          </div>
+
+          <div class="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-100 flex items-center justify-between">
+            <div>
+              <span class="text-xs text-gray-600 font-medium block">💵 Dinheiro</span>
+              <span id="metric-cash-total" class="text-base font-extrabold text-emerald-900">R$ 0,00</span>
+            </div>
+            <span id="metric-cash-count" class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">0 ped</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================================================================
+         ABA 4: CONFIGURAÇÕES DA LOJA
+         =================================================================== -->
+    <div id="tab-content-config" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm max-w-2xl">
+        <h2 class="text-base font-extrabold text-gray-900 mb-4 border-b border-gray-100 pb-3">
+          Dados da Loja Rotta do Açaí
+        </h2>
+
+        <form id="config-form" onsubmit="saveStoreSettings(event)" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Nome Fantasia da Loja</label>
+            <input id="cfg-name" type="text" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">WhatsApp para Contato e Pedidos</label>
+            <input id="cfg-phone" type="text" placeholder="Ex: 5511999999999 (com DDI e DDD)" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
+            <span class="text-[11px] text-gray-400">Usado para abrir o link direto do WhatsApp</span>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Chave Pix da Loja</label>
+            <input id="cfg-pix" type="text" placeholder="Ex: rotta.acai.pix@gmail.com ou celular" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
+            <span class="text-[11px] text-gray-400">Exibida com botão de copiar para clientes que pagam via Pix</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Taxa de Entrega Padrão (R$)</label>
+              <input id="cfg-delivery-fee" type="number" step="0.50" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Tempo Estimado</label>
+              <input id="cfg-time" type="text" placeholder="Ex: 30 a 50 min" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Endereço da Loja (Para Retirada)</label>
+            <input id="cfg-address" type="text" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700">
+          </div>
+
+          <div class="pt-3">
+            <button type="submit" class="bg-acai-700 hover:bg-acai-800 text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition">
+              Salvar Alterações
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- =====================================================================
+       MODAL DE COMANDA DE IMPRESSÃO (CUPOM TÉRMICO DE COZINHA)
+       ===================================================================== -->
+  <div id="receipt-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Topo Modal -->
+      <div class="bg-acai-900 text-white p-3 flex items-center justify-between text-xs font-bold">
+        <span>🖨️ Comanda de Montagem</span>
+        <button onclick="closeReceiptModal()" class="text-gray-300 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <!-- Cupom Térmico Formatado -->
+      <div class="p-4 overflow-y-auto flex-1 bg-amber-50/40">
+        <div id="receipt-modal-content" class="thermal-receipt p-4 text-xs space-y-3 border border-gray-300 shadow-inner rounded">
+          <!-- Inserido dinamicamente -->
+        </div>
+      </div>
+
+      <!-- Ações de Impressão -->
+      <div class="p-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2">
+        <button onclick="window.print()" class="flex-1 bg-gray-900 hover:bg-black text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition">
+          <span>🖨️ Imprimir</span>
+        </button>
+        <button onclick="closeReceiptModal()" class="px-4 py-2 border border-gray-300 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-100 transition">
+          Fechar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/store.js"></script>
+  <script src="js/painel.js"></script>
+
+</body>
+</html>

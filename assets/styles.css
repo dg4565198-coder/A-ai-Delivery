@@ -1,0 +1,232 @@
+/* ==========================================================================
+   ROTTA DO AÇAÍ - ESTILOS PERSONALIZADOS & SPLASH SCREEN
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
+
+:root {
+  --acai-900: #1b0222;
+  --acai-800: #290435;
+  --acai-700: #3c0950;
+  --acai-600: #550d71;
+  --acai-500: #74159a;
+  --acai-400: #9322c2;
+  --gold-500: #f5a623;
+  --gold-400: #fbbf24;
+  --gold-600: #d97706;
+  --gold-glow: rgba(245, 166, 35, 0.35);
+  --cream-50: #fdfaf6;
+  --cream-100: #f7f1e6;
+  --dark-surface: #14021a;
+  --dark-card: #20052a;
+}
+
+* {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  box-sizing: border-box;
+}
+
+/* Fundo padrão */
+body {
+  background-color: #f8f6fa;
+  color: #1f1b24;
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
+   SPLASH SCREEN ESTILO IFOOD
+   ========================================================================== */
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: radial-gradient(circle at center, #3c0950 0%, #1b0222 75%, #0e0112 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s ease;
+}
+
+#splash-screen.hidden-splash {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.splash-logo-container {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-logo-container img {
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 45px rgba(245, 166, 35, 0.4), 0 0 90px rgba(116, 21, 154, 0.5);
+  border: 3px solid #f5a623;
+  position: relative;
+  z-index: 2;
+  animation: logoPulse 2.4s ease-in-out infinite alternate;
+}
+
+/* Anéis de pulso atrás da logo */
+.splash-pulse-ring {
+  position: absolute;
+  inset: -15px;
+  border-radius: 50%;
+  border: 2px solid rgba(245, 166, 35, 0.4);
+  animation: ringPulse 2s ease-out infinite;
+}
+
+.splash-pulse-ring:nth-child(2) {
+  inset: -30px;
+  border-color: rgba(147, 34, 194, 0.3);
+  animation-delay: 0.6s;
+}
+
+@keyframes logoPulse {
+  0% { transform: scale(0.96); filter: drop-shadow(0 0 20px rgba(245, 166, 35, 0.3)); }
+  100% { transform: scale(1.04); filter: drop-shadow(0 0 40px rgba(245, 166, 35, 0.6)); }
+}
+
+@keyframes ringPulse {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.splash-loading-bar {
+  width: 180px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 32px;
+  position: relative;
+}
+
+.splash-loading-progress {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, #f5a623, #ffdd80, #f5a623);
+  width: 40%;
+  border-radius: 999px;
+  animation: loadingShimmer 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes loadingShimmer {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+/* ==========================================================================
+   CARDÁPIO & COMPONENTES VISUAIS
+   ========================================================================== */
+
+.hero-banner {
+  background: linear-gradient(135deg, #2a0437 0%, #440a5b 50%, #1f0328 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(245, 166, 35, 0.18) 0%, rgba(245, 166, 35, 0) 70%);
+  border-radius: 50%;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #f5a623 0%, #ffe29a 50%, #e09419 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.badge-pulse {
+  animation: pulseDot 1.8s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+/* Card de Produto */
+.product-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -6px rgba(41, 4, 53, 0.12);
+}
+
+/* Itens adicionais selecionáveis */
+.selectable-item {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.selectable-item.selected {
+  border-color: #74159a;
+  background-color: #faf2fd;
+}
+
+/* Kanban Cards do Painel */
+.kanban-column {
+  min-height: 520px;
+}
+
+.order-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.1);
+}
+
+.order-card.new-order-alert {
+  animation: alertBorder 1.5s infinite alternate;
+}
+
+@keyframes alertBorder {
+  0% { border-color: #f5a623; box-shadow: 0 0 12px rgba(245, 166, 35, 0.4); }
+  100% { border-color: #dc2626; box-shadow: 0 0 16px rgba(220, 38, 38, 0.5); }
+}
+
+/* Estilo de Comanda de Impressão Térmica */
+.thermal-receipt {
+  font-family: 'Courier New', Courier, monospace;
+  background: #fff;
+  color: #000;
+  border-left: 2px dashed #bbb;
+  border-right: 2px dashed #bbb;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #receipt-modal-content, #receipt-modal-content * {
+    visibility: visible;
+  }
+  #receipt-modal-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 10px;
+  }
+}
