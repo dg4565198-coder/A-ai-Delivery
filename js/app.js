@@ -489,7 +489,7 @@ function togglePaymentChange(show) {
 // ==========================================================================
 // 5. ENVIO DO PEDIDO (DIRETO PARA O SISTEMA DA LOJA!)
 // ==========================================================================
-function submitFinalOrder() {
+async function submitFinalOrder() {
   const name = document.getElementById('order-customer-name').value.trim();
   const phone = document.getElementById('order-customer-phone').value.trim();
 
