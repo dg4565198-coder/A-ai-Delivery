@@ -61,6 +61,18 @@
     <span class="text-white/60 text-xs mt-3">Carregando cardápio fresquinho...</span>
   </div>
 
+  <!-- Garantia de fechamento da Splash Screen mesmo em conexão lenta -->
+  <script>
+    setTimeout(function() {
+      var s = document.getElementById('splash-screen');
+      if (s) {
+        s.style.transition = 'opacity 0.4s ease';
+        s.style.opacity = '0';
+        setTimeout(function() { s.style.display = 'none'; }, 400);
+      }
+    }, 1500);
+  </script>
+
   <!-- =====================================================================
        2. TOPO & BANNER DA LOJA
        ===================================================================== -->
