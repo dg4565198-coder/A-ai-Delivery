@@ -203,7 +203,7 @@ window.Store = {
       createdAt: now.toISOString(),
       timeFormatted: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       dateFormatted: now.toLocaleDateString('pt-BR'),
-      status: 'novo',
+      status: 'preparo', // Aceite automático: entra direto em preparo na cozinha!
       customer: orderData.customer,
       items: orderData.items,
       deliveryType: orderData.deliveryType,
@@ -279,7 +279,7 @@ window.Store = {
 
       // Detecta pedidos NOVOS (chaves que não existiam antes)
       newKeys.forEach(key => {
-        if (!_knownKeys.has(key) && newCache[key].status === 'novo') {
+        if (!_knownKeys.has(key)) {
           if (onNewOrder) onNewOrder(newCache[key]);
         }
       });

@@ -566,7 +566,7 @@ async function submitFinalOrder() {
 function showSuccessOrderModal(order) {
   const config = window.Store.getConfig();
   document.getElementById('confirmed-order-number').textContent = order.orderNumber;
-  document.getElementById('confirmed-status-text').textContent = 'Pedido enviado direto para a loja! Aguardando aceite.';
+  document.getElementById('confirmed-status-text').textContent = '🥣 Pedido aceito automaticamente! Já estamos preparando seu açaí fresquinho!';
 
   const pixBox = document.getElementById('pix-payment-box');
   if (order.paymentMethod === 'pix') {
@@ -586,7 +586,7 @@ function showSuccessOrderModal(order) {
     (order.address ? `📍 *Endereço:* ${order.address.street}, ${order.address.number} - ${order.address.neighborhood}\n` : '') +
     `💳 *Pagamento:* ${order.paymentMethod.toUpperCase()}\n` +
     `💰 *Total:* ${window.Store.formatCurrency(order.total)}\n\n` +
-    `Aguardando confirmação!`
+    `Aguardando meu pedido!`
   );
 
   whatsappBtn.href = `https://api.whatsapp.com/send?phone=${config.phone}&text=${textMsg}`;
@@ -596,9 +596,9 @@ function showSuccessOrderModal(order) {
   // Rastreio em tempo real via Firebase - status do pedido atualiza automaticamente
   window.Store.listenToOrder(order.id, (updatedOrder) => {
     const statusMap = {
-      novo: '⏳ Pedido recebido! Aguardando aceite da loja...',
-      preparo: '🥣 Seu açaí está sendo montado com muito carinho!',
-      entrega: '🛵 Seu açaí saiu para entrega! Fique atento à porta!',
+      novo: '🥣 Pedido aceito! Já estamos preparando seu açaí!',
+      preparo: '🥣 Pedido aceito! Seu açaí está sendo montado com muito carinho!',
+      entrega: order.deliveryType === 'entrega' ? '🛵 Seu açaí saiu para entrega! Fique atento à porta!' : '🏬 Seu açaí está pronto para retirada no balcão!',
       concluido: '🎉 Pedido entregue! Bom apetite com a Rotta do Açaí!',
       cancelado: '❌ Pedido cancelado pela loja. Entre em contato.'
     };

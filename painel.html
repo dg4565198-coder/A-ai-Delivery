@@ -137,69 +137,62 @@
         </div>
       </div>
 
-      <!-- Grade Kanban (4 Colunas) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+      <!-- Grade Kanban (3 Colunas com Aceite Automático) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
 
-        <!-- Coluna 1: Novos Pedidos -->
+        <!-- Coluna 1: Em Preparo (Entrada Automática) -->
         <div class="kanban-column bg-white rounded-2xl border-2 border-amber-300 shadow-sm flex flex-col overflow-hidden">
-          <div class="bg-amber-100/80 px-4 py-3 border-b border-amber-200 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="text-base">📥</span>
-              <h3 class="font-extrabold text-amber-900 text-xs uppercase tracking-wider">Novos Pedidos</h3>
-            </div>
-            <span id="count-col-novo" class="w-6 h-6 rounded-full bg-amber-500 text-white font-extrabold text-xs flex items-center justify-center shadow">
-              0
-            </span>
-          </div>
-          <div id="column-novo" class="p-3 space-y-3 min-h-[450px] overflow-y-auto">
-            <!-- Inserido dinamicamente -->
-          </div>
-        </div>
-
-        <!-- Coluna 2: Em Preparo -->
-        <div class="kanban-column bg-white rounded-2xl border-2 border-blue-200 shadow-sm flex flex-col overflow-hidden">
-          <div class="bg-blue-100/80 px-4 py-3 border-b border-blue-200 flex items-center justify-between">
+          <div class="bg-amber-100/90 px-4 py-3 border-b border-amber-200 flex items-center justify-between">
             <div class="flex items-center space-x-2">
               <span class="text-base">🥣</span>
-              <h3 class="font-extrabold text-blue-900 text-xs uppercase tracking-wider">Em Preparo</h3>
+              <div>
+                <h3 class="font-extrabold text-amber-950 text-xs uppercase tracking-wider">1. Em Preparo</h3>
+                <span class="text-[10px] text-amber-700 font-semibold block">Aceite Automático ⚡</span>
+              </div>
             </div>
-            <span id="count-col-preparo" class="w-6 h-6 rounded-full bg-blue-500 text-white font-extrabold text-xs flex items-center justify-center shadow">
+            <span id="count-col-preparo" class="w-7 h-7 rounded-full bg-amber-500 text-white font-extrabold text-xs flex items-center justify-center shadow">
               0
             </span>
           </div>
-          <div id="column-preparo" class="p-3 space-y-3 min-h-[450px] overflow-y-auto">
+          <div id="column-preparo" class="p-3 space-y-3 min-h-[480px] overflow-y-auto">
             <!-- Inserido dinamicamente -->
           </div>
         </div>
 
-        <!-- Coluna 3: Saiu para Entrega -->
+        <!-- Coluna 2: Saiu para Entrega / A Caminho -->
         <div class="kanban-column bg-white rounded-2xl border-2 border-purple-200 shadow-sm flex flex-col overflow-hidden">
-          <div class="bg-purple-100/80 px-4 py-3 border-b border-purple-200 flex items-center justify-between">
+          <div class="bg-purple-100/90 px-4 py-3 border-b border-purple-200 flex items-center justify-between">
             <div class="flex items-center space-x-2">
               <span class="text-base">🛵</span>
-              <h3 class="font-extrabold text-purple-900 text-xs uppercase tracking-wider">A Caminho</h3>
+              <div>
+                <h3 class="font-extrabold text-purple-950 text-xs uppercase tracking-wider">2. A Caminho</h3>
+                <span class="text-[10px] text-purple-700 font-semibold block">Entrega ou Balcão</span>
+              </div>
             </div>
-            <span id="count-col-entrega" class="w-6 h-6 rounded-full bg-purple-600 text-white font-extrabold text-xs flex items-center justify-center shadow">
+            <span id="count-col-entrega" class="w-7 h-7 rounded-full bg-purple-600 text-white font-extrabold text-xs flex items-center justify-center shadow">
               0
             </span>
           </div>
-          <div id="column-entrega" class="p-3 space-y-3 min-h-[450px] overflow-y-auto">
+          <div id="column-entrega" class="p-3 space-y-3 min-h-[480px] overflow-y-auto">
             <!-- Inserido dinamicamente -->
           </div>
         </div>
 
-        <!-- Coluna 4: Finalizados -->
+        <!-- Coluna 3: Finalizados / Concluídos -->
         <div class="kanban-column bg-white rounded-2xl border-2 border-emerald-200 shadow-sm flex flex-col overflow-hidden">
-          <div class="bg-emerald-100/80 px-4 py-3 border-b border-emerald-200 flex items-center justify-between">
+          <div class="bg-emerald-100/90 px-4 py-3 border-b border-emerald-200 flex items-center justify-between">
             <div class="flex items-center space-x-2">
               <span class="text-base">✅</span>
-              <h3 class="font-extrabold text-emerald-900 text-xs uppercase tracking-wider">Concluídos</h3>
+              <div>
+                <h3 class="font-extrabold text-emerald-950 text-xs uppercase tracking-wider">3. Concluídos</h3>
+                <span class="text-[10px] text-emerald-700 font-semibold block">Pedidos Entregues</span>
+              </div>
             </div>
-            <span id="count-col-concluido" class="w-6 h-6 rounded-full bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center shadow">
+            <span id="count-col-concluido" class="w-7 h-7 rounded-full bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center shadow">
               0
             </span>
           </div>
-          <div id="column-concluido" class="p-3 space-y-3 min-h-[450px] overflow-y-auto">
+          <div id="column-concluido" class="p-3 space-y-3 min-h-[480px] overflow-y-auto">
             <!-- Inserido dinamicamente -->
           </div>
         </div>

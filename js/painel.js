@@ -95,8 +95,8 @@ function setupFirebaseListener() {
         return;
       }
 
-      // Pedido novo de verdade - toca alarme e atualiza o painel!
-      if (!_firstLoad && order.status === 'novo') {
+      // Pedido novo de verdade com aceite automático - toca alarme na cozinha!
+      if (!_firstLoad) {
         window.Store.playNotificationSound();
         showNewOrderNotification(order);
       }
@@ -124,13 +124,15 @@ function setupFirebaseListener() {
 }
 
 function showNewOrderNotification(order) {
-  // Badge numérico na aba
+  // Badge numérico na aba (pedidos ativos em preparo)
   const badge = document.getElementById('kanban-new-badge');
   const orders = window.Store.getOrdersArray();
-  const novos = orders.filter(o => o.status === 'novo').length;
-  if (badge && novos > 0) {
-    badge.textContent = novos;
+  const preparoCount = orders.filter(o => o.status === 'preparo' || o.status === 'novo').length;
+  if (badge && preparoCount > 0) {
+    badge.textContent = preparoCount;
     badge.classList.remove('hidden');
+  } else if (badge) {
+    badge.classList.add('hidden');
   }
 }
 
@@ -190,56 +192,64 @@ function renderKanbanBoard() {
   const orders = window.Store.getOrdersArray();
 
   const columns = {
-    novo: document.getElementById('column-novo'),
     preparo: document.getElementById('column-preparo'),
     entrega: document.getElementById('column-entrega'),
     concluido: document.getElementById('column-concluido')
   };
 
-  const counts = { novo: 0, preparo: 0, entrega: 0, concluido: 0 };
+  const counts = { preparo: 0, entrega: 0, concluido: 0 };
 
   Object.values(columns).forEach(col => { if (col) col.innerHTML = ''; });
 
   orders.forEach(order => {
-    const status = order.status || 'novo';
+    // Aceite automático: se o pedido for 'novo' ou 'preparo', exibe direto em preparo!
+    let status = order.status || 'preparo';
+    if (status === 'novo') status = 'preparo';
+
     if (counts[status] !== undefined) counts[status]++;
     const col = columns[status];
-    if (col) col.appendChild(createOrderCardElement(order));
+    if (col) col.appendChild(createOrderCardElement(order, status));
   });
 
-  // Atualiza contadores
-  document.getElementById('count-col-novo').textContent = counts.novo;
-  document.getElementById('count-col-preparo').textContent = counts.preparo;
-  document.getElementById('count-col-entrega').textContent = counts.entrega;
-  document.getElementById('count-col-concluido').textContent = counts.concluido;
+  // Atualiza contadores das 3 colunas
+  if (document.getElementById('count-col-preparo')) document.getElementById('count-col-preparo').textContent = counts.preparo;
+  if (document.getElementById('count-col-entrega')) document.getElementById('count-col-entrega').textContent = counts.entrega;
+  if (document.getElementById('count-col-concluido')) document.getElementById('count-col-concluido').textContent = counts.concluido;
 
-  // Badge aba
+  // Badge da aba (pedidos ativos em preparo)
   const badge = document.getElementById('kanban-new-badge');
-  if (counts.novo > 0) {
-    badge.textContent = counts.novo;
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
+  if (badge) {
+    if (counts.preparo > 0) {
+      badge.textContent = counts.preparo;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
   }
 
   // Placeholders para colunas vazias
   Object.keys(columns).forEach(key => {
     if (counts[key] === 0 && columns[key]) {
+      const messages = {
+        preparo: 'Nenhum açaí sendo montado',
+        entrega: 'Nenhum pedido a caminho',
+        concluido: 'Nenhum pedido finalizado ainda'
+      };
       columns[key].innerHTML = `
         <div class="h-36 flex flex-col items-center justify-center text-center text-gray-400 text-xs p-4">
-          <span class="text-2xl mb-1 opacity-50">📭</span>
-          <span>Nenhum pedido aqui</span>
+          <span class="text-2xl mb-1 opacity-50">🥣</span>
+          <span>${messages[key] || 'Vazio'}</span>
         </div>`;
     }
   });
 }
 
-function createOrderCardElement(order) {
+function createOrderCardElement(order, currentStatus) {
   const card = document.createElement('div');
-  const isNew = order.status === 'novo';
+  const isPreparo = currentStatus === 'preparo';
 
   card.className = `order-card bg-white p-3.5 rounded-xl border-2 transition shadow-sm space-y-3 ${
-    isNew ? 'border-amber-400 new-order-alert bg-amber-50/20' : 'border-gray-200 hover:border-gray-300'
+    isPreparo ? 'border-amber-400 new-order-alert bg-amber-50/20' : 'border-gray-200 hover:border-gray-300'
   }`;
 
   const headerHtml = `
@@ -293,20 +303,15 @@ function createOrderCardElement(order) {
     </div>`;
 
   let actionHtml = '';
-  if (order.status === 'novo') {
+  if (currentStatus === 'preparo') {
     actionHtml = `<div class="grid grid-cols-2 gap-2 pt-1">
       <button onclick="openReceiptModal('${order.id}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
-      <button onclick="advanceOrderStatus('${order.id}', 'preparo')" class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>🥣</span><span>Aceitar</span></button>
+      <button onclick="advanceOrderStatus('${order.id}', 'entrega')" class="text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Pronto'}</span></button>
     </div>`;
-  } else if (order.status === 'preparo') {
+  } else if (currentStatus === 'entrega') {
     actionHtml = `<div class="grid grid-cols-2 gap-2 pt-1">
       <button onclick="openReceiptModal('${order.id}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
-      <button onclick="advanceOrderStatus('${order.id}', 'entrega')" class="text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>🛵</span><span>Despachar</span></button>
-    </div>`;
-  } else if (order.status === 'entrega') {
-    actionHtml = `<div class="grid grid-cols-2 gap-2 pt-1">
-      <button onclick="openReceiptModal('${order.id}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
-      <button onclick="advanceOrderStatus('${order.id}', 'concluido')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>✅</span><span>Concluir</span></button>
+      <button onclick="advanceOrderStatus('${order.id}', 'concluido')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>✅ Concluir</span></button>
     </div>`;
   } else {
     actionHtml = `<div class="pt-1"><button onclick="openReceiptModal('${order.id}')" class="w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1.5 rounded-lg transition">🖨️ Reemitir Comanda</button></div>`;
