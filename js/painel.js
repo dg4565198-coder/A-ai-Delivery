@@ -9,16 +9,20 @@ let _firstLoad = true; // controla se é o carregamento inicial (sem tocar alarm
 // ==========================================================================
 // 1. INICIALIZAÇÃO
 // ==========================================================================
-document.addEventListener('DOMContentLoaded', () => {
-  window.Store.init();
-  updateStoreStatusButton();
-  renderStockManagement();
-  renderFinancialMetrics();
-  loadConfigForm();
+function startPainel() {
+  try { window.Store.init(); } catch (e) { console.error('Store init:', e); }
+  try { updateStoreStatusButton(); } catch (e) { console.error('Status:', e); }
+  try { renderStockManagement(); } catch (e) { console.error('Stock:', e); }
+  try { renderFinancialMetrics(); } catch (e) { console.error('Metrics:', e); }
+  try { loadConfigForm(); } catch (e) { console.error('Config:', e); }
+  try { setupFirebaseListener(); } catch (e) { console.error('Firebase:', e); }
+}
 
-  // Inicia a escuta em tempo real do Firebase
-  setupFirebaseListener();
-});
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startPainel);
+} else {
+  startPainel();
+}
 
 // ==========================================================================
 // 2. LISTENER FIREBASE - CORAÇÃO DO SISTEMA EM TEMPO REAL

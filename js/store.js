@@ -94,12 +94,18 @@ let _orderCount = 0;   // contador para numerar pedidos
 
 function getDB() {
   if (!_db) {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(FIREBASE_CONFIG);
-    } else {
-      firebase.app();
+    try {
+      if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        } else {
+          firebase.app();
+        }
+        _db = firebase.database();
+      }
+    } catch (e) {
+      console.warn('Erro ao inicializar Firebase:', e);
     }
-    _db = firebase.database();
   }
   return _db;
 }
@@ -108,46 +114,79 @@ window.Store = {
 
   // ---------- Inicialização ----------
   init() {
-    if (!localStorage.getItem(STORAGE_KEYS.CONFIG))       localStorage.setItem(STORAGE_KEYS.CONFIG,       JSON.stringify(DEFAULT_CONFIG));
-    if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS))     localStorage.setItem(STORAGE_KEYS.PRODUCTS,     JSON.stringify(DEFAULT_PRODUCTS));
-    if (!localStorage.getItem(STORAGE_KEYS.BASES))        localStorage.setItem(STORAGE_KEYS.BASES,        JSON.stringify(DEFAULT_BASES));
-    if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS))localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS,JSON.stringify(DEFAULT_FREE_TOPPINGS));
-    if (!localStorage.getItem(STORAGE_KEYS.PAID_ADDONS))  localStorage.setItem(STORAGE_KEYS.PAID_ADDONS,  JSON.stringify(DEFAULT_PAID_ADDONS));
-    // Inicializa conexão com Firebase
+    try {
+      if (!localStorage.getItem(STORAGE_KEYS.CONFIG)) localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(DEFAULT_CONFIG));
+      if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(DEFAULT_PRODUCTS));
+      if (!localStorage.getItem(STORAGE_KEYS.BASES)) localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(DEFAULT_BASES));
+      if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(DEFAULT_FREE_TOPPINGS));
+      if (!localStorage.getItem(STORAGE_KEYS.PAID_ADDONS)) localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(DEFAULT_PAID_ADDONS));
+    } catch (e) {
+      console.warn('LocalStorage inacessível:', e);
+    }
+    // Inicializa conexão com Firebase em background
     getDB();
   },
 
-  // ---------- Configurações (localStorage) ----------
+  // ---------- Configurações ----------
   getConfig() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG)) || DEFAULT_CONFIG; } catch { return DEFAULT_CONFIG; }
+    try {
+      const cfg = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG));
+      return cfg && typeof cfg === 'object' ? cfg : DEFAULT_CONFIG;
+    } catch { return DEFAULT_CONFIG; }
   },
   saveConfig(config) {
-    localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(config));
+    try { localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(config)); } catch {}
   },
 
-  // ---------- Produtos (localStorage) ----------
+  // ---------- Produtos (sempre retorna lista com itens) ----------
   getProducts() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS)) || DEFAULT_PRODUCTS; } catch { return DEFAULT_PRODUCTS; }
+    try {
+      const p = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS));
+      if (Array.isArray(p) && p.length > 0) return p;
+      return DEFAULT_PRODUCTS;
+    } catch {
+      return DEFAULT_PRODUCTS;
+    }
   },
-  saveProducts(products) { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products)); },
+  saveProducts(products) {
+    try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products)); } catch {}
+  },
 
-  // ---------- Bases (localStorage) ----------
+  // ---------- Bases ----------
   getBases() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.BASES)) || DEFAULT_BASES; } catch { return DEFAULT_BASES; }
+    try {
+      const b = JSON.parse(localStorage.getItem(STORAGE_KEYS.BASES));
+      if (Array.isArray(b) && b.length > 0) return b;
+      return DEFAULT_BASES;
+    } catch { return DEFAULT_BASES; }
   },
-  saveBases(bases) { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(bases)); },
+  saveBases(bases) {
+    try { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(bases)); } catch {}
+  },
 
-  // ---------- Acompanhamentos Grátis (localStorage) ----------
+  // ---------- Acompanhamentos Grátis ----------
   getFreeToppings() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) || DEFAULT_FREE_TOPPINGS; } catch { return DEFAULT_FREE_TOPPINGS; }
+    try {
+      const f = JSON.parse(localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS));
+      if (Array.isArray(f) && f.length > 0) return f;
+      return DEFAULT_FREE_TOPPINGS;
+    } catch { return DEFAULT_FREE_TOPPINGS; }
   },
-  saveFreeToppings(toppings) { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(toppings)); },
+  saveFreeToppings(toppings) {
+    try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(toppings)); } catch {}
+  },
 
-  // ---------- Adicionais Pagos (localStorage) ----------
+  // ---------- Adicionais Pagos ----------
   getPaidAddons() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.PAID_ADDONS)) || DEFAULT_PAID_ADDONS; } catch { return DEFAULT_PAID_ADDONS; }
+    try {
+      const a = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAID_ADDONS));
+      if (Array.isArray(a) && a.length > 0) return a;
+      return DEFAULT_PAID_ADDONS;
+    } catch { return DEFAULT_PAID_ADDONS; }
   },
-  savePaidAddons(addons) { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(addons)); },
+  savePaidAddons(addons) {
+    try { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(addons)); } catch {}
+  },
 
   // ==============================================
   // PEDIDOS - 100% Firebase Realtime Database

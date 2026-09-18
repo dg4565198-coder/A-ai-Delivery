@@ -14,16 +14,19 @@ const state = {
   lastCreatedOrderId: null
 };
 
-// ==========================================================================
-// 1. INICIALIZAÇÃO & SPLASH SCREEN
-// ==========================================================================
-document.addEventListener('DOMContentLoaded', () => {
-  window.Store.init();
-  setupSplashScreen();
-  renderStoreHeader();
-  renderProducts();
-  setupSyncListener();
-});
+function startApp() {
+  try { window.Store.init(); } catch (e) { console.error('Store init:', e); }
+  try { setupSplashScreen(); } catch (e) { console.error('Splash:', e); }
+  try { renderStoreHeader(); } catch (e) { console.error('Header:', e); }
+  try { renderProducts(); } catch (e) { console.error('Products:', e); }
+  try { setupSyncListener(); } catch (e) { console.error('Sync:', e); }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
 
 function setupSplashScreen() {
   const splash = document.getElementById('splash-screen');
