@@ -154,7 +154,7 @@ window.Store = {
   // Funciona entre QUALQUER celular ou computador!
   // ==============================================
 
-  createOrder(orderData) {
+  async createOrder(orderData) {
     const db = getDB();
     const now = new Date();
     const orderNumber = '#' + (101 + _orderCount);
@@ -177,17 +177,17 @@ window.Store = {
       notes: orderData.notes || ''
     };
 
-    // Salva no Firebase e obtém o ID gerado automaticamente
+    // Salva no Firebase e aguarda confirmação
     const ref = db.ref('orders').push();
     newOrder.id = ref.key;
-    ref.set(newOrder);
+    await ref.set(newOrder);
 
     return newOrder;
   },
 
   updateOrderStatus(orderId, newStatus) {
     const db = getDB();
-    db.ref('orders/' + orderId).update({
+    return db.ref('orders/' + orderId).update({
       status: newStatus,
       updatedAt: new Date().toISOString()
     });
@@ -212,8 +212,7 @@ window.Store = {
   },
 
   // Escuta pedidos em TEMPO REAL do Firebase
-  // Usa on('value') — mais simples e confiável que child_added
-  listenToOrders(onNewOrder, onOrderChanged) {
+  listenToOrders(onNewOrder, onOrderChanged, onError) {
     const db = getDB();
     let _isFirstLoad = true;
     let _knownKeys = new Set();
@@ -235,7 +234,7 @@ window.Store = {
         _knownKeys = newKeys;
         _orderCount = Object.keys(newCache).length;
         _isFirstLoad = false;
-        if (onNewOrder) onNewOrder(null); // sinal de carga inicial
+        if (onNewOrder) onNewOrder(null); // sinal de carga inicial com sucesso
         return;
       }
 
@@ -254,6 +253,7 @@ window.Store = {
       if (onOrderChanged) onOrderChanged(null);
     }, error => {
       console.error('Firebase listenToOrders error:', error);
+      if (onError) onError(error);
     });
   },
 

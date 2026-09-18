@@ -24,9 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // 2. LISTENER FIREBASE - CORAÇÃO DO SISTEMA EM TEMPO REAL
 // ==========================================================================
 function setupFirebaseListener() {
+  const badge = document.getElementById('firebase-status-badge');
+  const dot = document.getElementById('firebase-status-dot');
+  const text = document.getElementById('firebase-status-text');
+
   window.Store.listenToOrders(
     // Callback para novo pedido ou carregamento inicial
     function onNewOrder(order) {
+      if (badge && dot && text) {
+        badge.className = "flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 shadow";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400";
+        text.textContent = "Firebase Online 🟢";
+      }
+
       if (order === null) {
         // Carregamento inicial completo - renderiza sem alarme
         _firstLoad = false;
@@ -49,6 +59,16 @@ function setupFirebaseListener() {
     function onOrderChanged(_ignored) {
       renderKanbanBoard();
       renderFinancialMetrics();
+    },
+
+    // Callback de ERRO do Firebase (ex: regras bloqueadas)
+    function onFirebaseError(err) {
+      console.error("Firebase Error:", err);
+      if (badge && dot && text) {
+        badge.className = "flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-rose-950/90 text-rose-300 border border-rose-600 shadow animate-bounce";
+        dot.className = "w-2 h-2 rounded-full bg-rose-500";
+        text.textContent = "Permissão Negada no Firebase 🔴";
+      }
     }
   );
 }

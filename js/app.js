@@ -523,8 +523,8 @@ function submitFinalOrder() {
   btnSubmit.disabled = true;
   btnSubmit.innerHTML = `<span>⏳ Enviando pedido direto para a loja...</span>`;
 
-  setTimeout(() => {
-    const newOrder = window.Store.createOrder({
+  try {
+    const newOrder = await window.Store.createOrder({
       customer: { name, phone },
       items: [...state.cart],
       deliveryType: state.deliveryType,
@@ -546,7 +546,12 @@ function submitFinalOrder() {
     btnSubmit.innerHTML = `<span>🚀 Confirmar e Enviar Pedido</span>`;
 
     showSuccessOrderModal(newOrder);
-  }, 350);
+  } catch (error) {
+    console.error("Erro ao enviar pedido para o Firebase:", error);
+    btnSubmit.disabled = false;
+    btnSubmit.innerHTML = `<span>🚀 Confirmar e Enviar Pedido</span>`;
+    alert('Atenção: Não foi possível registrar o pedido no banco de dados da loja.\n\nMotivo: ' + (error.message || 'Permissão negada no Firebase.'));
+  }
 }
 
 function showSuccessOrderModal(order) {

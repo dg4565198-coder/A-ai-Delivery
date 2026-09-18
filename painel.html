@@ -60,6 +60,12 @@
 
       <!-- Controles Rápidos do Cabeçalho -->
       <div class="flex items-center space-x-3">
+        <!-- Status do Banco de Dados Firebase -->
+        <div id="firebase-status-badge" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-purple-950/80 text-yellow-300 border border-purple-700/60 shadow">
+          <span id="firebase-status-dot" class="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
+          <span id="firebase-status-text">Conectando ao Firebase...</span>
+        </div>
+
         <!-- Chave Liga/Desliga Loja Aberta -->
         <button id="btn-toggle-store-status" onclick="toggleStoreOpenStatus()" class="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow transition">
           <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
