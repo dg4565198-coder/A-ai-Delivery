@@ -45,8 +45,8 @@ function setupFirebaseListener() {
       renderFinancialMetrics();
     },
 
-    // Callback para mudança de status de pedido existente
-    function onOrderChanged(order) {
+    // Callback para qualquer mudança (status, remoção, etc.)
+    function onOrderChanged(_ignored) {
       renderKanbanBoard();
       renderFinancialMetrics();
     }

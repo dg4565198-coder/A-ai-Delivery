@@ -212,51 +212,48 @@ window.Store = {
   },
 
   // Escuta pedidos em TEMPO REAL do Firebase
-  // Usado pelo Painel da Loja para receber notificações instantâneas
+  // Usa on('value') — mais simples e confiável que child_added
   listenToOrders(onNewOrder, onOrderChanged) {
     const db = getDB();
+    let _isFirstLoad = true;
+    let _knownKeys = new Set();
 
-    // Primeiro carregamento: busca todos os pedidos existentes
-    db.ref('orders').once('value', snapshot => {
-      _ordersCache = {};
-      _orderCount = 0;
+    db.ref('orders').on('value', snapshot => {
+      const newCache = {};
+      const newKeys = new Set();
+
       if (snapshot.exists()) {
         snapshot.forEach(child => {
-          _ordersCache[child.key] = child.val();
-          _orderCount++;
+          newCache[child.key] = child.val();
+          newKeys.add(child.key);
         });
       }
-      // Chama com null para indicar carregamento inicial completo
-      if (onNewOrder) onNewOrder(null);
-    });
 
-    // Escuta novos pedidos em tempo real
-    db.ref('orders').on('child_added', snapshot => {
-      const order = snapshot.val();
-      const isNew = !_ordersCache[snapshot.key];
-      _ordersCache[snapshot.key] = order;
-      _orderCount = Object.keys(_ordersCache).length;
-
-      if (isNew && onNewOrder) {
-        onNewOrder(order);
+      if (_isFirstLoad) {
+        // Primeiro carregamento: popula o cache silenciosamente
+        _ordersCache = newCache;
+        _knownKeys = newKeys;
+        _orderCount = Object.keys(newCache).length;
+        _isFirstLoad = false;
+        if (onNewOrder) onNewOrder(null); // sinal de carga inicial
+        return;
       }
-    });
 
-    // Escuta mudanças de status em tempo real
-    db.ref('orders').on('child_changed', snapshot => {
-      const order = snapshot.val();
-      _ordersCache[snapshot.key] = order;
+      // Detecta pedidos NOVOS (chaves que não existiam antes)
+      newKeys.forEach(key => {
+        if (!_knownKeys.has(key) && newCache[key].status === 'novo') {
+          if (onNewOrder) onNewOrder(newCache[key]);
+        }
+      });
 
-      if (onOrderChanged) {
-        onOrderChanged(order);
-      }
-    });
+      _ordersCache = newCache;
+      _knownKeys = newKeys;
+      _orderCount = Object.keys(newCache).length;
 
-    // Escuta remoções
-    db.ref('orders').on('child_removed', snapshot => {
-      delete _ordersCache[snapshot.key];
-      _orderCount = Object.keys(_ordersCache).length;
+      // Notifica mudanças (status, remoções, etc.)
       if (onOrderChanged) onOrderChanged(null);
+    }, error => {
+      console.error('Firebase listenToOrders error:', error);
     });
   },
 
