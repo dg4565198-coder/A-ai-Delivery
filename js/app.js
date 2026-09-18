@@ -9,7 +9,7 @@ const state = {
   currentBuildingProduct: null,
   selectedBase: null,
   selectedFreeToppings: [],
-  selectedPaidAddons: [],
+  selectedFruits: [],
   deliveryType: 'entrega', // 'entrega' | 'retirada'
   lastCreatedOrderId: null
 };
@@ -198,7 +198,7 @@ function handleProductClick(productId) {
   state.currentBuildingProduct = product;
   state.selectedBase = window.Store.getBases().find(b => b.available) || null;
   state.selectedFreeToppings = [];
-  state.selectedPaidAddons = [];
+  state.selectedFruits = [];
 
   document.getElementById('builder-product-name').textContent = product.name;
   document.getElementById('builder-icon').textContent = product.icon || '🍧';
@@ -206,11 +206,14 @@ function handleProductClick(productId) {
   document.getElementById('builder-notes').value = '';
 
   const freeLimit = product.freeToppingLimit || 3;
-  document.getElementById('builder-free-limit-label').textContent = `Escolha até ${freeLimit} opções grátis`;
+  document.getElementById('builder-free-limit-label').textContent = `Escolha até ${freeLimit} opções`;
+  
+  const fruitLimit = product.freeFruitLimit || 3;
+  document.getElementById('builder-fruit-limit-label').textContent = `Escolha até ${fruitLimit} opções`;
 
   renderBuilderBases();
+  renderBuilderFruits();
   renderBuilderFreeToppings();
-  renderBuilderPaidAddons();
   updateBuilderTotal();
 
   const modal = document.getElementById('builder-modal');
@@ -284,37 +287,46 @@ function toggleFreeTopping(toppingId) {
   renderBuilderFreeToppings();
 }
 
-function renderBuilderPaidAddons() {
-  const container = document.getElementById('builder-paid-list');
-  const addons = window.Store.getPaidAddons().filter(a => a.available);
+function renderBuilderFruits() {
+  const container = document.getElementById('builder-fruits-list');
+  const fruits = window.Store.getFruits().filter(a => a.available);
+  const limit = state.currentBuildingProduct?.freeFruitLimit || 3;
 
-  container.innerHTML = addons.map(addon => {
-    const isSelected = state.selectedPaidAddons.some(a => a.id === addon.id);
+  document.getElementById('builder-fruit-counter').textContent = `${state.selectedFruits.length} / ${limit}`;
+
+  container.innerHTML = fruits.map(fruit => {
+    const isSelected = state.selectedFruits.some(a => a.id === fruit.id);
     return `
-      <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-amber-500 bg-amber-50/70 font-semibold' : 'border-gray-200 bg-white'}">
+      <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-emerald-500 bg-emerald-50/70 font-semibold' : 'border-gray-200 bg-white'}">
         <div class="flex items-center space-x-2.5">
-          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="togglePaidAddon('${addon.id}')" class="rounded text-amber-600 focus:ring-amber-500 h-3.5 w-3.5">
-          <span class="text-base">${addon.icon || '✨'}</span>
-          <span class="text-gray-800">${addon.name}</span>
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFruit('${fruit.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+          <span class="text-base">${fruit.icon || '🍓'}</span>
+          <span class="text-gray-800">${fruit.name}</span>
         </div>
-        <span class="text-xs font-bold text-amber-700">+ ${window.Store.formatCurrency(addon.price)}</span>
+        <span class="text-[11px] text-emerald-700 font-bold">Grátis</span>
       </label>
     `;
   }).join('');
 }
 
-function togglePaidAddon(addonId) {
-  const addon = window.Store.getPaidAddons().find(a => a.id === addonId);
-  if (!addon) return;
+function toggleFruit(fruitId) {
+  const fruit = window.Store.getFruits().find(a => a.id === fruitId);
+  if (!fruit) return;
 
-  const index = state.selectedPaidAddons.findIndex(a => a.id === addonId);
+  const limit = state.currentBuildingProduct?.freeFruitLimit || 3;
+  const index = state.selectedFruits.findIndex(a => a.id === fruitId);
+  
   if (index !== -1) {
-    state.selectedPaidAddons.splice(index, 1);
+    state.selectedFruits.splice(index, 1);
   } else {
-    state.selectedPaidAddons.push(addon);
+    if (state.selectedFruits.length >= limit) {
+      alert(`Você já atingiu o limite de ${limit} frutas para este tamanho. Você pode desmarcar uma se quiser trocar.`);
+      return;
+    }
+    state.selectedFruits.push(fruit);
   }
 
-  renderBuilderPaidAddons();
+  renderBuilderFruits();
   updateBuilderTotal();
 }
 
@@ -325,9 +337,6 @@ function updateBuilderTotal() {
   if (state.selectedBase && state.selectedBase.extraPrice) {
     total += state.selectedBase.extraPrice;
   }
-  state.selectedPaidAddons.forEach(a => {
-    total += a.price;
-  });
 
   const priceElem = document.getElementById('builder-total-price');
   if (priceElem) {
@@ -346,7 +355,6 @@ function confirmAddItemToCart() {
 
   let unitPrice = state.currentBuildingProduct.price;
   if (state.selectedBase?.extraPrice) unitPrice += state.selectedBase.extraPrice;
-  state.selectedPaidAddons.forEach(a => unitPrice += a.price);
 
   const notes = document.getElementById('builder-notes').value.trim();
 
@@ -358,7 +366,7 @@ function confirmAddItemToCart() {
     unitPrice,
     base: state.selectedBase ? state.selectedBase.name : null,
     freeToppings: [...state.selectedFreeToppings],
-    paidAddons: [...state.selectedPaidAddons],
+    fruits: [...state.selectedFruits],
     notes,
     quantity: 1
   };
@@ -377,7 +385,7 @@ function addItemDirectlyToCart(product) {
     unitPrice: product.price,
     base: null,
     freeToppings: [],
-    paidAddons: [],
+    fruits: [],
     notes: '',
     quantity: 1
   };
@@ -440,9 +448,9 @@ function renderCartModalContent() {
           </p>
         ` : ''}
 
-        ${item.paidAddons.length > 0 ? `
-          <p class="text-[10px] text-amber-700 font-medium mt-0.5">
-            <strong>Extras:</strong> ${item.paidAddons.map(a => `${a.name} (+${window.Store.formatCurrency(a.price)})`).join(', ')}
+        ${item.fruits && item.fruits.length > 0 ? `
+          <p class="text-[10px] text-emerald-700 font-medium mt-0.5">
+            <strong>Frutas:</strong> ${item.fruits.map(f => f.name).join(', ')}
           </p>
         ` : ''}
 
@@ -471,21 +479,14 @@ function removeCartItem(index) {
 }
 
 function updateCheckoutCalculations() {
-  const config = window.Store.getConfig();
   const subtotal = state.cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
-  const deliveryFee = state.deliveryType === 'entrega' ? config.deliveryFee : 0;
-  const grandTotal = subtotal + deliveryFee;
+  const grandTotal = subtotal;
 
-  document.getElementById('checkout-subtotal').textContent = window.Store.formatCurrency(subtotal);
-  document.getElementById('checkout-delivery-fee').textContent = window.Store.formatCurrency(deliveryFee);
-  document.getElementById('checkout-grand-total').textContent = window.Store.formatCurrency(grandTotal);
+  const subtotalElem = document.getElementById('checkout-subtotal');
+  if (subtotalElem) subtotalElem.textContent = window.Store.formatCurrency(subtotal);
 
-  const feeRow = document.getElementById('checkout-fee-row');
-  if (state.deliveryType === 'retirada') {
-    feeRow.classList.add('hidden');
-  } else {
-    feeRow.classList.remove('hidden');
-  }
+  const grandTotalElem = document.getElementById('checkout-grand-total');
+  if (grandTotalElem) grandTotalElem.textContent = window.Store.formatCurrency(grandTotal);
 }
 
 function setDeliveryType(type) {
@@ -495,13 +496,13 @@ function setDeliveryType(type) {
   const fields = document.getElementById('delivery-fields');
 
   if (type === 'entrega') {
-    btnEntrega.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-acai-700 text-white border-acai-700 shadow-sm";
-    btnRetirada.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-white text-gray-700 border-gray-200";
-    fields.classList.remove('hidden');
+    if (btnEntrega) btnEntrega.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-acai-700 text-white border-acai-700 shadow-sm";
+    if (btnRetirada) btnRetirada.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-white text-gray-700 border-gray-200";
+    if (fields) fields.classList.remove('hidden');
   } else {
-    btnRetirada.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-acai-700 text-white border-acai-700 shadow-sm";
-    btnEntrega.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-white text-gray-700 border-gray-200";
-    fields.classList.add('hidden');
+    if (btnRetirada) btnRetirada.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-acai-700 text-white border-acai-700 shadow-sm";
+    if (btnEntrega) btnEntrega.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-white text-gray-700 border-gray-200";
+    if (fields) fields.classList.add('hidden');
   }
 
   updateCheckoutCalculations();
@@ -510,9 +511,9 @@ function setDeliveryType(type) {
 function togglePaymentChange(show) {
   const changeField = document.getElementById('change-field-container');
   if (show) {
-    changeField.classList.remove('hidden');
+    if (changeField) changeField.classList.remove('hidden');
   } else {
-    changeField.classList.add('hidden');
+    if (changeField) changeField.classList.add('hidden');
   }
 }
 
@@ -560,8 +561,8 @@ async function submitFinalOrder() {
   const paymentChange = paymentMethod === 'dinheiro' ? document.getElementById('order-change').value.trim() : null;
 
   const subtotal = state.cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
-  const deliveryFee = state.deliveryType === 'entrega' ? config.deliveryFee : 0;
-  const total = subtotal + deliveryFee;
+  const deliveryFee = 0;
+  const total = subtotal;
 
   const btnSubmit = document.getElementById('btn-submit-order');
   btnSubmit.disabled = true;

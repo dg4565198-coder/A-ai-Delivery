@@ -411,13 +411,19 @@ function renderStockProducts() {
   container.innerHTML = products.map(prod => `
     <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
       <div class="flex items-center space-x-2.5">
-        <span class="text-2xl">${prod.icon || '🍧'}</span>
-        <div><h4 class="font-bold text-xs text-gray-800">${prod.name}</h4><span class="text-[11px] text-gray-500 font-semibold">${window.Store.formatCurrency(prod.price)}</span></div>
+        ${prod.image ? `<img src="${prod.image}" class="w-10 h-10 object-cover rounded-lg border border-purple-200">` : `<span class="text-2xl">${prod.icon || '🍧'}</span>`}
+        <div>
+          <h4 class="font-bold text-xs text-gray-800">${prod.name}</h4>
+          <span class="text-[11px] text-gray-500 font-semibold">${window.Store.formatCurrency(prod.price)}</span>
+        </div>
       </div>
-      <label class="relative inline-flex items-center cursor-pointer">
-        <input type="checkbox" ${prod.available ? 'checked' : ''} onchange="toggleProductAvailability('${prod.id}')" class="sr-only peer">
-        <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-      </label>
+      <div class="flex items-center space-x-2">
+        <button onclick="openEditModal('product', '${prod.id}')" title="Editar item" class="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs font-bold transition">✏️</button>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" ${prod.available ? 'checked' : ''} onchange="toggleProductAvailability('${prod.id}')" class="sr-only peer">
+          <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+        </label>
+      </div>
     </div>`).join('');
 }
 
@@ -429,24 +435,30 @@ function toggleProductAvailability(id) {
 
 function renderStockAddons() {
   const container = document.getElementById('stock-addons-list');
-  const addons = window.Store.getPaidAddons();
-  container.innerHTML = addons.map(addon => `
+  const fruits = window.Store.getFruits();
+  container.innerHTML = fruits.map(fruit => `
     <div class="p-3 bg-amber-50/50 rounded-xl border border-amber-200 flex items-center justify-between">
       <div class="flex items-center space-x-2.5">
-        <span class="text-xl">${addon.icon || '✨'}</span>
-        <div><h4 class="font-bold text-xs text-gray-800">${addon.name}</h4><span class="text-[11px] text-amber-700 font-semibold">+ ${window.Store.formatCurrency(addon.price)}</span></div>
+        ${fruit.image ? `<img src="${fruit.image}" class="w-10 h-10 object-cover rounded-lg border border-amber-200">` : `<span class="text-xl">${fruit.icon || '🍓'}</span>`}
+        <div>
+          <h4 class="font-bold text-xs text-gray-800">${fruit.name}</h4>
+          <span class="text-[11px] text-amber-700 font-semibold">Fruta Inclusa</span>
+        </div>
       </div>
-      <label class="relative inline-flex items-center cursor-pointer">
-        <input type="checkbox" ${addon.available ? 'checked' : ''} onchange="toggleAddonAvailability('${addon.id}')" class="sr-only peer">
-        <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-      </label>
+      <div class="flex items-center space-x-2">
+        <button onclick="openEditModal('fruit', '${fruit.id}')" title="Editar item" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition">✏️</button>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" ${fruit.available ? 'checked' : ''} onchange="toggleFruitAvailability('${fruit.id}')" class="sr-only peer">
+          <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+        </label>
+      </div>
     </div>`).join('');
 }
 
-function toggleAddonAvailability(id) {
-  const addons = window.Store.getPaidAddons();
-  const addon = addons.find(a => a.id === id);
-  if (addon) { addon.available = !addon.available; window.Store.savePaidAddons(addons); renderStockAddons(); }
+function toggleFruitAvailability(id) {
+  const fruits = window.Store.getFruits();
+  const fruit = fruits.find(a => a.id === id);
+  if (fruit) { fruit.available = !fruit.available; window.Store.saveFruits(fruits); renderStockAddons(); }
 }
 
 function renderStockToppings() {
@@ -454,11 +466,20 @@ function renderStockToppings() {
   const toppings = window.Store.getFreeToppings();
   container.innerHTML = toppings.map(top => `
     <div class="p-3 bg-emerald-50/50 rounded-xl border border-emerald-200 flex items-center justify-between">
-      <div><h4 class="font-bold text-xs text-gray-800">${top.name}</h4><span class="text-[11px] text-emerald-700 font-semibold">Grátis</span></div>
-      <label class="relative inline-flex items-center cursor-pointer">
-        <input type="checkbox" ${top.available ? 'checked' : ''} onchange="toggleToppingAvailability('${top.id}')" class="sr-only peer">
-        <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-      </label>
+      <div class="flex items-center space-x-2.5">
+        ${top.image ? `<img src="${top.image}" class="w-10 h-10 object-cover rounded-lg border border-emerald-200">` : `<span class="text-xl">${top.icon || '🥣'}</span>`}
+        <div>
+          <h4 class="font-bold text-xs text-gray-800">${top.name}</h4>
+          <span class="text-[11px] text-emerald-700 font-semibold">Grátis</span>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="openEditModal('topping', '${top.id}')" title="Editar item" class="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold transition">✏️</button>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" ${top.available ? 'checked' : ''} onchange="toggleToppingAvailability('${top.id}')" class="sr-only peer">
+          <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+        </label>
+      </div>
     </div>`).join('');
 }
 
@@ -466,6 +487,173 @@ function toggleToppingAvailability(id) {
   const toppings = window.Store.getFreeToppings();
   const top = toppings.find(t => t.id === id);
   if (top) { top.available = !top.available; window.Store.saveFreeToppings(toppings); renderStockToppings(); }
+}
+
+let currentEditItem = null;
+
+function openEditModal(type, id) {
+  let item = null;
+  if (type === 'product') {
+    item = window.Store.getProducts().find(p => p.id === id);
+  } else if (type === 'fruit') {
+    item = window.Store.getFruits().find(f => f.id === id);
+  } else if (type === 'topping') {
+    item = window.Store.getFreeToppings().find(t => t.id === id);
+  }
+
+  if (!item) return;
+
+  currentEditItem = { type, id, image: item.image || '' };
+
+  document.getElementById('edit-item-type').value = type;
+  document.getElementById('edit-item-id').value = id;
+  document.getElementById('edit-item-name').value = item.name || '';
+  document.getElementById('edit-item-price').value = item.price || 0;
+
+  const limitsContainer = document.getElementById('edit-item-limits-container');
+  if (type === 'product' && item.allowsCustomization) {
+    limitsContainer.classList.remove('hidden');
+    document.getElementById('edit-item-fruit-limit').value = item.freeFruitLimit || 3;
+    document.getElementById('edit-item-topping-limit').value = item.freeToppingLimit || 3;
+  } else {
+    limitsContainer.classList.add('hidden');
+  }
+
+  const previewDiv = document.getElementById('edit-item-image-preview');
+  const previewImg = document.getElementById('preview-img-src');
+  if (item.image) {
+    previewImg.src = item.image;
+    previewDiv.classList.remove('hidden');
+  } else {
+    previewImg.src = '';
+    previewDiv.classList.add('hidden');
+  }
+
+  document.getElementById('edit-item-photo').value = '';
+  document.getElementById('edit-item-modal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-item-modal').classList.add('hidden');
+  currentEditItem = null;
+}
+
+function resizeImageFile(file, maxWidth, maxHeight, callback) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth || height > maxHeight) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      let quality = 0.8;
+      let dataUrl = canvas.toDataURL('image/jpeg', quality);
+      
+      while (dataUrl.length > 270000 && quality > 0.3) {
+        quality -= 0.1;
+        dataUrl = canvas.toDataURL('image/jpeg', quality);
+      }
+
+      callback(dataUrl);
+    };
+    img.onerror = function() {
+      callback(null);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleSaveItemEdit(e) {
+  e.preventDefault();
+  if (!currentEditItem) return;
+
+  const type = document.getElementById('edit-item-type').value;
+  const id = document.getElementById('edit-item-id').value;
+  const newName = document.getElementById('edit-item-name').value.trim();
+  const newPrice = parseFloat(document.getElementById('edit-item-price').value) || 0;
+  const fileInput = document.getElementById('edit-item-photo');
+
+  let base64Image = currentEditItem.image;
+
+  if (fileInput.files && fileInput.files[0]) {
+    const file = fileInput.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      alert("O arquivo selecionado é muito grande. Escolha uma imagem menor.");
+      return;
+    }
+
+    base64Image = await new Promise(resolve => {
+      resizeImageFile(file, 800, 800, function(dataUrl) {
+        resolve(dataUrl);
+      });
+    });
+
+    if (!base64Image) {
+      alert("Erro ao processar imagem. Tente outra foto.");
+      return;
+    }
+
+    if (base64Image.length > 270000) {
+      alert("A imagem selecionada é muito pesada mesmo após otimização (máx. 200 KB). Por favor escolha uma foto com menor resolução.");
+      return;
+    }
+  } else if (!base64Image) {
+    alert("A foto do item é obrigatória ao editar! Por favor selecione uma imagem.");
+    return;
+  }
+
+  if (type === 'product') {
+    const products = window.Store.getProducts();
+    const prod = products.find(p => p.id === id);
+    if (prod) {
+      prod.name = newName;
+      prod.price = newPrice;
+      prod.image = base64Image;
+      if (prod.allowsCustomization) {
+        prod.freeFruitLimit = parseInt(document.getElementById('edit-item-fruit-limit').value) || 3;
+        prod.freeToppingLimit = parseInt(document.getElementById('edit-item-topping-limit').value) || 3;
+      }
+      window.Store.saveProducts(products);
+    }
+  } else if (type === 'fruit') {
+    const fruits = window.Store.getFruits();
+    const fruit = fruits.find(f => f.id === id);
+    if (fruit) {
+      fruit.name = newName;
+      fruit.price = newPrice;
+      fruit.image = base64Image;
+      window.Store.saveFruits(fruits);
+    }
+  } else if (type === 'topping') {
+    const toppings = window.Store.getFreeToppings();
+    const top = toppings.find(t => t.id === id);
+    if (top) {
+      top.name = newName;
+      top.image = base64Image;
+      window.Store.saveFreeToppings(toppings);
+    }
+  }
+
+  closeEditModal();
+  renderStockManagement();
+  alert("✅ Item atualizado com sucesso!");
 }
 
 // ==========================================================================
@@ -550,5 +738,9 @@ window.openReceiptModal = openReceiptModal;
 window.closeReceiptModal = closeReceiptModal;
 window.toggleProductAvailability = toggleProductAvailability;
 window.toggleAddonAvailability = toggleAddonAvailability;
+window.toggleFruitAvailability = toggleFruitAvailability;
 window.toggleToppingAvailability = toggleToppingAvailability;
+window.openEditModal = openEditModal;
+window.closeEditModal = closeEditModal;
+window.handleSaveItemEdit = handleSaveItemEdit;
 window.saveStoreSettings = saveStoreSettings;

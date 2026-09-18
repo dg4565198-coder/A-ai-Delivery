@@ -23,10 +23,10 @@ const FIREBASE_CONFIG = {
 // ==========================================
 const STORAGE_KEYS = {
   CONFIG: 'rotta_config',
-  PRODUCTS: 'rotta_products',
-  BASES: 'rotta_bases',
-  FREE_TOPPINGS: 'rotta_free_toppings',
-  PAID_ADDONS: 'rotta_paid_addons'
+  PRODUCTS: 'rotta_products_v4',
+  BASES: 'rotta_bases_v4',
+  FREE_TOPPINGS: 'rotta_free_toppings_v4',
+  FRUITS: 'rotta_fruits_v4'
 };
 
 const DEFAULT_CONFIG = {
@@ -35,23 +35,21 @@ const DEFAULT_CONFIG = {
   phone: '5511999999999',
   pixKey: 'rotta.acai.pix@gmail.com (Chave E-mail ou Celular)',
   pixReceiver: 'Rotta do Açaí',
-  deliveryFee: 6.00,
-  minOrder: 15.00,
   estimatedTime: '30 a 50 min',
   isOpen: true,
   address: 'Rua Principal, 123 - Centro'
 };
 
 const DEFAULT_PRODUCTS = [
-  { id: 'copo-300', name: 'Copo Tradicional 300ml', category: 'copos', price: 16.00, description: 'Tamanho ideal para matar a vontade. Inclui até 3 acompanhamentos tradicionais grátis!', freeToppingLimit: 3, allowsCustomization: true, available: true, badge: 'Popular', icon: '🍧' },
-  { id: 'copo-500', name: 'Copo Tradicional 500ml', category: 'copos', price: 22.00, description: 'O queridinho da galera! Muito sabor e cremosidade. Inclui até 3 acompanhamentos grátis!', freeToppingLimit: 3, allowsCustomization: true, available: true, badge: 'Mais Pedido ⭐', icon: '🍧' },
-  { id: 'copo-700', name: 'Copo Gigante 700ml', category: 'copos', price: 28.00, description: 'Para quem ama açaí de verdade! Acompanha até 4 opções tradicionais grátis.', freeToppingLimit: 4, allowsCustomization: true, available: true, badge: 'Top!', icon: '🍨' },
-  { id: 'pote-1000', name: 'Pote Família 1 Litro', category: 'copos', price: 38.00, description: 'Açaí super cremoso para dividir com quem você ama. Inclui até 5 acompanhamentos grátis!', freeToppingLimit: 5, allowsCustomization: true, available: true, badge: 'Família', icon: '🪣' },
-  { id: 'barca-especial', name: 'Barca Especial Rotta (1,2kg)', category: 'especiais', price: 49.90, description: 'Barca recheada com açaí, morangos frescos, Nutella pura, banana fatiada, leite ninho e bombom!', freeToppingLimit: 5, allowsCustomization: true, available: true, badge: 'Gourmet 🍫', icon: '⛵' },
-  { id: 'roletta-degustacao', name: 'Roleta de Sabores Rotta', category: 'especiais', price: 56.00, description: '6 potinhos com açaí e 5 coberturas diferentes para você montar como quiser!', freeToppingLimit: 4, allowsCustomization: true, available: true, badge: 'Novidade', icon: '🎡' },
-  { id: 'bebida-agua', name: 'Água Mineral sem Gás 500ml', category: 'bebidas', price: 4.00, description: 'Garrafinha 500ml gelada.', allowsCustomization: false, available: true, icon: '💧' },
-  { id: 'bebida-refri', name: 'Refrigerante em Lata 350ml', category: 'bebidas', price: 6.00, description: 'Coca-Cola, Guaraná Antarctica ou Fanta geladinhos.', allowsCustomization: false, available: true, icon: '🥤' },
-  { id: 'suco-laranja', name: 'Suco Natural de Laranja 400ml', category: 'bebidas', price: 9.00, description: '100% fruta natural feito na hora.', allowsCustomization: false, available: true, icon: '🍊' }
+  { id: 'copo-300', name: 'Copo Tradicional 300ml', category: 'copos', price: 16.00, description: 'Tamanho ideal para matar a vontade. Inclui até 3 frutas e 3 complementos!', freeFruitLimit: 3, freeToppingLimit: 3, allowsCustomization: true, available: true, badge: 'Popular', icon: '🍧', image: '' },
+  { id: 'copo-500', name: 'Copo Tradicional 500ml', category: 'copos', price: 22.00, description: 'O queridinho da galera! Inclui até 3 frutas e 4 complementos!', freeFruitLimit: 3, freeToppingLimit: 4, allowsCustomization: true, available: true, badge: 'Mais Pedido ⭐', icon: '🍧', image: '' },
+  { id: 'copo-770', name: 'Copo Gigante 770ml', category: 'copos', price: 28.00, description: 'Para quem ama açaí de verdade! Acompanha até 3 frutas e 5 complementos.', freeFruitLimit: 3, freeToppingLimit: 5, allowsCustomization: true, available: true, badge: 'Top!', icon: '🍨', image: '' },
+  { id: 'pote-1000', name: 'Pote Família 1 Litro', category: 'copos', price: 38.00, description: 'Açaí super cremoso para dividir com quem você ama. Inclui até 3 frutas e 5 complementos!', freeFruitLimit: 3, freeToppingLimit: 5, allowsCustomization: true, available: true, badge: 'Família', icon: '🪣', image: '' },
+  { id: 'barca-especial', name: 'Barca Especial Rotta (1,2kg)', category: 'especiais', price: 49.90, description: 'Barca recheada com açaí. Escolha seus acompanhamentos!', freeFruitLimit: 5, freeToppingLimit: 5, allowsCustomization: true, available: true, badge: 'Gourmet 🍫', icon: '⛵', image: '' },
+  { id: 'roletta-degustacao', name: 'Roleta de Sabores Rotta', category: 'especiais', price: 56.00, description: '6 potinhos com açaí e coberturas diferentes!', freeFruitLimit: 4, freeToppingLimit: 4, allowsCustomization: true, available: true, badge: 'Novidade', icon: '🎡', image: '' },
+  { id: 'bebida-agua', name: 'Água Mineral sem Gás 500ml', category: 'bebidas', price: 4.00, description: 'Garrafinha 500ml gelada.', allowsCustomization: false, available: true, icon: '💧', image: '' },
+  { id: 'bebida-refri', name: 'Refrigerante em Lata 350ml', category: 'bebidas', price: 6.00, description: 'Coca-Cola, Guaraná Antarctica ou Fanta geladinhos.', allowsCustomization: false, available: true, icon: '🥤', image: '' },
+  { id: 'suco-laranja', name: 'Suco Natural de Laranja 400ml', category: 'bebidas', price: 9.00, description: '100% fruta natural feito na hora.', allowsCustomization: false, available: true, icon: '🍊', image: '' }
 ];
 
 const DEFAULT_BASES = [
@@ -62,41 +60,38 @@ const DEFAULT_BASES = [
   { id: 'base-zero', name: 'Açaí Zero Adição de Açúcar (Fit)', extraPrice: 2.50, available: true }
 ];
 
-const DEFAULT_FREE_TOPPINGS = [
-  { id: 'top-leite-po', name: 'Leite em Pó (Ninho)', available: true },
-  { id: 'top-leite-cond', name: 'Leite Condensado Moça', available: true },
-  { id: 'top-granola', name: 'Granola Tradicional Crocante', available: true },
-  { id: 'top-banana', name: 'Banana Fatiada Fresquinha', available: true },
-  { id: 'top-aveia', name: 'Aveia em Flocos Finos', available: true },
-  { id: 'top-pacoca', name: 'Farinha de Paçoca Doce', available: true },
-  { id: 'top-mel', name: 'Mel de Abelha Puro', available: true }
+const DEFAULT_FRUITS = [
+  { id: 'fruta-morango', name: 'Morango Fresco', available: true, icon: '🍓', image: '' },
+  { id: 'fruta-banana', name: 'Banana Fatiada', available: true, icon: '🍌', image: '' },
+  { id: 'fruta-kiwi', name: 'Kiwi em Fatias', available: true, icon: '🥝', image: '' },
+  { id: 'fruta-uva', name: 'Uva Sem Semente', available: true, icon: '🍇', image: '' },
+  { id: 'fruta-manga', name: 'Manga em Cubos', available: true, icon: '🥭', image: '' }
 ];
 
-const DEFAULT_PAID_ADDONS = [
-  { id: 'add-morango', name: 'Morango Fresco Selecionado', price: 4.50, available: true, icon: '🍓' },
-  { id: 'add-nutella', name: 'Nutella Ferrero Original', price: 5.50, available: true, icon: '🍫' },
-  { id: 'add-ouro-branco', name: 'Bombom Ouro Branco Picado', price: 3.50, available: true, icon: '🍬' },
-  { id: 'add-sonho-valsa', name: 'Bombom Sonho de Valsa Picado', price: 3.50, available: true, icon: '🍬' },
-  { id: 'add-kitkat', name: 'KitKat Picadinho Crocante', price: 4.00, available: true, icon: '🍫' },
-  { id: 'add-creme-ninho', name: 'Creme Trufado de Leite Ninho', price: 4.50, available: true, icon: '🥛' },
-  { id: 'add-gotas-choc', name: 'Gotas de Chocolate Nobre', price: 3.00, available: true, icon: '✨' },
-  { id: 'add-kiwi', name: 'Kiwi Fresco em Fatias', price: 4.00, available: true, icon: '🥝' },
-  { id: 'add-mms', name: 'Confetes de Chocolate (estilo M&M)', price: 3.00, available: true, icon: '🌈' },
-  { id: 'add-chocoball', name: 'Chocoball Crocante', price: 2.50, available: true, icon: '⚪' }
+const DEFAULT_FREE_TOPPINGS = [
+  { id: 'top-leite-po', name: 'Leite em Pó (Ninho)', available: true, image: '' },
+  { id: 'top-leite-cond', name: 'Leite Condensado Moça', available: true, image: '' },
+  { id: 'top-granola', name: 'Granola Tradicional Crocante', available: true, image: '' },
+  { id: 'top-aveia', name: 'Aveia em Flocos Finos', available: true, image: '' },
+  { id: 'top-pacoca', name: 'Farinha de Paçoca Doce', available: true, image: '' },
+  { id: 'top-mel', name: 'Mel de Abelha Puro', available: true, image: '' },
+  { id: 'top-chocoball', name: 'Chocoball Crocante', available: true, image: '' },
+  { id: 'top-gotas', name: 'Gotas de Chocolate Nobre', available: true, image: '' },
+  { id: 'top-confetes', name: 'Confetes de Chocolate', available: true, image: '' }
 ];
 
 // ==========================================
 // FIREBASE & STORE
 // ==========================================
 let _db = null;
-let _ordersCache = {}; // cache local dos pedidos
-let _orderCount = 0;   // contador para numerar pedidos
+let _ordersCache = {}; 
+let _orderCount = 0;   
 let _currentConfig = DEFAULT_CONFIG;
 let _stockCache = {
   products: null,
   bases: null,
   toppings: null,
-  addons: null
+  fruits: null
 };
 
 function getDB() {
@@ -129,7 +124,7 @@ window.Store = {
       if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(DEFAULT_PRODUCTS));
       if (!localStorage.getItem(STORAGE_KEYS.BASES)) localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(DEFAULT_BASES));
       if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(DEFAULT_FREE_TOPPINGS));
-      if (!localStorage.getItem(STORAGE_KEYS.PAID_ADDONS)) localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(DEFAULT_PAID_ADDONS));
+      if (!localStorage.getItem(STORAGE_KEYS.FRUITS)) localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(DEFAULT_FRUITS));
     } catch (e) {
       console.warn('LocalStorage inacessível:', e);
     }
@@ -225,20 +220,28 @@ window.Store = {
     if (db) db.ref('stock/toppings').set(toppings);
   },
 
-  getPaidAddons() {
-    if (_stockCache.addons && _stockCache.addons.length > 0) return _stockCache.addons;
+  getFruits() {
+    if (_stockCache.fruits && _stockCache.fruits.length > 0) return _stockCache.fruits;
     try {
-      const a = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAID_ADDONS));
+      const a = JSON.parse(localStorage.getItem(STORAGE_KEYS.FRUITS));
       if (Array.isArray(a) && a.length > 0) return a;
     } catch {}
-    return DEFAULT_PAID_ADDONS;
+    return DEFAULT_FRUITS;
+  },
+
+  saveFruits(fruits) {
+    _stockCache.fruits = fruits;
+    try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(fruits)); } catch {}
+    const db = getDB();
+    if (db) db.ref('stock/fruits').set(fruits);
+  },
+
+  getPaidAddons() {
+    return this.getFruits();
   },
 
   savePaidAddons(addons) {
-    _stockCache.addons = addons;
-    try { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(addons)); } catch {}
-    const db = getDB();
-    if (db) db.ref('stock/addons').set(addons);
+    return this.saveFruits(addons);
   },
 
   listenToStock(callback) {
@@ -251,7 +254,7 @@ window.Store = {
         if (data.products) { _stockCache.products = data.products; try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(data.products)); } catch {} }
         if (data.bases) { _stockCache.bases = data.bases; try { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(data.bases)); } catch {} }
         if (data.toppings) { _stockCache.toppings = data.toppings; try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(data.toppings)); } catch {} }
-        if (data.addons) { _stockCache.addons = data.addons; try { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(data.addons)); } catch {} }
+        if (data.fruits) { _stockCache.fruits = data.fruits; try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(data.fruits)); } catch {} }
         if (callback) callback();
       }
     });
@@ -280,7 +283,7 @@ window.Store = {
       paymentMethod: orderData.paymentMethod,
       paymentChange: orderData.paymentChange || null,
       subtotal: orderData.subtotal,
-      deliveryFee: orderData.deliveryFee,
+      deliveryFee: orderData.deliveryFee || 0,
       total: orderData.total,
       notes: orderData.notes || ''
     };
