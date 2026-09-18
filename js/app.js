@@ -559,7 +559,6 @@ async function submitFinalOrder() {
   const paymentMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'pix';
   const paymentChange = paymentMethod === 'dinheiro' ? document.getElementById('order-change').value.trim() : null;
 
-  const config = window.Store.getConfig();
   const subtotal = state.cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
   const deliveryFee = state.deliveryType === 'entrega' ? config.deliveryFee : 0;
   const total = subtotal + deliveryFee;
