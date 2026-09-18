@@ -578,6 +578,21 @@ function showSuccessOrderModal(order) {
   whatsappBtn.href = `https://api.whatsapp.com/send?phone=${config.phone}&text=${textMsg}`;
 
   document.getElementById('success-modal').classList.remove('hidden');
+
+  // Rastreio em tempo real via Firebase - status do pedido atualiza automaticamente
+  window.Store.listenToOrder(order.id, (updatedOrder) => {
+    const statusMap = {
+      novo: '⏳ Pedido recebido! Aguardando aceite da loja...',
+      preparo: '🥣 Seu açaí está sendo montado com muito carinho!',
+      entrega: '🛵 Seu açaí saiu para entrega! Fique atento à porta!',
+      concluido: '🎉 Pedido entregue! Bom apetite com a Rotta do Açaí!',
+      cancelado: '❌ Pedido cancelado pela loja. Entre em contato.'
+    };
+    const textElem = document.getElementById('confirmed-status-text');
+    if (textElem && updatedOrder.status) {
+      textElem.textContent = statusMap[updatedOrder.status] || 'Status atualizado!';
+    }
+  });
 }
 
 function copyPixKey() {
@@ -595,22 +610,8 @@ function closeSuccessModal() {
 }
 
 function setupSyncListener() {
-  window.Store.onSync(data => {
-    if (data.type === 'ORDER_STATUS_CHANGED' && data.payload?.id === state.lastCreatedOrderId) {
-      const status = data.payload.status;
-      const statusMap = {
-        novo: 'Pedido recebido pela loja!',
-        preparo: '🥣 Seu açaí está sendo montado com muito carinho!',
-        entrega: '🛵 Seu açaí saiu para entrega! Fique atento.',
-        concluido: '🎉 Pedido entregue! Bom apetite com a Rotta do Açaí!',
-        cancelado: '❌ Pedido cancelado pela loja.'
-      };
-      const textElem = document.getElementById('confirmed-status-text');
-      if (textElem) {
-        textElem.textContent = statusMap[status] || 'Status atualizado!';
-      }
-    }
-  });
+  // O rastreio é feito pelo Firebase após o pedido ser criado
+  // (veja showSuccessOrderModal -> window.Store.listenToOrder)
 }
 
 // Vincula funções globais

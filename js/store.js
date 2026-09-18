@@ -1,22 +1,38 @@
 /**
  * ROTTA DO AÇAÍ - STORE & DATA LAYER
- * Gerenciamento centralizado de dados, cardápio, estoque, pedidos e sincronização em tempo real.
+ * Versão 2.0 com Firebase Realtime Database para sincronização entre dispositivos.
+ * Pedidos em tempo real! Funciona de qualquer celular ou computador do mundo.
  */
 
+// ==========================================
+// CONFIGURAÇÃO DO FIREBASE (Google)
+// ==========================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAaHO4ZemS5SCw42SxC-ekHsHcW1nlazhg",
+  authDomain: "rotta-do-acai.firebaseapp.com",
+  databaseURL: "https://rotta-do-acai-default-rtdb.firebaseio.com",
+  projectId: "rotta-do-acai",
+  storageBucket: "rotta-do-acai.firebasestorage.app",
+  messagingSenderId: "974745460161",
+  appId: "1:974745460161:web:92ff4dfbde68f1cecb2340",
+  measurementId: "G-VB785L6695"
+};
+
+// ==========================================
+// DADOS ESTÁTICOS (LocalStorage - não precisam de sync entre devices)
+// ==========================================
 const STORAGE_KEYS = {
   CONFIG: 'rotta_config',
   PRODUCTS: 'rotta_products',
   BASES: 'rotta_bases',
   FREE_TOPPINGS: 'rotta_free_toppings',
-  PAID_ADDONS: 'rotta_paid_addons',
-  ORDERS: 'rotta_orders'
+  PAID_ADDONS: 'rotta_paid_addons'
 };
 
-// Configurações Padrão da Loja
 const DEFAULT_CONFIG = {
   name: 'Rotta do Açaí',
   slogan: 'O sabor que conquista seu dia!',
-  phone: '5511999999999', // WhatsApp da Loja
+  phone: '5511999999999',
   pixKey: 'rotta.acai.pix@gmail.com (Chave E-mail ou Celular)',
   pixReceiver: 'Rotta do Açaí',
   deliveryFee: 6.00,
@@ -26,113 +42,18 @@ const DEFAULT_CONFIG = {
   address: 'Rua Principal, 123 - Centro'
 };
 
-// Produtos Iniciais
 const DEFAULT_PRODUCTS = [
-  {
-    id: 'copo-300',
-    name: 'Copo Tradicional 300ml',
-    category: 'copos',
-    price: 16.00,
-    description: 'Tamanho ideal para matar a vontade. Inclui até 3 acompanhamentos tradicionais grátis!',
-    freeToppingLimit: 3,
-    allowsCustomization: true,
-    available: true,
-    badge: 'Popular',
-    icon: '🍧'
-  },
-  {
-    id: 'copo-500',
-    name: 'Copo Tradicional 500ml',
-    category: 'copos',
-    price: 22.00,
-    description: 'O queridinho da galera! Muito sabor e cremosidade. Inclui até 3 acompanhamentos grátis!',
-    freeToppingLimit: 3,
-    allowsCustomization: true,
-    available: true,
-    badge: 'Mais Pedido ⭐',
-    icon: '🍧'
-  },
-  {
-    id: 'copo-700',
-    name: 'Copo Gigante 700ml',
-    category: 'copos',
-    price: 28.00,
-    description: 'Para quem ama açaí de verdade! Acompanha até 4 opções tradicionais grátis.',
-    freeToppingLimit: 4,
-    allowsCustomization: true,
-    available: true,
-    badge: 'Top!',
-    icon: '🍨'
-  },
-  {
-    id: 'pote-1000',
-    name: 'Pote Família 1 Litro',
-    category: 'copos',
-    price: 38.00,
-    description: 'Açaí super cremoso para dividir com quem você ama. Inclui até 5 acompanhamentos grátis!',
-    freeToppingLimit: 5,
-    allowsCustomization: true,
-    available: true,
-    badge: 'Família',
-    icon: '🪣'
-  },
-  {
-    id: 'barca-especial',
-    name: 'Barca Especial Rotta (1,2kg)',
-    category: 'especiais',
-    price: 49.90,
-    description: 'Barca recheada com açaí, morangos frescos, Nutella pura, banana fatiada, leite ninho e bombom!',
-    freeToppingLimit: 5,
-    allowsCustomization: true,
-    available: true,
-    badge: 'Gourmet 🍫',
-    icon: '⛵'
-  },
-  {
-    id: 'roletta-degustacao',
-    name: 'Roleta de Sabores Rotta',
-    category: 'especiais',
-    price: 56.00,
-    description: '6 potinhos com açaí e 5 coberturas diferentes para você montar como quiser!',
-    freeToppingLimit: 4,
-    allowsCustomization: true,
-    available: true,
-    badge: 'Novidade',
-    icon: '🎡'
-  },
-  {
-    id: 'bebida-agua',
-    name: 'Água Mineral sem Gás 500ml',
-    category: 'bebidas',
-    price: 4.00,
-    description: 'Garrafinha 500ml gelada.',
-    allowsCustomization: false,
-    available: true,
-    icon: '💧'
-  },
-  {
-    id: 'bebida-refri',
-    name: 'Refrigerante em Lata 350ml',
-    category: 'bebidas',
-    price: 6.00,
-    description: 'Coca-Cola, Guaraná Antarctica ou Fanta geladinhos.',
-    allowsCustomization: false,
-    available: true,
-    icon: '🥤'
-  },
-  {
-    id: 'suco-laranja',
-    name: 'Suco Natural de Laranja 400ml',
-    category: 'bebidas',
-    price: 9.00,
-    description: '100% fruta natural feito na hora.',
-    allowsCustomization: false,
-    available: true,
-    icon: '🍊'
-  }
+  { id: 'copo-300', name: 'Copo Tradicional 300ml', category: 'copos', price: 16.00, description: 'Tamanho ideal para matar a vontade. Inclui até 3 acompanhamentos tradicionais grátis!', freeToppingLimit: 3, allowsCustomization: true, available: true, badge: 'Popular', icon: '🍧' },
+  { id: 'copo-500', name: 'Copo Tradicional 500ml', category: 'copos', price: 22.00, description: 'O queridinho da galera! Muito sabor e cremosidade. Inclui até 3 acompanhamentos grátis!', freeToppingLimit: 3, allowsCustomization: true, available: true, badge: 'Mais Pedido ⭐', icon: '🍧' },
+  { id: 'copo-700', name: 'Copo Gigante 700ml', category: 'copos', price: 28.00, description: 'Para quem ama açaí de verdade! Acompanha até 4 opções tradicionais grátis.', freeToppingLimit: 4, allowsCustomization: true, available: true, badge: 'Top!', icon: '🍨' },
+  { id: 'pote-1000', name: 'Pote Família 1 Litro', category: 'copos', price: 38.00, description: 'Açaí super cremoso para dividir com quem você ama. Inclui até 5 acompanhamentos grátis!', freeToppingLimit: 5, allowsCustomization: true, available: true, badge: 'Família', icon: '🪣' },
+  { id: 'barca-especial', name: 'Barca Especial Rotta (1,2kg)', category: 'especiais', price: 49.90, description: 'Barca recheada com açaí, morangos frescos, Nutella pura, banana fatiada, leite ninho e bombom!', freeToppingLimit: 5, allowsCustomization: true, available: true, badge: 'Gourmet 🍫', icon: '⛵' },
+  { id: 'roletta-degustacao', name: 'Roleta de Sabores Rotta', category: 'especiais', price: 56.00, description: '6 potinhos com açaí e 5 coberturas diferentes para você montar como quiser!', freeToppingLimit: 4, allowsCustomization: true, available: true, badge: 'Novidade', icon: '🎡' },
+  { id: 'bebida-agua', name: 'Água Mineral sem Gás 500ml', category: 'bebidas', price: 4.00, description: 'Garrafinha 500ml gelada.', allowsCustomization: false, available: true, icon: '💧' },
+  { id: 'bebida-refri', name: 'Refrigerante em Lata 350ml', category: 'bebidas', price: 6.00, description: 'Coca-Cola, Guaraná Antarctica ou Fanta geladinhos.', allowsCustomization: false, available: true, icon: '🥤' },
+  { id: 'suco-laranja', name: 'Suco Natural de Laranja 400ml', category: 'bebidas', price: 9.00, description: '100% fruta natural feito na hora.', allowsCustomization: false, available: true, icon: '🍊' }
 ];
 
-// Bases de Açaí
 const DEFAULT_BASES = [
   { id: 'base-trad', name: 'Açaí Tradicional Cremoso (Receita da Casa)', extraPrice: 0, available: true },
   { id: 'base-trufado', name: 'Açaí Trufado com Chocolate', extraPrice: 3.00, available: true },
@@ -141,7 +62,6 @@ const DEFAULT_BASES = [
   { id: 'base-zero', name: 'Açaí Zero Adição de Açúcar (Fit)', extraPrice: 2.50, available: true }
 ];
 
-// Acompanhamentos Grátis
 const DEFAULT_FREE_TOPPINGS = [
   { id: 'top-leite-po', name: 'Leite em Pó (Ninho)', available: true },
   { id: 'top-leite-cond', name: 'Leite Condensado Moça', available: true },
@@ -152,7 +72,6 @@ const DEFAULT_FREE_TOPPINGS = [
   { id: 'top-mel', name: 'Mel de Abelha Puro', available: true }
 ];
 
-// Adicionais Pagos (Gourmet / Extras)
 const DEFAULT_PAID_ADDONS = [
   { id: 'add-morango', name: 'Morango Fresco Selecionado', price: 4.50, available: true, icon: '🍓' },
   { id: 'add-nutella', name: 'Nutella Ferrero Original', price: 5.50, available: true, icon: '🍫' },
@@ -166,142 +85,91 @@ const DEFAULT_PAID_ADDONS = [
   { id: 'add-chocoball', name: 'Chocoball Crocante', price: 2.50, available: true, icon: '⚪' }
 ];
 
-// BroadcastChannel para sincronização instantânea entre abas
-const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rotta_do_acai_channel') : null;
+// ==========================================
+// FIREBASE & STORE
+// ==========================================
+let _db = null;
+let _ordersCache = {}; // cache local dos pedidos (preenchido pelo Firebase)
+let _orderCount = 0;   // contador para numerar pedidos
+
+function getDB() {
+  if (!_db) {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    } else {
+      firebase.app();
+    }
+    _db = firebase.database();
+  }
+  return _db;
+}
 
 window.Store = {
-  // Inicialização
+
+  // ---------- Inicialização ----------
   init() {
-    if (!localStorage.getItem(STORAGE_KEYS.CONFIG)) {
-      localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(DEFAULT_CONFIG));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
-      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(DEFAULT_PRODUCTS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.BASES)) {
-      localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(DEFAULT_BASES));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) {
-      localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(DEFAULT_FREE_TOPPINGS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.PAID_ADDONS)) {
-      localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(DEFAULT_PAID_ADDONS));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.ORDERS)) {
-      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify([]));
-    }
+    if (!localStorage.getItem(STORAGE_KEYS.CONFIG))       localStorage.setItem(STORAGE_KEYS.CONFIG,       JSON.stringify(DEFAULT_CONFIG));
+    if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS))     localStorage.setItem(STORAGE_KEYS.PRODUCTS,     JSON.stringify(DEFAULT_PRODUCTS));
+    if (!localStorage.getItem(STORAGE_KEYS.BASES))        localStorage.setItem(STORAGE_KEYS.BASES,        JSON.stringify(DEFAULT_BASES));
+    if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS))localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS,JSON.stringify(DEFAULT_FREE_TOPPINGS));
+    if (!localStorage.getItem(STORAGE_KEYS.PAID_ADDONS))  localStorage.setItem(STORAGE_KEYS.PAID_ADDONS,  JSON.stringify(DEFAULT_PAID_ADDONS));
+    // Inicializa conexão com Firebase
+    getDB();
   },
 
-  // Configurações
+  // ---------- Configurações (localStorage) ----------
   getConfig() {
-    this.init();
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG)) || DEFAULT_CONFIG;
-    } catch {
-      return DEFAULT_CONFIG;
-    }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG)) || DEFAULT_CONFIG; } catch { return DEFAULT_CONFIG; }
   },
-
   saveConfig(config) {
     localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(config));
-    this.broadcast('CONFIG_UPDATED', config);
   },
 
-  // Produtos
+  // ---------- Produtos (localStorage) ----------
   getProducts() {
-    this.init();
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS)) || DEFAULT_PRODUCTS;
-    } catch {
-      return DEFAULT_PRODUCTS;
-    }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS)) || DEFAULT_PRODUCTS; } catch { return DEFAULT_PRODUCTS; }
   },
+  saveProducts(products) { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products)); },
 
-  saveProducts(products) {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-    this.broadcast('PRODUCTS_UPDATED', products);
-  },
-
-  // Bases
+  // ---------- Bases (localStorage) ----------
   getBases() {
-    this.init();
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.BASES)) || DEFAULT_BASES;
-    } catch {
-      return DEFAULT_BASES;
-    }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.BASES)) || DEFAULT_BASES; } catch { return DEFAULT_BASES; }
   },
+  saveBases(bases) { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(bases)); },
 
-  saveBases(bases) {
-    localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(bases));
-    this.broadcast('BASES_UPDATED', bases);
-  },
-
-  // Acompanhamentos Grátis
+  // ---------- Acompanhamentos Grátis (localStorage) ----------
   getFreeToppings() {
-    this.init();
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) || DEFAULT_FREE_TOPPINGS;
-    } catch {
-      return DEFAULT_FREE_TOPPINGS;
-    }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) || DEFAULT_FREE_TOPPINGS; } catch { return DEFAULT_FREE_TOPPINGS; }
   },
+  saveFreeToppings(toppings) { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(toppings)); },
 
-  saveFreeToppings(toppings) {
-    localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(toppings));
-    this.broadcast('TOPPINGS_UPDATED', toppings);
-  },
-
-  // Adicionais Pagos
+  // ---------- Adicionais Pagos (localStorage) ----------
   getPaidAddons() {
-    this.init();
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.PAID_ADDONS)) || DEFAULT_PAID_ADDONS;
-    } catch {
-      return DEFAULT_PAID_ADDONS;
-    }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.PAID_ADDONS)) || DEFAULT_PAID_ADDONS; } catch { return DEFAULT_PAID_ADDONS; }
   },
+  savePaidAddons(addons) { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(addons)); },
 
-  savePaidAddons(addons) {
-    localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(addons));
-    this.broadcast('ADDONS_UPDATED', addons);
-  },
-
-  // Pedidos
-  getOrders() {
-    this.init();
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS)) || [];
-    } catch {
-      return [];
-    }
-  },
-
-  getOrderById(orderId) {
-    const orders = this.getOrders();
-    return orders.find(o => o.id === orderId);
-  },
+  // ==============================================
+  // PEDIDOS - 100% Firebase Realtime Database
+  // Funciona entre QUALQUER celular ou computador!
+  // ==============================================
 
   createOrder(orderData) {
-    const orders = this.getOrders();
+    const db = getDB();
     const now = new Date();
-    
-    // Gerar número de pedido sequencial amigável ex: #101
-    const nextNumber = 101 + orders.length;
-    const orderNumber = `#${nextNumber}`;
+    const orderNumber = '#' + (101 + _orderCount);
 
     const newOrder = {
-      id: 'ord_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
       orderNumber,
       createdAt: now.toISOString(),
       timeFormatted: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       dateFormatted: now.toLocaleDateString('pt-BR'),
-      status: 'novo', // 'novo' | 'preparo' | 'entrega' | 'concluido' | 'cancelado'
+      status: 'novo',
       customer: orderData.customer,
       items: orderData.items,
-      deliveryType: orderData.deliveryType, // 'entrega' | 'retirada'
+      deliveryType: orderData.deliveryType,
       address: orderData.address || null,
-      paymentMethod: orderData.paymentMethod, // 'pix' | 'cartao' | 'dinheiro'
+      paymentMethod: orderData.paymentMethod,
       paymentChange: orderData.paymentChange || null,
       subtotal: orderData.subtotal,
       deliveryFee: orderData.deliveryFee,
@@ -309,90 +177,136 @@ window.Store = {
       notes: orderData.notes || ''
     };
 
-    orders.unshift(newOrder); // Coloca o mais recente no topo
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+    // Salva no Firebase e obtém o ID gerado automaticamente
+    const ref = db.ref('orders').push();
+    newOrder.id = ref.key;
+    ref.set(newOrder);
 
-    // Notifica em tempo real a tela da lojista!
-    this.broadcast('NEW_ORDER', newOrder);
     return newOrder;
   },
 
   updateOrderStatus(orderId, newStatus) {
-    const orders = this.getOrders();
-    const orderIndex = orders.findIndex(o => o.id === orderId);
-    if (orderIndex !== -1) {
-      orders[orderIndex].status = newStatus;
-      orders[orderIndex].updatedAt = new Date().toISOString();
-      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-      this.broadcast('ORDER_STATUS_CHANGED', orders[orderIndex]);
-      return orders[orderIndex];
-    }
-    return null;
+    const db = getDB();
+    db.ref('orders/' + orderId).update({
+      status: newStatus,
+      updatedAt: new Date().toISOString()
+    });
   },
 
-  clearAllOrders() {
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify([]));
-    this.broadcast('ORDERS_CLEARED', {});
+  getOrderById(orderId) {
+    return _ordersCache[orderId] || null;
   },
 
-  // Sincronização Broadcast
-  broadcast(type, payload) {
-    if (channel) {
-      channel.postMessage({ type, payload, timestamp: Date.now() });
-    }
+  getOrdersArray() {
+    return Object.values(_ordersCache).sort((a, b) =>
+      new Date(b.createdAt) - new Date(a.createdAt)
+    );
   },
 
-  onSync(callback) {
-    if (channel) {
-      channel.onmessage = (event) => {
-        callback(event.data);
-      };
-    }
-    // Fallback para abas via storage event
-    window.addEventListener('storage', (e) => {
-      if (Object.values(STORAGE_KEYS).includes(e.key)) {
-        callback({ type: 'STORAGE_EVENT', key: e.key });
+  clearConcludedOrders() {
+    const db = getDB();
+    const toDelete = Object.values(_ordersCache).filter(o => o.status === 'concluido');
+    toDelete.forEach(order => {
+      db.ref('orders/' + order.id).remove();
+    });
+  },
+
+  // Escuta pedidos em TEMPO REAL do Firebase
+  // Usado pelo Painel da Loja para receber notificações instantâneas
+  listenToOrders(onNewOrder, onOrderChanged) {
+    const db = getDB();
+
+    // Primeiro carregamento: busca todos os pedidos existentes
+    db.ref('orders').once('value', snapshot => {
+      _ordersCache = {};
+      _orderCount = 0;
+      if (snapshot.exists()) {
+        snapshot.forEach(child => {
+          _ordersCache[child.key] = child.val();
+          _orderCount++;
+        });
+      }
+      // Chama com null para indicar carregamento inicial completo
+      if (onNewOrder) onNewOrder(null);
+    });
+
+    // Escuta novos pedidos em tempo real
+    db.ref('orders').on('child_added', snapshot => {
+      const order = snapshot.val();
+      const isNew = !_ordersCache[snapshot.key];
+      _ordersCache[snapshot.key] = order;
+      _orderCount = Object.keys(_ordersCache).length;
+
+      if (isNew && onNewOrder) {
+        onNewOrder(order);
+      }
+    });
+
+    // Escuta mudanças de status em tempo real
+    db.ref('orders').on('child_changed', snapshot => {
+      const order = snapshot.val();
+      _ordersCache[snapshot.key] = order;
+
+      if (onOrderChanged) {
+        onOrderChanged(order);
+      }
+    });
+
+    // Escuta remoções
+    db.ref('orders').on('child_removed', snapshot => {
+      delete _ordersCache[snapshot.key];
+      _orderCount = Object.keys(_ordersCache).length;
+      if (onOrderChanged) onOrderChanged(null);
+    });
+  },
+
+  // Escuta status de um pedido específico (usado na tela do cliente para rastreio)
+  listenToOrder(orderId, callback) {
+    const db = getDB();
+    db.ref('orders/' + orderId).on('value', snapshot => {
+      if (snapshot.exists() && callback) {
+        callback(snapshot.val());
       }
     });
   },
 
-  // Alerta Sonoro usando a Web Audio API nativa
+  stopListeningToOrder(orderId) {
+    const db = getDB();
+    db.ref('orders/' + orderId).off();
+  },
+
+  // Mantido para compatibilidade (não usado mais ativamente)
+  broadcast() {},
+  onSync() {},
+
+  // ---------- Áudio de Notificação (Web Audio API) ----------
   playNotificationSound() {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
-      
       const playTone = (freq, start, duration) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-
         gain.gain.setValueAtTime(0.35, ctx.currentTime + start);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-
         osc.connect(gain);
         gain.connect(ctx.destination);
-
         osc.start(ctx.currentTime + start);
         osc.stop(ctx.currentTime + start + duration);
       };
-
-      // Toque melódico alegre ("Plim-Plim-Plim!")
-      playTone(587.33, 0.0, 0.25); // D5
-      playTone(739.99, 0.15, 0.3); // F#5
-      playTone(880.00, 0.32, 0.6); // A5
+      playTone(587.33, 0.0, 0.25);
+      playTone(739.99, 0.15, 0.3);
+      playTone(880.00, 0.32, 0.6);
     } catch (e) {
-      console.warn('Som não pôde ser reproduzido automaticamente:', e);
+      console.warn('Áudio não disponível:', e);
     }
   },
 
-  // Formatador de Moeda R$
+  // ---------- Formatador de Moeda ----------
   formatCurrency(value) {
-    return Number(value || 0).toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    });
+    return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 };
