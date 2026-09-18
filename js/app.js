@@ -29,13 +29,19 @@ function setupSplashScreen() {
   const splash = document.getElementById('splash-screen');
   if (!splash) return;
 
-  // Animação de entrada estilo iFood: 2.2 segundos para exibição e fade out suave
-  setTimeout(() => {
+  const dismiss = () => {
     splash.classList.add('hidden-splash');
     setTimeout(() => {
       splash.style.display = 'none';
-    }, 800);
-  }, 2200);
+    }, 400);
+  };
+
+  // Se o usuário tocar ou clicar, fecha imediatamente
+  splash.addEventListener('click', dismiss);
+  splash.addEventListener('touchstart', dismiss, { passive: true });
+
+  // Fecha automaticamente após 1.5s
+  setTimeout(dismiss, 1500);
 }
 
 function renderStoreHeader() {
