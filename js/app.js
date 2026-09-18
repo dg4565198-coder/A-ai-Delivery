@@ -51,6 +51,15 @@ function renderStoreHeader() {
   const config = window.Store.getConfig();
   const statusBadge = document.getElementById('store-status-badge');
   const deliveryFee = document.getElementById('header-delivery-fee');
+  const deliveryTime = document.getElementById('header-delivery-time');
+  const minOrder = document.getElementById('header-min-order');
+  const storeName = document.getElementById('header-store-name');
+  const closedBanner = document.getElementById('store-closed-banner');
+  const headerWhatsApp = document.getElementById('header-whatsapp-btn');
+
+  if (storeName && config.name) {
+    storeName.textContent = config.name;
+  }
 
   if (statusBadge) {
     if (config.isOpen) {
@@ -62,8 +71,29 @@ function renderStoreHeader() {
     }
   }
 
+  if (closedBanner) {
+    if (config.isOpen) {
+      closedBanner.classList.add('hidden');
+    } else {
+      closedBanner.classList.remove('hidden');
+    }
+  }
+
   if (deliveryFee) {
     deliveryFee.textContent = window.Store.formatCurrency(config.deliveryFee);
+  }
+
+  if (deliveryTime && config.estimatedTime) {
+    deliveryTime.textContent = `Entrega rápida • ${config.estimatedTime}`;
+  }
+
+  if (minOrder && config.minOrder) {
+    minOrder.textContent = window.Store.formatCurrency(config.minOrder);
+  }
+
+  if (headerWhatsApp) {
+    const cleanPhone = window.Store.formatWhatsAppPhone(config.phone);
+    headerWhatsApp.href = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent('Olá! Gostaria de tirar dúvidas ou saber mais sobre o cardápio da Rotta do Açaí.')}`;
   }
 }
 
@@ -490,6 +520,12 @@ function togglePaymentChange(show) {
 // 5. ENVIO DO PEDIDO (DIRETO PARA O SISTEMA DA LOJA!)
 // ==========================================================================
 async function submitFinalOrder() {
+  const config = window.Store.getConfig();
+  if (config.isOpen === false) {
+    alert('A loja está FECHADA no momento e não está aceitando novos pedidos.\n\nPor favor, aguarde a reabertura para enviar seu pedido.');
+    return;
+  }
+
   const name = document.getElementById('order-customer-name').value.trim();
   const phone = document.getElementById('order-customer-phone').value.trim();
 
@@ -577,8 +613,9 @@ function showSuccessOrderModal(order) {
   }
 
   const whatsappBtn = document.getElementById('btn-whatsapp-optional');
+  const storeName = config.name || 'ROTTA DO AÇAÍ';
   const textMsg = encodeURIComponent(
-    `*NOVO PEDIDO ${order.orderNumber} - ROTTA DO AÇAÍ*\n\n` +
+    `*NOVO PEDIDO ${order.orderNumber} - ${storeName.toUpperCase()}*\n\n` +
     `Olá! Acabei de enviar meu pedido pelo Cardápio Digital.\n\n` +
     `👤 *Cliente:* ${order.customer.name}\n` +
     `📱 *Telefone:* ${order.customer.phone}\n` +
@@ -589,7 +626,8 @@ function showSuccessOrderModal(order) {
     `Aguardando meu pedido!`
   );
 
-  whatsappBtn.href = `https://api.whatsapp.com/send?phone=${config.phone}&text=${textMsg}`;
+  const cleanPhone = window.Store.formatWhatsAppPhone(config.phone);
+  whatsappBtn.href = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${textMsg}`;
 
   document.getElementById('success-modal').classList.remove('hidden');
 
@@ -624,8 +662,16 @@ function closeSuccessModal() {
 }
 
 function setupSyncListener() {
-  // O rastreio é feito pelo Firebase após o pedido ser criado
-  // (veja showSuccessOrderModal -> window.Store.listenToOrder)
+  // Sincronização em tempo real das configurações da loja (WhatsApp, Pix, Taxa, Aberto/Fechado)
+  window.Store.listenToConfig(config => {
+    renderStoreHeader();
+    updateCheckoutCalculations();
+  });
+
+  // Sincronização em tempo real do estoque (itens pausados/esgotados)
+  window.Store.listenToStock(() => {
+    renderProducts();
+  });
 }
 
 // Vincula funções globais

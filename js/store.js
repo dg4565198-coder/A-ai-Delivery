@@ -89,8 +89,15 @@ const DEFAULT_PAID_ADDONS = [
 // FIREBASE & STORE
 // ==========================================
 let _db = null;
-let _ordersCache = {}; // cache local dos pedidos (preenchido pelo Firebase)
+let _ordersCache = {}; // cache local dos pedidos
 let _orderCount = 0;   // contador para numerar pedidos
+let _currentConfig = DEFAULT_CONFIG;
+let _stockCache = {
+  products: null,
+  bases: null,
+  toppings: null,
+  addons: null
+};
 
 function getDB() {
   if (!_db) {
@@ -115,7 +122,10 @@ window.Store = {
   // ---------- Inicialização ----------
   init() {
     try {
-      if (!localStorage.getItem(STORAGE_KEYS.CONFIG)) localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(DEFAULT_CONFIG));
+      const savedCfg = localStorage.getItem(STORAGE_KEYS.CONFIG);
+      if (savedCfg) _currentConfig = { ...DEFAULT_CONFIG, ...JSON.parse(savedCfg) };
+      else localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(DEFAULT_CONFIG));
+
       if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(DEFAULT_PRODUCTS));
       if (!localStorage.getItem(STORAGE_KEYS.BASES)) localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(DEFAULT_BASES));
       if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(DEFAULT_FREE_TOPPINGS));
@@ -123,69 +133,128 @@ window.Store = {
     } catch (e) {
       console.warn('LocalStorage inacessível:', e);
     }
-    // Inicializa conexão com Firebase em background
+    // Inicializa conexão com Firebase
     getDB();
   },
 
-  // ---------- Configurações ----------
+  // ---------- Configurações (Sincronizadas via Firebase) ----------
   getConfig() {
-    try {
-      const cfg = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG));
-      return cfg && typeof cfg === 'object' ? cfg : DEFAULT_CONFIG;
-    } catch { return DEFAULT_CONFIG; }
-  },
-  saveConfig(config) {
-    try { localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(config)); } catch {}
+    return _currentConfig || DEFAULT_CONFIG;
   },
 
-  // ---------- Produtos (sempre retorna lista com itens) ----------
+  saveConfig(config) {
+    _currentConfig = { ...DEFAULT_CONFIG, ...config };
+    try { localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(_currentConfig)); } catch {}
+    const db = getDB();
+    if (db) {
+      return db.ref('config').set(_currentConfig);
+    }
+    return Promise.resolve();
+  },
+
+  listenToConfig(callback) {
+    const db = getDB();
+    if (!db) {
+      if (callback) callback(_currentConfig);
+      return;
+    }
+
+    db.ref('config').on('value', snapshot => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        _currentConfig = { ...DEFAULT_CONFIG, ...val };
+        try { localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(_currentConfig)); } catch {}
+        if (callback) callback(_currentConfig);
+      } else {
+        // Se ainda não existir no Firebase, inicializa com o atual
+        db.ref('config').set(_currentConfig);
+        if (callback) callback(_currentConfig);
+      }
+    }, error => {
+      console.warn('Erro no listener de config do Firebase:', error);
+      if (callback) callback(_currentConfig);
+    });
+  },
+
+  // ---------- Estoque & Cardápio (Sincronizados via Firebase) ----------
   getProducts() {
+    if (_stockCache.products && _stockCache.products.length > 0) return _stockCache.products;
     try {
       const p = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS));
       if (Array.isArray(p) && p.length > 0) return p;
-      return DEFAULT_PRODUCTS;
-    } catch {
-      return DEFAULT_PRODUCTS;
-    }
-  },
-  saveProducts(products) {
-    try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products)); } catch {}
+    } catch {}
+    return DEFAULT_PRODUCTS;
   },
 
-  // ---------- Bases ----------
+  saveProducts(products) {
+    _stockCache.products = products;
+    try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products)); } catch {}
+    const db = getDB();
+    if (db) db.ref('stock/products').set(products);
+  },
+
   getBases() {
+    if (_stockCache.bases && _stockCache.bases.length > 0) return _stockCache.bases;
     try {
       const b = JSON.parse(localStorage.getItem(STORAGE_KEYS.BASES));
       if (Array.isArray(b) && b.length > 0) return b;
-      return DEFAULT_BASES;
-    } catch { return DEFAULT_BASES; }
-  },
-  saveBases(bases) {
-    try { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(bases)); } catch {}
+    } catch {}
+    return DEFAULT_BASES;
   },
 
-  // ---------- Acompanhamentos Grátis ----------
+  saveBases(bases) {
+    _stockCache.bases = bases;
+    try { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(bases)); } catch {}
+    const db = getDB();
+    if (db) db.ref('stock/bases').set(bases);
+  },
+
   getFreeToppings() {
+    if (_stockCache.toppings && _stockCache.toppings.length > 0) return _stockCache.toppings;
     try {
       const f = JSON.parse(localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS));
       if (Array.isArray(f) && f.length > 0) return f;
-      return DEFAULT_FREE_TOPPINGS;
-    } catch { return DEFAULT_FREE_TOPPINGS; }
-  },
-  saveFreeToppings(toppings) {
-    try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(toppings)); } catch {}
+    } catch {}
+    return DEFAULT_FREE_TOPPINGS;
   },
 
-  // ---------- Adicionais Pagos ----------
+  saveFreeToppings(toppings) {
+    _stockCache.toppings = toppings;
+    try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(toppings)); } catch {}
+    const db = getDB();
+    if (db) db.ref('stock/toppings').set(toppings);
+  },
+
   getPaidAddons() {
+    if (_stockCache.addons && _stockCache.addons.length > 0) return _stockCache.addons;
     try {
       const a = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAID_ADDONS));
       if (Array.isArray(a) && a.length > 0) return a;
-      return DEFAULT_PAID_ADDONS;
-    } catch { return DEFAULT_PAID_ADDONS; }
+    } catch {}
+    return DEFAULT_PAID_ADDONS;
   },
+
   savePaidAddons(addons) {
+    _stockCache.addons = addons;
     try { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(addons)); } catch {}
+    const db = getDB();
+    if (db) db.ref('stock/addons').set(addons);
+  },
+
+  listenToStock(callback) {
+    const db = getDB();
+    if (!db) return;
+
+    db.ref('stock').on('value', snapshot => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        if (data.products) { _stockCache.products = data.products; try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(data.products)); } catch {} }
+        if (data.bases) { _stockCache.bases = data.bases; try { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(data.bases)); } catch {} }
+        if (data.toppings) { _stockCache.toppings = data.toppings; try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(data.toppings)); } catch {} }
+        if (data.addons) { _stockCache.addons = data.addons; try { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(data.addons)); } catch {} }
+        if (callback) callback();
+      }
+    });
   },
 
   // ==============================================
@@ -344,5 +413,15 @@ window.Store = {
   // ---------- Formatador de Moeda ----------
   formatCurrency(value) {
     return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  },
+
+  // ---------- Formatador de Telefone WhatsApp ----------
+  formatWhatsAppPhone(phone) {
+    if (!phone) return '5511999999999';
+    let clean = ('' + phone).replace(/\D/g, '');
+    if (clean.length === 10 || clean.length === 11) {
+      clean = '55' + clean;
+    }
+    return clean;
   }
 };

@@ -121,6 +121,17 @@ function setupFirebaseListener() {
       }
     }
   );
+
+  // Sincroniza status da loja e formulário de configurações em tempo real
+  window.Store.listenToConfig(cfg => {
+    updateStoreStatusButton();
+    loadConfigForm();
+  });
+
+  // Sincroniza estoque em tempo real
+  window.Store.listenToStock(() => {
+    renderStockManagement();
+  });
 }
 
 function showNewOrderNotification(order) {
@@ -505,11 +516,16 @@ function saveStoreSettings(e) {
   e.preventDefault();
   const config = window.Store.getConfig();
   config.name = document.getElementById('cfg-name').value.trim();
-  config.phone = document.getElementById('cfg-phone').value.trim();
+  config.phone = window.Store.formatWhatsAppPhone(document.getElementById('cfg-phone').value.trim());
   config.pixKey = document.getElementById('cfg-pix').value.trim();
   config.deliveryFee = parseFloat(document.getElementById('cfg-delivery-fee').value) || 0;
   config.estimatedTime = document.getElementById('cfg-time').value.trim();
   config.address = document.getElementById('cfg-address').value.trim();
+  
+  // Atualiza o campo com o telefone formatado
+  document.getElementById('cfg-phone').value = config.phone;
+
+  // Salva no LocalStorage e no Firebase Realtime Database
   window.Store.saveConfig(config);
 
   const newUser = document.getElementById('cfg-username')?.value.trim();
@@ -518,7 +534,7 @@ function saveStoreSettings(e) {
     localStorage.setItem(CREDS_KEY, JSON.stringify({ user: newUser, pass: newPass }));
   }
 
-  alert('Configurações e dados de acesso salvos com sucesso!');
+  alert('✅ Configurações salvas com sucesso!\n\nO número de WhatsApp (' + config.phone + '), Chave Pix, Taxa de Entrega e Horário já foram sincronizados em tempo real com todos os clientes!');
 }
 
 // Vincula funções globais
