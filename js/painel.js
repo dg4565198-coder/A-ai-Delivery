@@ -6,10 +6,56 @@
 let currentViewingOrder = null;
 let _firstLoad = true; // controla se é o carregamento inicial (sem tocar alarme)
 
-// ==========================================================================
-// 1. INICIALIZAÇÃO
-// ==========================================================================
+const AUTH_SESSION_KEY = 'rotta_panel_session';
+const CREDS_KEY = 'rotta_panel_creds';
+
+function getPanelCredentials() {
+  try {
+    const creds = JSON.parse(localStorage.getItem(CREDS_KEY));
+    if (creds && creds.user && creds.pass) return creds;
+  } catch {}
+  return { user: 'admin', pass: 'rotta123' };
+}
+
+function handlePanelLogin(e) {
+  if (e) e.preventDefault();
+  const userInput = document.getElementById('login-username').value.trim();
+  const passInput = document.getElementById('login-password').value.trim();
+  const errorMsg = document.getElementById('login-error-msg');
+  const creds = getPanelCredentials();
+
+  if (userInput === creds.user && passInput === creds.pass) {
+    sessionStorage.setItem(AUTH_SESSION_KEY, 'true');
+    const modal = document.getElementById('login-modal');
+    if (modal) modal.classList.add('hidden');
+    if (errorMsg) errorMsg.classList.add('hidden');
+    runPainelApp();
+  } else {
+    if (errorMsg) errorMsg.classList.remove('hidden');
+  }
+}
+
+function handlePanelLogout() {
+  if (confirm('Deseja realmente sair do Painel da Loja?')) {
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    window.location.reload();
+  }
+}
+
 function startPainel() {
+  const isLogged = sessionStorage.getItem(AUTH_SESSION_KEY) === 'true';
+  const modal = document.getElementById('login-modal');
+
+  if (!isLogged) {
+    if (modal) modal.classList.remove('hidden');
+    return;
+  }
+
+  if (modal) modal.classList.add('hidden');
+  runPainelApp();
+}
+
+function runPainelApp() {
   try { window.Store.init(); } catch (e) { console.error('Store init:', e); }
   try { updateStoreStatusButton(); } catch (e) { console.error('Status:', e); }
   try { renderStockManagement(); } catch (e) { console.error('Stock:', e); }
@@ -442,6 +488,12 @@ function loadConfigForm() {
   document.getElementById('cfg-delivery-fee').value = config.deliveryFee || 6.00;
   document.getElementById('cfg-time').value = config.estimatedTime || '';
   document.getElementById('cfg-address').value = config.address || '';
+
+  const creds = getPanelCredentials();
+  const userField = document.getElementById('cfg-username');
+  const passField = document.getElementById('cfg-password');
+  if (userField) userField.value = creds.user;
+  if (passField) passField.value = creds.pass;
 }
 
 function saveStoreSettings(e) {
@@ -454,10 +506,19 @@ function saveStoreSettings(e) {
   config.estimatedTime = document.getElementById('cfg-time').value.trim();
   config.address = document.getElementById('cfg-address').value.trim();
   window.Store.saveConfig(config);
-  alert('Configurações salvas com sucesso!');
+
+  const newUser = document.getElementById('cfg-username')?.value.trim();
+  const newPass = document.getElementById('cfg-password')?.value.trim();
+  if (newUser && newPass) {
+    localStorage.setItem(CREDS_KEY, JSON.stringify({ user: newUser, pass: newPass }));
+  }
+
+  alert('Configurações e dados de acesso salvos com sucesso!');
 }
 
 // Vincula funções globais
+window.handlePanelLogin = handlePanelLogin;
+window.handlePanelLogout = handlePanelLogout;
 window.toggleStoreOpenStatus = toggleStoreOpenStatus;
 window.testAudioAlert = testAudioAlert;
 window.switchTab = switchTab;
