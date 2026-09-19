@@ -60,6 +60,7 @@ function runPainelApp() {
   try { renderStockManagement(); } catch (e) { console.error('Stock:', e); }
   try { renderFinancialMetrics(); } catch (e) { console.error('Metrics:', e); }
   try { loadConfigForm(); } catch (e) { console.error('Config:', e); }
+  try { loadHoursTab(); } catch (e) { console.error('Hours:', e); }
   try { setupFirebaseListener(); } catch (e) { console.error('Firebase:', e); }
 }
 
