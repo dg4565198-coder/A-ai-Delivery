@@ -150,13 +150,16 @@ function updateStoreStatusButton() {
   const config = window.Store.getConfig();
   const btn = document.getElementById('btn-toggle-store-status');
   const text = document.getElementById('store-status-text');
+  const tabStatusText = document.getElementById('hours-tab-store-status');
 
   if (config.isOpen) {
-    btn.className = "flex items-center space-x-2 px-3.5 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow transition";
-    text.textContent = "Loja Aberta";
+    if (btn) btn.className = "flex items-center space-x-2 px-3.5 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow transition";
+    if (text) text.textContent = "Loja Aberta";
+    if (tabStatusText) tabStatusText.textContent = "🟢 Loja Aberta";
   } else {
-    btn.className = "flex items-center space-x-2 px-3.5 py-1.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white shadow transition";
-    text.textContent = "Loja Fechada";
+    if (btn) btn.className = "flex items-center space-x-2 px-3.5 py-1.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white shadow transition";
+    if (text) text.textContent = "Loja Fechada";
+    if (tabStatusText) tabStatusText.textContent = "🔴 Loja Fechada";
   }
 }
 
@@ -168,10 +171,11 @@ function testAudioAlert() {
 // 4. NAVEGAÇÃO POR ABAS
 // ==========================================================================
 function switchTab(tabId) {
-  const tabs = ['kanban', 'estoque', 'caixa', 'config'];
+  const tabs = ['kanban', 'estoque', 'horarios', 'promocoes', 'caixa', 'config'];
   tabs.forEach(t => {
     const content = document.getElementById('tab-content-' + t);
     const btn = document.getElementById('tab-btn-' + t);
+    if (!content || !btn) return;
     if (t === tabId) {
       content.classList.remove('hidden');
       btn.className = "tab-button px-4 py-2 text-xs font-bold rounded-lg transition bg-acai-800 text-gold-400 flex items-center space-x-2";
@@ -183,6 +187,8 @@ function switchTab(tabId) {
 
   if (tabId === 'estoque') renderStockManagement();
   if (tabId === 'caixa') renderFinancialMetrics();
+  if (tabId === 'horarios') loadHoursTab();
+  if (tabId === 'promocoes') renderPromotionsHistory();
 }
 
 // ==========================================================================
@@ -728,6 +734,111 @@ function saveStoreSettings(e) {
   alert('✅ Configurações salvas com sucesso!');
 }
 
+// ==========================================================================
+// 10. HORÁRIOS DE FUNCIONAMENTO & PROMOÇÕES PUSH
+// ==========================================================================
+function loadHoursTab() {
+  const config = window.Store.getConfig();
+  const input = document.getElementById('cfg-hours-text');
+  if (input) input.value = config.businessHours || 'Terça a Domingo • 14:00 às 22:00';
+
+  const statusText = document.getElementById('hours-tab-store-status');
+  if (statusText) {
+    statusText.textContent = config.isOpen ? "🟢 Loja Aberta" : "🔴 Loja Fechada";
+  }
+}
+
+function handleSaveBusinessHours(e) {
+  e.preventDefault();
+  const text = document.getElementById('cfg-hours-text').value.trim();
+  const config = window.Store.getConfig();
+  config.businessHours = text;
+  window.Store.saveConfig(config);
+  alert("✅ Horário de funcionamento salvo com sucesso!");
+}
+
+async function handleSendInstantPromo(e) {
+  e.preventDefault();
+  const title = document.getElementById('promo-instant-title').value.trim();
+  const message = document.getElementById('promo-instant-msg').value.trim();
+
+  if (!title || !message) {
+    alert('Por favor, preencha o título e a mensagem da promoção.');
+    return;
+  }
+
+  try {
+    await window.Store.sendPromotion({ title, message });
+    document.getElementById('instant-promo-form').reset();
+    alert('🚀 Promoção enviada com sucesso em tempo real para todos os clientes!');
+    renderPromotionsHistory();
+  } catch (err) {
+    alert('Erro ao enviar promoção: ' + err.message);
+  }
+}
+
+async function handleSchedulePromo(e) {
+  e.preventDefault();
+  const title = document.getElementById('promo-sched-title').value.trim();
+  const message = document.getElementById('promo-sched-msg').value.trim();
+  const dateVal = document.getElementById('promo-sched-date').value;
+  const timeVal = document.getElementById('promo-sched-time').value;
+
+  if (!title || !message || !dateVal || !timeVal) {
+    alert('Por favor, preencha todos os campos do agendamento.');
+    return;
+  }
+
+  const scheduledTime = `${dateVal}T${timeVal}:00`;
+
+  try {
+    await window.Store.sendPromotion({ title, message, scheduledTime });
+    document.getElementById('scheduled-promo-form').reset();
+    alert(`⏰ Promoção agendada com sucesso para ${new Date(scheduledTime).toLocaleString('pt-BR')}!`);
+    renderPromotionsHistory();
+  } catch (err) {
+    alert('Erro ao agendar promoção: ' + err.message);
+  }
+}
+
+function renderPromotionsHistory() {
+  const container = document.getElementById('promotions-history-list');
+  if (!container) return;
+
+  const db = window.Store.getDB ? window.Store.getDB() : null;
+  if (!db) {
+    container.innerHTML = '<div class="text-gray-400 text-xs">Aguardando conexão com o Firebase...</div>';
+    return;
+  }
+
+  db.ref('promotions').once('value').then(snap => {
+    if (!snap.exists()) {
+      container.innerHTML = '<div class="text-gray-400 py-4 text-center">Nenhuma promoção enviada ou agendada ainda.</div>';
+      return;
+    }
+
+    const data = snap.val();
+    const list = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    container.innerHTML = list.map(p => `
+      <div class="bg-purple-50/70 p-3 rounded-xl border border-purple-100 flex items-start justify-between">
+        <div>
+          <div class="font-extrabold text-acai-900 flex items-center gap-2">
+            <span>📢 ${p.title}</span>
+            ${p.scheduledTime 
+              ? `<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold">⏰ Agendado para ${new Date(p.scheduledTime).toLocaleString('pt-BR')}</span>`
+              : `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">⚡ Disparado em ${p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : ''}</span>`
+            }
+          </div>
+          <p class="text-gray-600 mt-1 text-xs">${p.message}</p>
+        </div>
+      </div>
+    `).join('');
+  }).catch(err => {
+    container.innerHTML = `<div class="text-red-500 text-xs">Erro ao carregar histórico: ${err.message}</div>`;
+  });
+}
+
 window.handlePanelLogin = handlePanelLogin;
 window.handlePanelLogout = handlePanelLogout;
 window.toggleStoreOpenStatus = toggleStoreOpenStatus;
@@ -746,3 +857,7 @@ window.openEditModal = openEditModal;
 window.closeEditModal = closeEditModal;
 window.handleSaveItemEdit = handleSaveItemEdit;
 window.saveStoreSettings = saveStoreSettings;
+window.loadHoursTab = loadHoursTab;
+window.handleSaveBusinessHours = handleSaveBusinessHours;
+window.handleSendInstantPromo = handleSendInstantPromo;
+window.handleSchedulePromo = handleSchedulePromo;

@@ -34,7 +34,8 @@ const DEFAULT_CONFIG = {
   pixQrImage: 'assets/pix_qr.jpg',
   estimatedTime: '30 a 50 min',
   isOpen: true,
-  address: 'Rua Principal, 123 - Centro'
+  address: 'Rua Principal, 123 - Centro',
+  businessHours: 'Terça a Domingo - 14:00 às 22:00'
 };
 
 const DEFAULT_PRODUCTS = [
@@ -117,8 +118,39 @@ window.Store = {
     getDB();
   },
 
+  getDB() {
+    return getDB();
+  },
+
   getConfig() {
     return _currentConfig || DEFAULT_CONFIG;
+  },
+
+  sendPromotion(promoData) {
+    const db = getDB();
+    if (!db) return Promise.reject(new Error('Firebase não inicializado'));
+
+    const promoRef = db.ref('promotions').push();
+    const payload = {
+      id: promoRef.key,
+      title: promoData.title,
+      message: promoData.message,
+      scheduledTime: promoData.scheduledTime || null,
+      createdAt: Date.now()
+    };
+
+    return promoRef.set(payload);
+  },
+
+  listenToPromotions(callback) {
+    const db = getDB();
+    if (!db) return;
+
+    db.ref('promotions').on('child_added', snapshot => {
+      if (snapshot.exists() && callback) {
+        callback(snapshot.val());
+      }
+    });
   },
 
   saveConfig(config) {

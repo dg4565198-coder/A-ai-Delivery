@@ -25,6 +25,7 @@ function startApp() {
   try { setupSyncListener(); } catch (e) { console.error('Sync:', e); }
   try { setupPWAInstaller(); } catch (e) { console.error('PWA:', e); }
   try { setupOrderNotificationListeners(); } catch (e) { console.error('Notifications:', e); }
+  try { setupPromotionsListener(); } catch (e) { console.error('Promotions:', e); }
 }
 
 if (document.readyState === 'loading') {
@@ -105,6 +106,11 @@ function renderStoreHeader() {
 
   if (deliveryTime && config.estimatedTime) {
     deliveryTime.textContent = `Entrega rápida • ${config.estimatedTime}`;
+  }
+
+  const hoursElem = document.getElementById('hours-text');
+  if (hoursElem && config.businessHours) {
+    hoursElem.textContent = config.businessHours;
   }
 
   if (headerWhatsApp) {
@@ -1063,6 +1069,53 @@ function renderMyOrders() {
   });
 }
 
+// ==========================================================================
+// 8. PROMOÇÕES & NOTIFICAÇÕES INSTANTÂNEAS E AGENDADAS
+// ==========================================================================
+const _seenPromos = {};
+
+function setupPromotionsListener() {
+  window.Store.listenToPromotions(promo => {
+    if (!promo || !promo.id || _seenPromos[promo.id]) return;
+    _seenPromos[promo.id] = true;
+
+    if (promo.scheduledTime) {
+      const scheduledMs = new Date(promo.scheduledTime).getTime();
+      const nowMs = Date.now();
+      const delayMs = scheduledMs - nowMs;
+
+      if (delayMs > 0) {
+        setTimeout(() => {
+          triggerPromoNotification(promo);
+        }, delayMs);
+        return;
+      }
+    }
+
+    triggerPromoNotification(promo);
+  });
+}
+
+function triggerPromoNotification(promo) {
+  sendPushNotification(`📢 ${promo.title}`, promo.message);
+  try { window.Store.playNotificationSound(); } catch {}
+
+  const titleElem = document.getElementById('promo-modal-title');
+  const msgElem = document.getElementById('promo-modal-message');
+  const modal = document.getElementById('promo-modal');
+
+  if (titleElem && msgElem && modal) {
+    titleElem.textContent = promo.title;
+    msgElem.textContent = promo.message;
+    modal.classList.remove('hidden');
+  }
+}
+
+function closePromoModal() {
+  const modal = document.getElementById('promo-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
 // Funções Globais
 window.filterCategory = filterCategory;
 window.handleProductClick = handleProductClick;
@@ -1088,3 +1141,4 @@ window.addFavoriteToCart = addFavoriteToCart;
 window.deleteFavorite = deleteFavorite;
 window.openMyOrdersModal = openMyOrdersModal;
 window.closeMyOrdersModal = closeMyOrdersModal;
+window.closePromoModal = closePromoModal;
