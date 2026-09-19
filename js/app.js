@@ -152,7 +152,7 @@ function renderProducts() {
   const grid = document.getElementById('products-grid');
   if (!grid) return;
 
-  const products = window.Store.getProducts();
+  const products = window.Store.getProducts().filter(p => p.available);
   const filtered = state.activeCategory === 'todos' 
     ? products 
     : products.filter(p => p.category === state.activeCategory);
@@ -168,7 +168,7 @@ function renderProducts() {
   }
 
   grid.innerHTML = filtered.map(prod => `
-    <div class="product-card bg-white rounded-2xl p-4 border border-gray-200 shadow-sm flex flex-col justify-between relative overflow-hidden ${!prod.available ? 'opacity-60 grayscale' : ''}">
+    <div class="product-card bg-white rounded-2xl p-4 border border-gray-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
       ${prod.badge ? `<span class="absolute top-3 right-3 bg-gold-500 text-acai-950 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow-sm">${prod.badge}</span>` : ''}
       
       <div class="flex items-start space-x-3.5">
@@ -187,16 +187,10 @@ function renderProducts() {
           <span class="text-base font-extrabold text-acai-900">${window.Store.formatCurrency(prod.price)}</span>
         </div>
 
-        ${prod.available ? `
-          <button onclick="handleProductClick('${prod.id}')" class="bg-acai-700 hover:bg-acai-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition transform active:scale-95 flex items-center space-x-1.5">
-            <span>${prod.allowsCustomization ? 'Montar' : 'Adicionar'}</span>
-            <span class="text-gold-400 font-extrabold">+</span>
-          </button>
-        ` : `
-          <span class="bg-gray-200 text-gray-500 font-bold text-xs px-3 py-1.5 rounded-xl">
-            Esgotado
-          </span>
-        `}
+        <button onclick="handleProductClick('${prod.id}')" class="bg-acai-700 hover:bg-acai-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition transform active:scale-95 flex items-center space-x-1.5">
+          <span>${prod.allowsCustomization ? 'Montar' : 'Adicionar'}</span>
+          <span class="text-gold-400 font-extrabold">+</span>
+        </button>
       </div>
     </div>
   `).join('');
@@ -268,7 +262,6 @@ function renderBuilderFruits() {
           ${fruit.image ? `<img src="${fruit.image}" class="w-6 h-6 object-cover rounded">` : `<span class="text-base">${fruit.icon || '🍓'}</span>`}
           <span class="text-gray-800">${fruit.name}</span>
         </div>
-        <span class="text-[11px] text-emerald-700 font-bold">Grátis</span>
       </label>
     `;
   }).join('');
@@ -314,7 +307,6 @@ function renderBuilderFreeToppings() {
           ${top.image ? `<img src="${top.image}" class="w-6 h-6 object-cover rounded">` : `<span class="text-base">${top.icon || '🥣'}</span>`}
           <span class="text-gray-800">${top.name}</span>
         </div>
-        <span class="text-[11px] text-emerald-700 font-bold">Grátis</span>
       </label>
     `;
   }).join('');
@@ -770,6 +762,20 @@ function showSuccessOrderModal(order) {
     paymentText = `COMBINADO (Pix: ${window.Store.formatCurrency(order.pixAmount)} + Dinheiro: ${window.Store.formatCurrency(order.cashAmount)})`;
   }
 
+  let itemsText = (order.items || []).map(item => {
+    let lines = [`• *${item.quantity}x ${item.name}* (${window.Store.formatCurrency(item.unitPrice * item.quantity)})`];
+    if (item.fruits && item.fruits.length > 0) {
+      lines.push(`  🍓 *Frutas:* ${item.fruits.map(f => f.name).join(', ')}`);
+    }
+    if (item.freeToppings && item.freeToppings.length > 0) {
+      lines.push(`  🥣 *Complementos:* ${item.freeToppings.map(t => t.name).join(', ')}`);
+    }
+    if (item.notes) {
+      lines.push(`  📝 *Obs:* ${item.notes}`);
+    }
+    return lines.join('\n');
+  }).join('\n\n');
+
   const textMsg = encodeURIComponent(
     `*NOVO PEDIDO ${order.orderNumber} - ${storeName.toUpperCase()}*\n\n` +
     `Olá! Acabei de enviar meu pedido pelo Cardápio Digital.\n\n` +
@@ -777,9 +783,10 @@ function showSuccessOrderModal(order) {
     `📱 *Telefone:* ${order.customer.phone}\n` +
     `🛵 *Tipo:* ${order.deliveryType === 'entrega' ? 'Entrega em Casa' : 'Retirada no Balcão'}\n` +
     (order.address ? `📍 *Endereço:* ${order.address.street}, ${order.address.number} - ${order.address.neighborhood}\n` : '') +
-    `💳 *Pagamento:* ${paymentText}\n` +
-    `💰 *Total:* ${window.Store.formatCurrency(order.total)}\n\n` +
-    `Aguardando meu pedido!`
+    `💳 *Pagamento:* ${paymentText}\n\n` +
+    `📋 *ITENS DO PEDIDO:*\n${itemsText}\n\n` +
+    `💰 *TOTAL DO PEDIDO:* ${window.Store.formatCurrency(order.total)}\n\n` +
+    `Aguardando confirmação!`
   );
 
   const cleanPhone = window.Store.formatWhatsAppPhone(config.phone);

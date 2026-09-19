@@ -13,6 +13,9 @@
   <meta name="apple-mobile-web-app-title" content="Rotta Painel">
   <link rel="apple-touch-icon" href="assets/logo.jpg">
   
+  <!-- Chart.js para Gráficos de Vendas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -207,9 +210,12 @@
         <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
           <div>
             <h2 class="text-base font-extrabold text-gray-900">Gerenciador de Itens & Estoque</h2>
-            <p class="text-xs text-gray-500">Se algum ingrediente ou fruta acabar no dia, desative-o aqui com um clique.</p>
+            <p class="text-xs text-gray-500">Adicione novos itens, edite preços ou desative/exclua opções do cardápio.</p>
           </div>
-          <span class="text-xs font-bold text-acai-700 bg-purple-50 px-3 py-1 rounded-lg">Atualização Imediata</span>
+          <button onclick="openAddNewItemModal()" class="bg-gold-500 hover:bg-gold-400 text-acai-950 font-black text-xs px-4 py-2 rounded-xl shadow transition transform active:scale-95 flex items-center space-x-1.5">
+            <span>➕</span>
+            <span>Adicionar Novo Item</span>
+          </button>
         </div>
 
         <div class="space-y-6">
@@ -237,8 +243,10 @@
       </div>
     </div>
 
-    <!-- ABA 3: CAIXA DO DIA -->
+    <!-- ABA 3: CAIXA DO DIA E MÉTRICAS -->
     <div id="tab-content-caixa" class="hidden space-y-6">
+      
+      <!-- Cards Principais -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-gradient-to-br from-acai-800 to-acai-900 text-white p-5 rounded-2xl shadow-lg border border-acai-700">
           <span class="text-xs font-semibold text-purple-200 block uppercase tracking-wider">Faturamento Hoje</span>
@@ -249,7 +257,7 @@
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wider">Total de Pedidos</span>
           <span id="metric-orders-count" class="text-3xl font-black text-acai-900 mt-2 block">0</span>
-          <span class="text-[11px] text-gray-400 mt-1 block">Pedidos recebidos no sistema</span>
+          <span class="text-[11px] text-gray-400 mt-1 block">Pedidos realizados hoje</span>
         </div>
 
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
@@ -259,34 +267,114 @@
         </div>
       </div>
 
-      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-        <h3 class="text-sm font-bold text-gray-900 mb-3">Vendas por Forma de Pagamento</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div class="bg-purple-50/70 p-3.5 rounded-xl border border-purple-100 flex items-center justify-between">
-            <div>
-              <span class="text-xs text-gray-600 font-medium block">💠 Pix</span>
-              <span id="metric-pix-total" class="text-base font-extrabold text-acai-900">R$ 0,00</span>
+      <!-- Vendas por Pagamento & Entrega -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- Por Forma de Pagamento -->
+        <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+            <span>💳</span> Vendas por Forma de Pagamento
+          </h3>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-purple-50/70 p-3 rounded-xl border border-purple-100 text-center">
+              <span class="text-[11px] text-gray-600 font-bold block">💠 Pix</span>
+              <span id="metric-pix-total" class="text-sm font-black text-acai-900 block mt-1">R$ 0,00</span>
+              <span id="metric-pix-count" class="text-[10px] text-purple-700 font-bold">0 ped</span>
             </div>
-            <span id="metric-pix-count" class="text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">0 ped</span>
-          </div>
 
-          <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-100 flex items-center justify-between">
-            <div>
-              <span class="text-xs text-gray-600 font-medium block">🔄 Combinado (Pix+Dinheiro)</span>
-              <span id="metric-card-total" class="text-base font-extrabold text-blue-900">R$ 0,00</span>
+            <div class="bg-blue-50/70 p-3 rounded-xl border border-blue-100 text-center">
+              <span class="text-[11px] text-gray-600 font-bold block">🔄 Combinado</span>
+              <span id="metric-card-total" class="text-sm font-black text-blue-900 block mt-1">R$ 0,00</span>
+              <span id="metric-card-count" class="text-[10px] text-blue-700 font-bold">0 ped</span>
             </div>
-            <span id="metric-card-count" class="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">0 ped</span>
-          </div>
 
-          <div class="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-100 flex items-center justify-between">
-            <div>
-              <span class="text-xs text-gray-600 font-medium block">💵 Dinheiro</span>
-              <span id="metric-cash-total" class="text-base font-extrabold text-emerald-900">R$ 0,00</span>
+            <div class="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100 text-center">
+              <span class="text-[11px] text-gray-600 font-bold block">💵 Dinheiro</span>
+              <span id="metric-cash-total" class="text-sm font-black text-emerald-900 block mt-1">R$ 0,00</span>
+              <span id="metric-cash-count" class="text-[10px] text-emerald-700 font-bold">0 ped</span>
             </div>
-            <span id="metric-cash-count" class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">0 ped</span>
           </div>
         </div>
+
+        <!-- Por Tipo de Entrega -->
+        <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+            <span>🛵</span> Vendas por Tipo de Recebimento
+          </h3>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-purple-50/70 p-3 rounded-xl border border-purple-100 text-center">
+              <span class="text-[11px] text-gray-600 font-bold block">🛵 Entrega em Casa</span>
+              <span id="metric-delivery-total" class="text-sm font-black text-acai-900 block mt-1">R$ 0,00</span>
+              <span id="metric-delivery-count" class="text-[10px] text-purple-700 font-bold">0 ped</span>
+            </div>
+
+            <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-100 text-center">
+              <span class="text-[11px] text-gray-600 font-bold block">🏪 Retirada no Balcão</span>
+              <span id="metric-pickup-total" class="text-sm font-black text-amber-900 block mt-1">R$ 0,00</span>
+              <span id="metric-pickup-count" class="text-[10px] text-amber-700 font-bold">0 ped</span>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      <!-- Gráfico de Vendas de Barras com Filtros -->
+      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+          <div>
+            <h3 class="font-extrabold text-base text-gray-900 flex items-center gap-2">
+              <span>📈</span> Gráfico de Acompanhamento de Vendas
+            </h3>
+            <p class="text-xs text-gray-500">Acompanhe a evolução do faturamento e número de pedidos por período</p>
+          </div>
+
+          <!-- Filtros de Período -->
+          <div class="flex items-center space-x-1.5 bg-gray-100 p-1 rounded-xl shrink-0">
+            <button onclick="filterSalesChart('dia')" id="chart-filter-dia" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-acai-700 text-white shadow-sm">Hoje (Dia)</button>
+            <button onclick="filterSalesChart('semana')" id="chart-filter-semana" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-600 hover:bg-gray-200">Semana</button>
+            <button onclick="filterSalesChart('mes')" id="chart-filter-mes" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-600 hover:bg-gray-200">Mês</button>
+            <button onclick="filterSalesChart('ano')" id="chart-filter-ano" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-600 hover:bg-gray-200">Ano</button>
+          </div>
+        </div>
+
+        <!-- Canvas do Gráfico -->
+        <div class="relative w-full h-64 md:h-80">
+          <canvas id="sales-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Tabela de Transações do Dia -->
+      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+          <h3 class="font-extrabold text-base text-gray-900 flex items-center gap-2">
+            <span>📑</span> Relação de Pedidos do Dia
+          </h3>
+          <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
+            <span>📥</span>
+            <span>Imprimir / Exportar Relatório</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="bg-purple-50 text-acai-900 font-bold border-b border-purple-100">
+                <th class="p-3 rounded-l-xl">Nº Pedido</th>
+                <th class="p-3">Horário</th>
+                <th class="p-3">Cliente</th>
+                <th class="p-3">Itens</th>
+                <th class="p-3">Tipo</th>
+                <th class="p-3">Pagamento</th>
+                <th class="p-3 rounded-r-xl text-right">Valor Total</th>
+              </tr>
+            </thead>
+            <tbody id="sales-table-body" class="divide-y divide-gray-100">
+              <!-- Inserido dinamicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
 
     <!-- ABA 4: CONFIGURAÇÕES DA LOJA -->
@@ -465,6 +553,73 @@
       </div>
     </div>
   </main>
+
+  <!-- MODAL DE ADICIONAR NOVO ITEM AO CARDÁPIO -->
+  <div id="add-new-item-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div class="bg-acai-900 text-white p-4 flex items-center justify-between">
+        <h4 class="font-bold text-sm text-white flex items-center gap-1.5">
+          <span>➕</span> Adicionar Novo Item ao Cardápio
+        </h4>
+        <button onclick="closeAddNewItemModal()" class="text-gray-300 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <form id="add-item-form" onsubmit="handleCreateNewItem(event)" class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Categoria do Novo Item *</label>
+          <select id="new-item-type" onchange="toggleNewItemFields()" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700 bg-white font-bold text-acai-900">
+            <option value="product">🍧 Copo / Barca / Produto Principal</option>
+            <option value="fruit">🍓 Fruta Inclusa</option>
+            <option value="topping">🥣 Acompanhamento / Complemento</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Nome do Item *</label>
+          <input id="new-item-name" type="text" placeholder="Ex: Copo Executivo 400ml ou Kiwi Fatiado" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
+        </div>
+
+        <div id="new-item-price-container">
+          <label class="block font-bold text-gray-700 mb-1">Preço Base (R$) *</label>
+          <input id="new-item-price" type="number" step="0.50" min="0" placeholder="Ex: 18.00" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700">
+        </div>
+
+        <div id="new-item-category-container">
+          <label class="block font-bold text-gray-700 mb-1">Categoria do Cardápio *</label>
+          <select id="new-item-product-cat" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700 bg-white">
+            <option value="copos">🍧 Copos Tradicionais</option>
+            <option value="especiais">⛵ Barcas & Especiais</option>
+            <option value="bebidas">🥤 Bebidas & Refrescos</option>
+          </select>
+        </div>
+
+        <div id="new-item-limits-container" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Limite Frutas *</label>
+            <input id="new-item-fruit-limit" type="number" min="0" max="10" value="3" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700">
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Limite Complementos *</label>
+            <input id="new-item-topping-limit" type="number" min="0" max="10" value="3" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Foto do Item (Opcional)</label>
+          <input id="new-item-photo" type="file" accept="image/*" class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-acai-700 hover:file:bg-purple-100">
+        </div>
+
+        <div class="pt-3 border-t border-gray-100 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeAddNewItemModal()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow">
+            ➕ Cadastrar Item
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- MODAL DE COMANDA DE IMPRESSÃO (CUPOM TÉRMICO DE COZINHA) -->
   <div id="receipt-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">

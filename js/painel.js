@@ -432,6 +432,7 @@ function renderStockProducts() {
       </div>
       <div class="flex items-center space-x-2">
         <button onclick="openEditModal('product', '${prod.id}')" title="Editar item" class="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs font-bold transition">✏️</button>
+        <button onclick="handleDeleteProduct('${prod.id}')" title="Excluir item definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" ${prod.available ? 'checked' : ''} onchange="toggleProductAvailability('${prod.id}')" class="sr-only peer">
           <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -444,6 +445,14 @@ function toggleProductAvailability(id) {
   const products = window.Store.getProducts();
   const prod = products.find(p => p.id === id);
   if (prod) { prod.available = !prod.available; window.Store.saveProducts(products); renderStockProducts(); }
+}
+
+function handleDeleteProduct(id) {
+  if (confirm("Deseja realmente excluir este produto definitivamente do cardápio?")) {
+    window.Store.deleteProduct(id);
+    renderStockProducts();
+    alert("✅ Produto excluído com sucesso!");
+  }
 }
 
 function renderStockAddons() {
@@ -460,6 +469,7 @@ function renderStockAddons() {
       </div>
       <div class="flex items-center space-x-2">
         <button onclick="openEditModal('fruit', '${fruit.id}')" title="Editar item" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition">✏️</button>
+        <button onclick="handleDeleteFruit('${fruit.id}')" title="Excluir fruta definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" ${fruit.available ? 'checked' : ''} onchange="toggleFruitAvailability('${fruit.id}')" class="sr-only peer">
           <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -472,6 +482,14 @@ function toggleFruitAvailability(id) {
   const fruits = window.Store.getFruits();
   const fruit = fruits.find(a => a.id === id);
   if (fruit) { fruit.available = !fruit.available; window.Store.saveFruits(fruits); renderStockAddons(); }
+}
+
+function handleDeleteFruit(id) {
+  if (confirm("Deseja realmente excluir esta fruta definitivamente do cardápio?")) {
+    window.Store.deleteFruit(id);
+    renderStockAddons();
+    alert("✅ Fruta excluída com sucesso!");
+  }
 }
 
 function renderStockToppings() {
@@ -488,6 +506,7 @@ function renderStockToppings() {
       </div>
       <div class="flex items-center space-x-2">
         <button onclick="openEditModal('topping', '${top.id}')" title="Editar item" class="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold transition">✏️</button>
+        <button onclick="handleDeleteTopping('${top.id}')" title="Excluir complemento definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" ${top.available ? 'checked' : ''} onchange="toggleToppingAvailability('${top.id}')" class="sr-only peer">
           <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -500,6 +519,14 @@ function toggleToppingAvailability(id) {
   const toppings = window.Store.getFreeToppings();
   const top = toppings.find(t => t.id === id);
   if (top) { top.available = !top.available; window.Store.saveFreeToppings(toppings); renderStockToppings(); }
+}
+
+function handleDeleteTopping(id) {
+  if (confirm("Deseja realmente excluir este complemento definitivamente do cardápio?")) {
+    window.Store.deleteFreeTopping(id);
+    renderStockToppings();
+    alert("✅ Complemento excluído com sucesso!");
+  }
 }
 
 let currentEditItem = null;
@@ -669,29 +696,341 @@ async function handleSaveItemEdit(e) {
   alert("✅ Item atualizado com sucesso!");
 }
 
+// Modal de Criação de Novo Item
+function openAddNewItemModal() {
+  const modal = document.getElementById('add-new-item-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    toggleNewItemFields();
+  }
+}
+
+function closeAddNewItemModal() {
+  const modal = document.getElementById('add-new-item-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    const form = document.getElementById('add-item-form');
+    if (form) form.reset();
+  }
+}
+
+function toggleNewItemFields() {
+  const typeSelect = document.getElementById('new-item-type');
+  if (!typeSelect) return;
+  const type = typeSelect.value;
+  const priceContainer = document.getElementById('new-item-price-container');
+  const catContainer = document.getElementById('new-item-category-container');
+  const limitsContainer = document.getElementById('new-item-limits-container');
+
+  if (type === 'product') {
+    if (priceContainer) priceContainer.classList.remove('hidden');
+    if (catContainer) catContainer.classList.remove('hidden');
+    if (limitsContainer) limitsContainer.classList.remove('hidden');
+  } else {
+    if (priceContainer) priceContainer.classList.add('hidden');
+    if (catContainer) catContainer.classList.add('hidden');
+    if (limitsContainer) limitsContainer.classList.add('hidden');
+  }
+}
+
+async function handleCreateNewItem(e) {
+  e.preventDefault();
+  const type = document.getElementById('new-item-type').value;
+  const name = document.getElementById('new-item-name').value.trim();
+  const price = parseFloat(document.getElementById('new-item-price').value) || 0;
+  const fileInput = document.getElementById('new-item-photo');
+
+  if (!name) {
+    alert("Informe o nome do item!");
+    return;
+  }
+
+  let base64Image = '';
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    const file = fileInput.files[0];
+    base64Image = await new Promise(resolve => {
+      resizeImageFile(file, 800, 800, function(dataUrl) {
+        resolve(dataUrl || '');
+      });
+    });
+  }
+
+  if (type === 'product') {
+    const category = document.getElementById('new-item-product-cat').value || 'copos';
+    const fruitLimit = parseInt(document.getElementById('new-item-fruit-limit').value) || 3;
+    const toppingLimit = parseInt(document.getElementById('new-item-topping-limit').value) || 3;
+    const allowsCustomization = category !== 'bebidas';
+
+    window.Store.addProduct({
+      name,
+      price,
+      category,
+      allowsCustomization,
+      freeFruitLimit: fruitLimit,
+      freeToppingLimit: toppingLimit,
+      image: base64Image,
+      icon: '🍧'
+    });
+  } else if (type === 'fruit') {
+    window.Store.addFruit({
+      name,
+      image: base64Image,
+      icon: '🍓'
+    });
+  } else if (type === 'topping') {
+    window.Store.addFreeTopping({
+      name,
+      image: base64Image,
+      icon: '🥣'
+    });
+  }
+
+  closeAddNewItemModal();
+  renderStockManagement();
+  alert("✅ Novo item adicionado ao cardápio com sucesso!");
+}
+
 // ==========================================================================
-// 8. CAIXA & RELATÓRIOS DO DIA
+// 8. CAIXA & RELATÓRIOS DO DIA & GRÁFICOS
 // ==========================================================================
+let salesChartInstance = null;
+let currentChartPeriod = 'dia';
+
+function filterSalesChart(period) {
+  currentChartPeriod = period;
+  ['dia', 'semana', 'mes', 'ano'].forEach(p => {
+    const btn = document.getElementById(`chart-filter-${p}`);
+    if (btn) {
+      if (p === period) {
+        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition bg-acai-700 text-white shadow-sm";
+      } else {
+        btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-600 hover:bg-gray-200";
+      }
+    }
+  });
+
+  const orders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
+  renderSalesChart(orders, period);
+}
+
+function renderSalesChart(orders, period) {
+  const canvas = document.getElementById('sales-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  if (salesChartInstance) {
+    salesChartInstance.destroy();
+    salesChartInstance = null;
+  }
+
+  let labels = [];
+  let revenueData = [];
+  let ordersCountData = [];
+
+  if (period === 'dia') {
+    const hours = [10, 12, 14, 16, 18, 20, 22];
+    labels = hours.map(h => `${h}:00`);
+    revenueData = hours.map(() => 0);
+    ordersCountData = hours.map(() => 0);
+
+    orders.forEach(o => {
+      let orderHour = 14;
+      if (o.createdAt) {
+        orderHour = new Date(o.createdAt).getHours();
+      } else if (o.timeFormatted) {
+        orderHour = parseInt(o.timeFormatted.split(':')[0]) || 14;
+      }
+      let idx = 0;
+      let minDiff = 999;
+      hours.forEach((h, i) => {
+        const diff = Math.abs(orderHour - h);
+        if (diff < minDiff) {
+          minDiff = diff;
+          idx = i;
+        }
+      });
+      revenueData[idx] += (o.total || 0);
+      ordersCountData[idx] += 1;
+    });
+
+  } else if (period === 'semana') {
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    labels = days;
+    revenueData = [0, 0, 0, 0, 0, 0, 0];
+    ordersCountData = [0, 0, 0, 0, 0, 0, 0];
+
+    orders.forEach(o => {
+      const d = o.createdAt ? new Date(o.createdAt) : new Date();
+      const dayIdx = d.getDay();
+      revenueData[dayIdx] += (o.total || 0);
+      ordersCountData[dayIdx] += 1;
+    });
+
+  } else if (period === 'mes') {
+    labels = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'];
+    revenueData = [0, 0, 0, 0];
+    ordersCountData = [0, 0, 0, 0];
+
+    orders.forEach(o => {
+      const d = o.createdAt ? new Date(o.createdAt) : new Date();
+      const dateNum = d.getDate();
+      let weekIdx = Math.floor((dateNum - 1) / 7);
+      if (weekIdx > 3) weekIdx = 3;
+      revenueData[weekIdx] += (o.total || 0);
+      ordersCountData[weekIdx] += 1;
+    });
+
+  } else if (period === 'ano') {
+    labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    revenueData = new Array(12).fill(0);
+    ordersCountData = new Array(12).fill(0);
+
+    orders.forEach(o => {
+      const d = o.createdAt ? new Date(o.createdAt) : new Date();
+      const monthIdx = d.getMonth();
+      revenueData[monthIdx] += (o.total || 0);
+      ordersCountData[monthIdx] += 1;
+    });
+  }
+
+  salesChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Faturamento (R$)',
+          data: revenueData,
+          backgroundColor: 'rgba(76, 8, 103, 0.85)',
+          borderColor: '#4c0867',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Qtd Pedidos',
+          data: ordersCountData,
+          backgroundColor: 'rgba(245, 166, 35, 0.85)',
+          borderColor: '#f5a623',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          ticks: {
+            callback: function(val) { return 'R$ ' + val; },
+            font: { size: 10 }
+          }
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: {
+            stepSize: 1,
+            font: { size: 10 }
+          }
+        },
+        x: {
+          ticks: { font: { size: 10 } }
+        }
+      },
+      plugins: {
+        legend: {
+          display: true,
+          labels: { font: { size: 11, weight: 'bold' } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) label += ': ';
+              if (context.datasetIndex === 0) {
+                label += 'R$ ' + context.parsed.y.toFixed(2).replace('.', ',');
+              } else {
+                label += context.parsed.y + ' pedidos';
+              }
+              return label;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 function renderFinancialMetrics() {
   const orders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
   const totalRevenue = orders.reduce((s, o) => s + o.total, 0);
   const totalCount = orders.length;
   const avgTicket = totalCount > 0 ? totalRevenue / totalCount : 0;
 
-  document.getElementById('metric-revenue-today').textContent = window.Store.formatCurrency(totalRevenue);
-  document.getElementById('metric-orders-count').textContent = totalCount;
-  document.getElementById('metric-average-ticket').textContent = window.Store.formatCurrency(avgTicket);
+  if (document.getElementById('metric-revenue-today')) document.getElementById('metric-revenue-today').textContent = window.Store.formatCurrency(totalRevenue);
+  if (document.getElementById('metric-orders-count')) document.getElementById('metric-orders-count').textContent = totalCount;
+  if (document.getElementById('metric-average-ticket')) document.getElementById('metric-average-ticket').textContent = window.Store.formatCurrency(avgTicket);
 
   const pix = orders.filter(o => o.paymentMethod === 'pix');
   const combined = orders.filter(o => o.paymentMethod === 'combinado');
   const cash = orders.filter(o => o.paymentMethod === 'dinheiro');
 
-  document.getElementById('metric-pix-total').textContent = window.Store.formatCurrency(pix.reduce((s, o) => s + o.total, 0));
-  document.getElementById('metric-pix-count').textContent = pix.length + ' ped';
-  document.getElementById('metric-card-total').textContent = window.Store.formatCurrency(combined.reduce((s, o) => s + o.total, 0));
-  document.getElementById('metric-card-count').textContent = combined.length + ' ped';
-  document.getElementById('metric-cash-total').textContent = window.Store.formatCurrency(cash.reduce((s, o) => s + o.total, 0));
-  document.getElementById('metric-cash-count').textContent = cash.length + ' ped';
+  if (document.getElementById('metric-pix-total')) document.getElementById('metric-pix-total').textContent = window.Store.formatCurrency(pix.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-pix-count')) document.getElementById('metric-pix-count').textContent = pix.length + ' ped';
+  if (document.getElementById('metric-card-total')) document.getElementById('metric-card-total').textContent = window.Store.formatCurrency(combined.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-card-count')) document.getElementById('metric-card-count').textContent = combined.length + ' ped';
+  if (document.getElementById('metric-cash-total')) document.getElementById('metric-cash-total').textContent = window.Store.formatCurrency(cash.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-cash-count')) document.getElementById('metric-cash-count').textContent = cash.length + ' ped';
+
+  // Por tipo de entrega
+  const delivery = orders.filter(o => o.deliveryType === 'entrega');
+  const pickup = orders.filter(o => (o.deliveryType || 'retirada') === 'retirada');
+
+  if (document.getElementById('metric-delivery-total')) document.getElementById('metric-delivery-total').textContent = window.Store.formatCurrency(delivery.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-delivery-count')) document.getElementById('metric-delivery-count').textContent = delivery.length + ' ped';
+  if (document.getElementById('metric-pickup-total')) document.getElementById('metric-pickup-total').textContent = window.Store.formatCurrency(pickup.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-pickup-count')) document.getElementById('metric-pickup-count').textContent = pickup.length + ' ped';
+
+  // Tabela de transações
+  const tbody = document.getElementById('sales-table-body');
+  if (tbody) {
+    if (orders.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400 font-semibold text-center">Nenhum pedido registrado hoje.</td></tr>';
+    } else {
+      tbody.innerHTML = orders.map(o => `
+        <tr class="hover:bg-purple-50/50 transition">
+          <td class="p-3 font-black text-acai-900">${o.orderNumber}</td>
+          <td class="p-3 text-gray-600 font-semibold">${o.timeFormatted || ''}</td>
+          <td class="p-3 font-bold text-gray-800">${o.customer ? o.customer.name : ''}</td>
+          <td class="p-3 text-gray-600 max-w-xs truncate">${o.items ? o.items.map(i => `${i.quantity}x ${i.name}`).join(', ') : ''}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.deliveryType === 'entrega' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}">
+              ${o.deliveryType === 'entrega' ? '🛵 Entrega' : '🏪 Retirada'}
+            </span>
+          </td>
+          <td class="p-3">
+            <span class="font-bold text-[10px] uppercase text-gray-700">${o.paymentMethod}</span>
+          </td>
+          <td class="p-3 text-right font-black text-acai-900">${window.Store.formatCurrency(o.total)}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // Renderizar gráfico
+  try {
+    renderSalesChart(orders, currentChartPeriod);
+  } catch (err) {
+    console.error("Erro ao renderizar gráfico de vendas:", err);
+  }
 }
 
 // ==========================================================================
@@ -854,6 +1193,15 @@ window.toggleProductAvailability = toggleProductAvailability;
 window.toggleAddonAvailability = toggleFruitAvailability;
 window.toggleFruitAvailability = toggleFruitAvailability;
 window.toggleToppingAvailability = toggleToppingAvailability;
+window.handleDeleteProduct = handleDeleteProduct;
+window.handleDeleteFruit = handleDeleteFruit;
+window.handleDeleteTopping = handleDeleteTopping;
+window.openAddNewItemModal = openAddNewItemModal;
+window.closeAddNewItemModal = closeAddNewItemModal;
+window.toggleNewItemFields = toggleNewItemFields;
+window.handleCreateNewItem = handleCreateNewItem;
+window.filterSalesChart = filterSalesChart;
+window.renderSalesChart = renderSalesChart;
 window.openEditModal = openEditModal;
 window.closeEditModal = closeEditModal;
 window.handleSaveItemEdit = handleSaveItemEdit;

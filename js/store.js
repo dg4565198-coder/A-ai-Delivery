@@ -455,8 +455,12 @@ window.Store = {
   saveFavorite(favorite) {
     try {
       const list = this.getFavorites();
+      if (list.length >= 3) {
+        alert("⚠️ Você já possui 3 Açaís Favoritos salvos! Por favor desmarque/exclua um dos favoritos antes de salvar este novo.");
+        return null;
+      }
       list.unshift(favorite);
-      localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(list.slice(0, 10)));
+      localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(list));
       return list;
     } catch { return []; }
   },
@@ -468,5 +472,44 @@ window.Store = {
       localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(list));
       return list;
     } catch { return []; }
+  },
+
+  deleteProduct(productId) {
+    let products = this.getProducts().filter(p => p.id !== productId);
+    this.saveProducts(products);
+    return products;
+  },
+
+  deleteFruit(fruitId) {
+    let fruits = this.getFruits().filter(f => f.id !== fruitId);
+    this.saveFruits(fruits);
+    return fruits;
+  },
+
+  deleteFreeTopping(toppingId) {
+    let toppings = this.getFreeToppings().filter(t => t.id !== toppingId);
+    this.saveFreeToppings(toppings);
+    return toppings;
+  },
+
+  addProduct(product) {
+    let products = this.getProducts();
+    products.push(product);
+    this.saveProducts(products);
+    return products;
+  },
+
+  addFruit(fruit) {
+    let fruits = this.getFruits();
+    fruits.push(fruit);
+    this.saveFruits(fruits);
+    return fruits;
+  },
+
+  addFreeTopping(topping) {
+    let toppings = this.getFreeToppings();
+    toppings.push(topping);
+    this.saveFreeToppings(toppings);
+    return toppings;
   }
 };
