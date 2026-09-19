@@ -358,6 +358,7 @@ function createOrderCardElement(order, currentStatus) {
             <span>${item.quantity}x ${item.name}</span>
             <span>${window.Store.formatCurrency(item.unitPrice * item.quantity)}</span>
           </div>
+          ${item.calda ? `<div class="text-[9px] text-amber-800 font-bold">🍯 Calda: ${item.calda}</div>` : ''}
           ${item.fruits && item.fruits.length > 0 ? `<div class="text-[9px] text-emerald-700 font-semibold">🍓 Frutas: ${item.fruits.map(f => f.name).join(', ')}</div>` : ''}
           ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="text-[9px] text-gray-600">✓ Grátis: ${item.freeToppings.map(t => t.name).join(', ')}</div>` : ''}
           ${item.notes ? `<div class="text-[9px] italic text-purple-600 bg-purple-50 p-0.5 rounded mt-0.5">Obs: "${item.notes}"</div>` : ''}
@@ -461,6 +462,7 @@ function openReceiptModal(orderId) {
       ${order.items.map(item => `
         <div class="text-[11px] pb-1 border-b border-gray-100 last:border-0">
           <div class="flex justify-between font-extrabold"><span>[${item.quantity}x] ${item.name}</span><span>${window.Store.formatCurrency(item.unitPrice * item.quantity)}</span></div>
+          ${item.calda ? `<div class="font-extrabold ml-2 text-amber-900">» Calda: ${item.calda}</div>` : ''}
           ${item.fruits && item.fruits.length > 0 ? `<div class="font-semibold ml-2">» Frutas: ${item.fruits.map(f => f.name).join(' + ')}</div>` : ''}
           ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="ml-2">» Grátis: ${item.freeToppings.map(t => t.name).join(' + ')}</div>` : ''}
           ${item.notes ? `<div class="italic ml-2 bg-yellow-50 p-0.5">OBS: "${item.notes}"</div>` : ''}
@@ -489,6 +491,7 @@ function renderStockManagement() {
   renderStockProducts();
   renderStockAddons();
   renderStockToppings();
+  renderStockCaldas();
 }
 
 function renderStockProducts() {
@@ -602,6 +605,44 @@ function handleDeleteTopping(id) {
   }
 }
 
+function renderStockCaldas() {
+  const container = document.getElementById('stock-caldas-list');
+  if (!container) return;
+  const caldas = window.Store.getCaldas();
+  container.innerHTML = caldas.map(calda => `
+    <div class="p-3 bg-amber-50/70 rounded-xl border border-amber-200 flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        ${calda.image ? `<img src="${calda.image}" class="w-10 h-10 object-cover rounded-lg border border-amber-200">` : `<span class="text-xl">${calda.icon || '🍯'}</span>`}
+        <div>
+          <h4 class="font-bold text-xs text-gray-800">${calda.name}</h4>
+          <span class="text-[11px] text-amber-800 font-semibold">Calda</span>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="openEditModal('calda', '${calda.id}')" title="Editar item" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition">✏️</button>
+        <button onclick="handleDeleteCalda('${calda.id}')" title="Excluir calda definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" ${calda.available ? 'checked' : ''} onchange="toggleCaldaAvailability('${calda.id}')" class="sr-only peer">
+          <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+        </label>
+      </div>
+    </div>`).join('');
+}
+
+function toggleCaldaAvailability(id) {
+  const caldas = window.Store.getCaldas();
+  const calda = caldas.find(c => c.id === id);
+  if (calda) { calda.available = !calda.available; window.Store.saveCaldas(caldas); renderStockCaldas(); }
+}
+
+function handleDeleteCalda(id) {
+  if (confirm("Deseja realmente excluir esta opção de calda definitivamente do cardápio?")) {
+    window.Store.deleteCalda(id);
+    renderStockCaldas();
+    alert("✅ Calda excluída com sucesso!");
+  }
+}
+
 let currentEditItem = null;
 
 function openEditModal(type, id) {
@@ -612,6 +653,8 @@ function openEditModal(type, id) {
     item = window.Store.getFruits().find(f => f.id === id);
   } else if (type === 'topping') {
     item = window.Store.getFreeToppings().find(t => t.id === id);
+  } else if (type === 'calda') {
+    item = window.Store.getCaldas().find(c => c.id === id);
   }
 
   if (!item) return;
@@ -762,6 +805,14 @@ async function handleSaveItemEdit(e) {
       top.image = base64Image;
       window.Store.saveFreeToppings(toppings);
     }
+  } else if (type === 'calda') {
+    const caldas = window.Store.getCaldas();
+    const calda = caldas.find(c => c.id === id);
+    if (calda) {
+      calda.name = newName;
+      calda.image = base64Image;
+      window.Store.saveCaldas(caldas);
+    }
   }
 
   closeEditModal();
@@ -855,6 +906,14 @@ async function handleCreateNewItem(e) {
       name,
       image: base64Image,
       icon: '🥣'
+    });
+  } else if (type === 'calda') {
+    window.Store.addCalda({
+      id: 'calda_' + Date.now(),
+      name,
+      available: true,
+      image: base64Image,
+      icon: '🍯'
     });
   }
 
@@ -1266,6 +1325,9 @@ window.toggleProductAvailability = toggleProductAvailability;
 window.toggleAddonAvailability = toggleFruitAvailability;
 window.toggleFruitAvailability = toggleFruitAvailability;
 window.toggleToppingAvailability = toggleToppingAvailability;
+window.renderStockCaldas = renderStockCaldas;
+window.toggleCaldaAvailability = toggleCaldaAvailability;
+window.handleDeleteCalda = handleDeleteCalda;
 window.handleDeleteProduct = handleDeleteProduct;
 window.handleDeleteFruit = handleDeleteFruit;
 window.handleDeleteTopping = handleDeleteTopping;

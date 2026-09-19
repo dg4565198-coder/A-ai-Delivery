@@ -9,6 +9,7 @@ const state = {
   selectedBase: null,
   selectedFreeToppings: [],
   selectedFruits: [],
+  selectedCalda: null,
   builderQuantity: 1,
   deliveryType: 'entrega',
   lastCreatedOrderId: null,
@@ -212,6 +213,9 @@ function handleProductClick(productId) {
   state.selectedBase = null;
   state.selectedFreeToppings = [];
   state.selectedFruits = [];
+  const caldas = window.Store.getCaldas();
+  const defaultCalda = caldas.find(c => c.available && c.id === 'calda-leite-cond') || caldas.find(c => c.available) || { id: 'calda-leite-cond', name: 'Leite Condensado' };
+  state.selectedCalda = defaultCalda;
   state.builderQuantity = 1;
 
   document.getElementById('builder-product-name').textContent = product.name;
@@ -232,6 +236,7 @@ function handleProductClick(productId) {
 
   renderBuilderFruits();
   renderBuilderFreeToppings();
+  renderBuilderCaldas();
   updateBuilderTotal();
 
   const modal = document.getElementById('builder-modal');
@@ -332,6 +337,37 @@ function toggleFreeTopping(toppingId) {
   renderBuilderFreeToppings();
 }
 
+function renderBuilderCaldas() {
+  const container = document.getElementById('builder-calda-list');
+  if (!container) return;
+
+  const caldas = window.Store.getCaldas().filter(c => c.available);
+  const tagElem = document.getElementById('builder-calda-selected-tag');
+  if (tagElem) {
+    tagElem.textContent = state.selectedCalda ? state.selectedCalda.name : 'Sem Calda';
+  }
+
+  container.innerHTML = caldas.map(calda => {
+    const isSelected = state.selectedCalda && state.selectedCalda.id === calda.id;
+    return `
+      <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs cursor-pointer ${isSelected ? 'border-amber-500 bg-amber-50/80 font-bold shadow-sm' : 'border-gray-200 bg-white'}" onclick="selectCalda('${calda.id}')">
+        <div class="flex items-center space-x-2">
+          <input type="radio" name="builder_calda_choice" ${isSelected ? 'checked' : ''} class="text-amber-600 focus:ring-amber-500 h-3.5 w-3.5">
+          ${calda.image ? `<img src="${calda.image}" class="w-6 h-6 object-cover rounded">` : `<span class="text-base">${calda.icon || '🍯'}</span>`}
+          <span class="text-gray-800">${calda.name}</span>
+        </div>
+      </label>
+    `;
+  }).join('');
+}
+
+function selectCalda(caldaId) {
+  const calda = window.Store.getCaldas().find(c => c.id === caldaId);
+  if (!calda) return;
+  state.selectedCalda = calda;
+  renderBuilderCaldas();
+}
+
 function changeBuilderQuantity(delta) {
   let newQty = (state.builderQuantity || 1) + delta;
   if (newQty < 1) newQty = 1;
@@ -372,6 +408,7 @@ function confirmAddItemToCart() {
     base: null,
     freeToppings: [...state.selectedFreeToppings],
     fruits: [...state.selectedFruits],
+    calda: state.selectedCalda ? state.selectedCalda.name : 'Sem Calda',
     notes,
     quantity: state.builderQuantity || 1
   };
@@ -447,6 +484,12 @@ function renderCartModalContent() {
           <span class="text-lg">${item.icon}</span>
           <h5 class="font-bold text-gray-900 text-xs">${item.name}</h5>
         </div>
+
+        ${item.calda ? `
+          <p class="text-[10px] text-amber-800 font-bold mt-0.5">
+            <strong>Calda:</strong> ${item.calda}
+          </p>
+        ` : ''}
 
         ${item.fruits && item.fruits.length > 0 ? `
           <p class="text-[10px] text-emerald-700 font-medium mt-0.5">
@@ -764,6 +807,9 @@ function showSuccessOrderModal(order) {
 
   let itemsText = (order.items || []).map(item => {
     let lines = [`• *${item.quantity}x ${item.name}* (${window.Store.formatCurrency(item.unitPrice * item.quantity)})`];
+    if (item.calda) {
+      lines.push(`  🍯 *Calda:* ${item.calda}`);
+    }
     if (item.fruits && item.fruits.length > 0) {
       lines.push(`  🍓 *Frutas:* ${item.fruits.map(f => f.name).join(', ')}`);
     }
@@ -1133,11 +1179,16 @@ function renderMyOrders() {
           </div>
         </div>
 
-        <div class="space-y-1 text-xs">
+        <div class="space-y-1.5 text-xs">
           ${(order.items || []).map(i => `
-            <div class="flex justify-between text-gray-700 font-medium">
-              <span>${i.quantity}x ${i.name}</span>
-              <span>${window.Store.formatCurrency(i.unitPrice * i.quantity)}</span>
+            <div class="border-b border-gray-100 pb-1 text-xs last:border-0 last:pb-0">
+              <div class="flex justify-between text-gray-800 font-bold">
+                <span>${i.quantity}x ${i.name}</span>
+                <span>${window.Store.formatCurrency(i.unitPrice * i.quantity)}</span>
+              </div>
+              ${i.calda ? `<div class="text-[10px] text-amber-800 font-semibold">🍯 Calda: ${i.calda}</div>` : ''}
+              ${i.fruits && i.fruits.length > 0 ? `<div class="text-[10px] text-emerald-700">🍓 Frutas: ${i.fruits.map(f => f.name).join(', ')}</div>` : ''}
+              ${i.freeToppings && i.freeToppings.length > 0 ? `<div class="text-[10px] text-gray-500">🥣 Complementos: ${i.freeToppings.map(t => t.name).join(', ')}</div>` : ''}
             </div>
           `).join('')}
         </div>

@@ -1,9 +1,9 @@
 /**
- * ROTTA DO AÇAÍ - SERVICE WORKER (v3)
+ * ROTTA DO AÇAÍ - SERVICE WORKER (v4)
  * Cache Strategy: Network-First with Cache Fallback for instant updates on mobile!
  */
 
-const CACHE_NAME = 'rotta-acai-v3';
+const CACHE_NAME = 'rotta-acai-v4';
 const urlsToCache = [
   './',
   './index.html',

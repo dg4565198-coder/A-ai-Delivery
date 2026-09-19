@@ -20,6 +20,7 @@ const STORAGE_KEYS = {
   BASES: 'rotta_bases_v4',
   FREE_TOPPINGS: 'rotta_free_toppings_v4',
   FRUITS: 'rotta_fruits_v4',
+  CALDAS: 'rotta_caldas_v4',
   CUSTOMER: 'rotta_customer_data',
   MY_ORDERS: 'rotta_my_orders_v1',
   FAVORITES: 'rotta_favorites_v1'
@@ -62,14 +63,20 @@ const DEFAULT_FRUITS = [
 
 const DEFAULT_FREE_TOPPINGS = [
   { id: 'top-leite-po', name: 'Leite em Pó (Ninho)', available: true, icon: '🥛', image: '' },
-  { id: 'top-leite-cond', name: 'Leite Condensado', available: true, icon: '🍯', image: '' },
   { id: 'top-granola', name: 'Granola Tradicional', available: true, icon: '🌾', image: '' },
   { id: 'top-aveia', name: 'Aveia em Flocos', available: true, icon: '🥣', image: '' },
   { id: 'top-pacoca', name: 'Farinha de Paçoca', available: true, icon: '🥜', image: '' },
-  { id: 'top-mel', name: 'Mel de Abelha', available: true, icon: '🐝', image: '' },
   { id: 'top-chocoball', name: 'Chocoball', available: true, icon: '🍫', image: '' },
   { id: 'top-gotas', name: 'Gotas de Chocolate', available: true, icon: '🍫', image: '' },
   { id: 'top-confetes', name: 'Confetes de Chocolate', available: true, icon: '🍬', image: '' }
+];
+
+const DEFAULT_CALDAS = [
+  { id: 'calda-leite-cond', name: 'Leite Condensado', available: true, icon: '🍯', image: '' },
+  { id: 'calda-sem-calda', name: 'Não Querer (Sem Calda)', available: true, icon: '🚫', image: '' },
+  { id: 'calda-chocolate', name: 'Cobertura de Chocolate', available: true, icon: '🍫', image: '' },
+  { id: 'calda-morango', name: 'Cobertura de Morango', available: true, icon: '🍓', image: '' },
+  { id: 'calda-mel', name: 'Mel de Abelha', available: true, icon: '🐝', image: '' }
 ];
 
 let _db = null;
@@ -80,7 +87,8 @@ let _stockCache = {
   products: null,
   bases: null,
   toppings: null,
-  fruits: null
+  fruits: null,
+  caldas: null
 };
 
 function getDB() {
@@ -112,6 +120,7 @@ window.Store = {
       if (!localStorage.getItem(STORAGE_KEYS.BASES)) localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(DEFAULT_BASES));
       if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(DEFAULT_FREE_TOPPINGS));
       if (!localStorage.getItem(STORAGE_KEYS.FRUITS)) localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(DEFAULT_FRUITS));
+      if (!localStorage.getItem(STORAGE_KEYS.CALDAS)) localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(DEFAULT_CALDAS));
     } catch (e) {
       console.warn('LocalStorage inacessível:', e);
     }
@@ -242,6 +251,22 @@ window.Store = {
     if (db) db.ref('stock/fruits').set(fruits);
   },
 
+  getCaldas() {
+    if (_stockCache.caldas && _stockCache.caldas.length > 0) return _stockCache.caldas;
+    try {
+      const c = JSON.parse(localStorage.getItem(STORAGE_KEYS.CALDAS));
+      if (Array.isArray(c) && c.length > 0) return c;
+    } catch {}
+    return DEFAULT_CALDAS;
+  },
+
+  saveCaldas(caldas) {
+    _stockCache.caldas = caldas;
+    try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(caldas)); } catch {}
+    const db = getDB();
+    if (db) db.ref('stock/caldas').set(caldas);
+  },
+
   getPaidAddons() {
     return this.getFruits();
   },
@@ -260,6 +285,7 @@ window.Store = {
         if (data.products) { _stockCache.products = data.products; try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(data.products)); } catch {} }
         if (data.toppings) { _stockCache.toppings = data.toppings; try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(data.toppings)); } catch {} }
         if (data.fruits) { _stockCache.fruits = data.fruits; try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(data.fruits)); } catch {} }
+        if (data.caldas) { _stockCache.caldas = data.caldas; try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(data.caldas)); } catch {} }
         if (callback) callback();
       }
     });
@@ -503,6 +529,12 @@ window.Store = {
     return toppings;
   },
 
+  deleteCalda(caldaId) {
+    let caldas = this.getCaldas().filter(c => c.id !== caldaId);
+    this.saveCaldas(caldas);
+    return caldas;
+  },
+
   addProduct(product) {
     let products = this.getProducts();
     products.push(product);
@@ -522,5 +554,12 @@ window.Store = {
     toppings.push(topping);
     this.saveFreeToppings(toppings);
     return toppings;
+  },
+
+  addCalda(calda) {
+    let caldas = this.getCaldas();
+    caldas.push(calda);
+    this.saveCaldas(caldas);
+    return caldas;
   }
 };
