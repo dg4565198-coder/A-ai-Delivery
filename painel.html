@@ -739,7 +739,17 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('sw.js').catch(function(err) { console.warn('SW:', err); });
+        navigator.serviceWorker.register('sw.js').then(function(reg) {
+          reg.update();
+        }).catch(function(err) { console.warn('SW:', err); });
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
       });
     }
   </script>

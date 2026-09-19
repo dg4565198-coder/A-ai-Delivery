@@ -125,6 +125,73 @@ function setupFirebaseListener() {
   });
 }
 
+function showInAppToast(title, body) {
+  let toast = document.getElementById('in-app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'in-app-toast';
+    toast.className = 'fixed top-4 left-4 right-4 z-50 bg-acai-900 text-white p-4 rounded-2xl shadow-2xl border-2 border-gold-400 transform -translate-y-32 transition-all duration-300 flex items-start space-x-3 pointer-events-auto';
+    document.body.appendChild(toast);
+  }
+
+  toast.innerHTML = `
+    <span class="text-2xl shrink-0">🔔</span>
+    <div class="flex-1 min-w-0">
+      <h4 class="font-black text-sm text-gold-400 truncate">${title}</h4>
+      <p class="text-xs text-purple-100 font-semibold mt-0.5 leading-snug">${body}</p>
+    </div>
+    <button onclick="document.getElementById('in-app-toast').classList.add('-translate-y-32')" class="text-gray-400 hover:text-white font-extrabold text-base leading-none">&times;</button>
+  `;
+
+  setTimeout(() => {
+    toast.classList.remove('-translate-y-32');
+    toast.classList.add('translate-y-0');
+  }, 50);
+
+  setTimeout(() => {
+    if (toast) {
+      toast.classList.remove('translate-y-0');
+      toast.classList.add('-translate-y-32');
+    }
+  }, 7000);
+}
+
+async function sendPushNotification(title, body) {
+  try { window.Store.playNotificationSound(); } catch {}
+  showInAppToast(title, body);
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg && reg.showNotification) {
+          await reg.showNotification(title, {
+            body: body,
+            icon: 'assets/logo.jpg',
+            badge: 'assets/logo.jpg',
+            vibrate: [200, 100, 200, 100, 200],
+            tag: 'rotta-panel-' + Date.now(),
+            renotify: true
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('SW Panel Notification error:', err);
+      }
+    }
+
+    try {
+      new Notification(title, {
+        body: body,
+        icon: 'assets/logo.jpg',
+        badge: 'assets/logo.jpg'
+      });
+    } catch (e) {
+      console.warn('Desktop Panel Notification fallback error:', e);
+    }
+  }
+}
+
 function showNewOrderNotification(order) {
   const badge = document.getElementById('kanban-new-badge');
   const orders = window.Store.getOrdersArray();
@@ -134,6 +201,12 @@ function showNewOrderNotification(order) {
     badge.classList.remove('hidden');
   } else if (badge) {
     badge.classList.add('hidden');
+  }
+
+  if (order) {
+    const customerName = order.customer ? order.customer.name : 'Cliente';
+    const totalVal = window.Store.formatCurrency(order.total || 0);
+    sendPushNotification(`🚨 NOVO PEDIDO (${order.orderNumber || ''})`, `${customerName} realizou um pedido no valor de ${totalVal}!`);
   }
 }
 
@@ -1210,3 +1283,5 @@ window.loadHoursTab = loadHoursTab;
 window.handleSaveBusinessHours = handleSaveBusinessHours;
 window.handleSendInstantPromo = handleSendInstantPromo;
 window.handleSchedulePromo = handleSchedulePromo;
+window.sendPushNotification = sendPushNotification;
+window.showInAppToast = showInAppToast;

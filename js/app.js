@@ -928,22 +928,100 @@ function deleteFavorite(favId) {
 // ==========================================================================
 const _notifiedStatuses = {};
 
-function requestNotificationPermission() {
+// Global Audio & Notification setup for mobile
+function unlockMobileAudioAndNotifications() {
+  try {
+    if (!window._sharedAudioCtx) {
+      window._sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (window._sharedAudioCtx.state === 'suspended') {
+      window._sharedAudioCtx.resume();
+    }
+  } catch {}
+
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission().catch(() => {});
   }
 }
 
-function sendPushNotification(title, body) {
+document.addEventListener('touchstart', unlockMobileAudioAndNotifications, { passive: true });
+document.addEventListener('click', unlockMobileAudioAndNotifications, { passive: true });
+
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') {
+        showInAppToast('Rotta do Açaí 🍇', 'Notificações ativadas no seu celular com sucesso!');
+      }
+    }).catch(() => {});
+  }
+}
+
+function showInAppToast(title, body) {
+  let toast = document.getElementById('in-app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'in-app-toast';
+    toast.className = 'fixed top-4 left-4 right-4 z-50 bg-acai-900 text-white p-4 rounded-2xl shadow-2xl border-2 border-gold-400 transform -translate-y-32 transition-all duration-300 flex items-start space-x-3 pointer-events-auto';
+    document.body.appendChild(toast);
+  }
+
+  toast.innerHTML = `
+    <span class="text-2xl shrink-0">🔔</span>
+    <div class="flex-1 min-w-0">
+      <h4 class="font-black text-sm text-gold-400 truncate">${title}</h4>
+      <p class="text-xs text-purple-100 font-semibold mt-0.5 leading-snug">${body}</p>
+    </div>
+    <button onclick="document.getElementById('in-app-toast').classList.add('-translate-y-32')" class="text-gray-400 hover:text-white font-extrabold text-base leading-none">&times;</button>
+  `;
+
+  setTimeout(() => {
+    toast.classList.remove('-translate-y-32');
+    toast.classList.add('translate-y-0');
+  }, 50);
+
+  setTimeout(() => {
+    if (toast) {
+      toast.classList.remove('translate-y-0');
+      toast.classList.add('-translate-y-32');
+    }
+  }, 7000);
+}
+
+async function sendPushNotification(title, body) {
+  try { window.Store.playNotificationSound(); } catch {}
+
+  showInAppToast(title, body);
+
   if ('Notification' in window && Notification.permission === 'granted') {
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg && reg.showNotification) {
+          await reg.showNotification(title, {
+            body: body,
+            icon: 'assets/logo.jpg',
+            badge: 'assets/logo.jpg',
+            vibrate: [200, 100, 200, 100, 200],
+            tag: 'rotta-notif-' + Date.now(),
+            renotify: true,
+            data: { url: window.location.href }
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn('SW Notification error:', err);
+      }
+    }
+
     try {
       new Notification(title, {
-        body,
+        body: body,
         icon: 'assets/logo.jpg',
         badge: 'assets/logo.jpg'
       });
     } catch (e) {
-      console.warn('Erro notificação push:', e);
+      console.warn('Desktop Notification fallback error:', e);
     }
   }
 }

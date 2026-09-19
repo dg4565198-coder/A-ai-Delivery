@@ -394,7 +394,18 @@ window.Store = {
 
   playNotificationSound() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (navigator.vibrate) {
+        try { navigator.vibrate([200, 100, 200, 100, 200]); } catch {}
+      }
+
+      if (!window._sharedAudioCtx) {
+        window._sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = window._sharedAudioCtx;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 

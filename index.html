@@ -646,9 +646,17 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('sw.js').then(function(reg) {
-          console.log('PWA ServiceWorker registrado com sucesso:', reg.scope);
+          reg.update();
         }).catch(function(err) {
           console.warn('PWA ServiceWorker erro:', err);
+        });
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       });
     }
