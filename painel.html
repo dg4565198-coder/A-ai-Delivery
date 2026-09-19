@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rotta do Açaí | Painel de Gestão & Pedidos ao Vivo</title>
+
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4c0867">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Rotta Painel">
+  <link rel="apple-touch-icon" href="assets/logo.jpg">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -116,12 +124,8 @@
        ===================================================================== -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
 
-    <!-- ===================================================================
-         ABA 1: KANBAN DE PEDIDOS AO VIVO
-         =================================================================== -->
+    <!-- ABA 1: KANBAN DE PEDIDOS AO VIVO -->
     <div id="tab-content-kanban" class="space-y-4">
-      
-      <!-- Barra de Ações Rápidas do Kanban -->
       <div class="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center space-x-2">
           <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
@@ -137,10 +141,8 @@
         </div>
       </div>
 
-      <!-- Grade Kanban (3 Colunas com Aceite Automático) -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-
-        <!-- Coluna 1: Em Preparo (Entrada Automática) -->
+        <!-- Coluna 1: Em Preparo -->
         <div class="kanban-column bg-white rounded-2xl border-2 border-amber-300 shadow-sm flex flex-col overflow-hidden">
           <div class="bg-amber-100/90 px-4 py-3 border-b border-amber-200 flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -154,12 +156,10 @@
               0
             </span>
           </div>
-          <div id="column-preparo" class="p-3 space-y-3 min-h-[480px] overflow-y-auto">
-            <!-- Inserido dinamicamente -->
-          </div>
+          <div id="column-preparo" class="p-3 space-y-3 min-h-[480px] overflow-y-auto"></div>
         </div>
 
-        <!-- Coluna 2: Saiu para Entrega / A Caminho -->
+        <!-- Coluna 2: A Caminho -->
         <div class="kanban-column bg-white rounded-2xl border-2 border-purple-200 shadow-sm flex flex-col overflow-hidden">
           <div class="bg-purple-100/90 px-4 py-3 border-b border-purple-200 flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -173,12 +173,10 @@
               0
             </span>
           </div>
-          <div id="column-entrega" class="p-3 space-y-3 min-h-[480px] overflow-y-auto">
-            <!-- Inserido dinamicamente -->
-          </div>
+          <div id="column-entrega" class="p-3 space-y-3 min-h-[480px] overflow-y-auto"></div>
         </div>
 
-        <!-- Coluna 3: Finalizados / Concluídos -->
+        <!-- Coluna 3: Concluídos -->
         <div class="kanban-column bg-white rounded-2xl border-2 border-emerald-200 shadow-sm flex flex-col overflow-hidden">
           <div class="bg-emerald-100/90 px-4 py-3 border-b border-emerald-200 flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -192,17 +190,12 @@
               0
             </span>
           </div>
-          <div id="column-concluido" class="p-3 space-y-3 min-h-[480px] overflow-y-auto">
-            <!-- Inserido dinamicamente -->
-          </div>
+          <div id="column-concluido" class="p-3 space-y-3 min-h-[480px] overflow-y-auto"></div>
         </div>
-
       </div>
     </div>
 
-    <!-- ===================================================================
-         ABA 2: GESTÃO DE CARDÁPIO & ESTOQUE RÁPIDO
-         =================================================================== -->
+    <!-- ABA 2: GESTÃO DE CARDÁPIO & ESTOQUE -->
     <div id="tab-content-estoque" class="hidden space-y-6">
       <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
         <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
@@ -213,75 +206,53 @@
           <span class="text-xs font-bold text-acai-700 bg-purple-50 px-3 py-1 rounded-lg">Atualização Imediata</span>
         </div>
 
-        <!-- Seções de Produtos, Bases, Acompanhamentos e Adicionais -->
         <div class="space-y-6">
-          
-          <!-- 1. Copos & Produtos -->
           <div>
             <h3 class="text-xs font-bold uppercase tracking-wider text-acai-800 mb-3 flex items-center gap-1.5">
               <span>🍧</span> Copos e Produtos Principais
             </h3>
-            <div id="stock-products-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <!-- Inserido dinamicamente -->
-            </div>
+            <div id="stock-products-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
           </div>
 
-          <!-- 2. Adicionais Pagos / Gourmet -->
           <div class="pt-4 border-t border-gray-100">
             <h3 class="text-xs font-bold uppercase tracking-wider text-amber-700 mb-3 flex items-center gap-1.5">
-              <span>🍓</span> Adicionais Gourmet & Frutas (Extras)
+              <span>🍓</span> Frutas Inclusas
             </h3>
-            <div id="stock-addons-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <!-- Inserido dinamicamente -->
-            </div>
+            <div id="stock-addons-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
           </div>
 
-          <!-- 3. Acompanhamentos Grátis -->
           <div class="pt-4 border-t border-gray-100">
             <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-3 flex items-center gap-1.5">
               <span>🥣</span> Acompanhamentos Tradicionais Grátis
             </h3>
-            <div id="stock-toppings-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <!-- Inserido dinamicamente -->
-            </div>
+            <div id="stock-toppings-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
           </div>
-
         </div>
       </div>
     </div>
 
-    <!-- ===================================================================
-         ABA 3: CAIXA DO DIA & RELATÓRIOS
-         =================================================================== -->
+    <!-- ABA 3: CAIXA DO DIA -->
     <div id="tab-content-caixa" class="hidden space-y-6">
-      
-      <!-- Cards de Métricas Principais -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        <!-- Faturamento Hoje -->
         <div class="bg-gradient-to-br from-acai-800 to-acai-900 text-white p-5 rounded-2xl shadow-lg border border-acai-700">
           <span class="text-xs font-semibold text-purple-200 block uppercase tracking-wider">Faturamento Hoje</span>
           <span id="metric-revenue-today" class="text-3xl font-black text-gold-400 mt-2 block">R$ 0,00</span>
           <span class="text-[11px] text-purple-300 mt-1 block">Somatório de todos os pedidos finalizados</span>
         </div>
 
-        <!-- Total de Pedidos -->
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wider">Total de Pedidos</span>
           <span id="metric-orders-count" class="text-3xl font-black text-acai-900 mt-2 block">0</span>
           <span class="text-[11px] text-gray-400 mt-1 block">Pedidos recebidos no sistema</span>
         </div>
 
-        <!-- Ticket Médio -->
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wider">Ticket Médio</span>
           <span id="metric-average-ticket" class="text-3xl font-black text-emerald-600 mt-2 block">R$ 0,00</span>
           <span class="text-[11px] text-gray-400 mt-1 block">Média gasta por cliente</span>
         </div>
-
       </div>
 
-      <!-- Detalhamento por Forma de Pagamento -->
       <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
         <h3 class="text-sm font-bold text-gray-900 mb-3">Vendas por Forma de Pagamento</h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -295,7 +266,7 @@
 
           <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-100 flex items-center justify-between">
             <div>
-              <span class="text-xs text-gray-600 font-medium block">💳 Cartão</span>
+              <span class="text-xs text-gray-600 font-medium block">🔄 Combinado (Pix+Dinheiro)</span>
               <span id="metric-card-total" class="text-base font-extrabold text-blue-900">R$ 0,00</span>
             </div>
             <span id="metric-card-count" class="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">0 ped</span>
@@ -310,12 +281,9 @@
           </div>
         </div>
       </div>
-
     </div>
 
-    <!-- ===================================================================
-         ABA 4: CONFIGURAÇÕES DA LOJA
-         =================================================================== -->
+    <!-- ABA 4: CONFIGURAÇÕES DA LOJA -->
     <div id="tab-content-config" class="hidden space-y-6">
       <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm max-w-2xl">
         <h2 class="text-base font-extrabold text-gray-900 mb-4 border-b border-gray-100 pb-3">
@@ -330,25 +298,17 @@
 
           <div>
             <label class="block font-bold text-gray-700 mb-1">WhatsApp para Contato e Pedidos</label>
-            <input id="cfg-phone" type="text" placeholder="Ex: 5511999999999 (com DDI e DDD)" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
-            <span class="text-[11px] text-gray-400">Usado para abrir o link direto do WhatsApp</span>
+            <input id="cfg-phone" type="text" placeholder="Ex: 5511999999999" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
           </div>
 
           <div>
-            <label class="block font-bold text-gray-700 mb-1">Chave Pix da Loja</label>
-            <input id="cfg-pix" type="text" placeholder="Ex: rotta.acai.pix@gmail.com ou celular" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
-            <span class="text-[11px] text-gray-400">Exibida com botão de copiar para clientes que pagam via Pix</span>
+            <label class="block font-bold text-gray-700 mb-1">Chave Pix da Loja (Kevillyn Martins dos Santos)</label>
+            <input id="cfg-pix" type="text" value="4b93bf67-9a91-4ffc-951c-ddd12184e042" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-bold text-gray-700 mb-1">Taxa de Entrega Padrão (R$)</label>
-              <input id="cfg-delivery-fee" type="number" step="0.50" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
-            </div>
-            <div>
-              <label class="block font-bold text-gray-700 mb-1">Tempo Estimado</label>
-              <input id="cfg-time" type="text" placeholder="Ex: 30 a 50 min" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
-            </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Tempo Estimado de Entrega</label>
+            <input id="cfg-time" type="text" placeholder="Ex: 30 a 50 min" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
           </div>
 
           <div>
@@ -356,7 +316,6 @@
             <input id="cfg-address" type="text" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700">
           </div>
 
-          <!-- Credenciais de Acesso ao Painel -->
           <div class="pt-4 border-t border-gray-200">
             <h4 class="font-bold text-sm text-gray-900 mb-2 flex items-center gap-1.5">
               <span>🔐</span>
@@ -372,7 +331,6 @@
                 <input id="cfg-password" type="text" placeholder="Sua senha" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
               </div>
             </div>
-            <p class="text-[11px] text-gray-400 mt-1">Essa senha é solicitada toda vez que o painel for aberto.</p>
           </div>
 
           <div class="pt-3">
@@ -383,29 +341,20 @@
         </form>
       </div>
     </div>
-
   </main>
 
-  <!-- =====================================================================
-       MODAL DE COMANDA DE IMPRESSÃO (CUPOM TÉRMICO DE COZINHA)
-       ===================================================================== -->
+  <!-- MODAL DE COMANDA DE IMPRESSÃO (CUPOM TÉRMICO DE COZINHA) -->
   <div id="receipt-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-      
-      <!-- Topo Modal -->
       <div class="bg-acai-900 text-white p-3 flex items-center justify-between text-xs font-bold">
         <span>🖨️ Comanda de Montagem</span>
         <button onclick="closeReceiptModal()" class="text-gray-300 hover:text-white text-lg">&times;</button>
       </div>
 
-      <!-- Cupom Térmico Formatado -->
       <div class="p-4 overflow-y-auto flex-1 bg-amber-50/40">
-        <div id="receipt-modal-content" class="thermal-receipt p-4 text-xs space-y-3 border border-gray-300 shadow-inner rounded">
-          <!-- Inserido dinamicamente -->
-        </div>
+        <div id="receipt-modal-content" class="thermal-receipt p-4 text-xs space-y-3 border border-gray-300 shadow-inner rounded"></div>
       </div>
 
-      <!-- Ações de Impressão -->
       <div class="p-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2">
         <button onclick="window.print()" class="flex-1 bg-gray-900 hover:bg-black text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition">
           <span>🖨️ Imprimir</span>
@@ -414,16 +363,12 @@
           Fechar
         </button>
       </div>
-
     </div>
   </div>
 
-  <!-- =====================================================================
-       TELA DE LOGIN E SEGURANÇA DO PAINEL DA LOJISTA
-       ===================================================================== -->
+  <!-- MODAL DE LOGIN -->
   <div id="login-modal" class="fixed inset-0 z-50 bg-acai-950/95 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-5 border border-purple-100">
-      
       <div class="flex flex-col items-center">
         <img src="assets/logo.jpg" alt="Rotta do Açaí" class="w-16 h-16 rounded-full border-2 border-gold-500 shadow-md object-cover">
         <h2 class="text-xl font-black text-acai-900 mt-3">Rotta do Açaí</h2>
@@ -435,12 +380,12 @@
       <form id="login-form" onsubmit="handlePanelLogin(event)" class="space-y-4 text-left">
         <div>
           <label class="text-xs font-bold text-gray-700 block mb-1">Usuário</label>
-          <input id="login-username" type="text" required placeholder="Digite seu usuário" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-acai-600 focus:ring-1 focus:ring-acai-600 focus:outline-none">
+          <input id="login-username" type="text" required placeholder="Digite seu usuário" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-acai-600 focus:outline-none">
         </div>
 
         <div>
           <label class="text-xs font-bold text-gray-700 block mb-1">Senha</label>
-          <input id="login-password" type="password" required placeholder="Digite sua senha" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-acai-600 focus:ring-1 focus:ring-acai-600 focus:outline-none">
+          <input id="login-password" type="password" required placeholder="Digite sua senha" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-gray-300 focus:border-acai-600 focus:outline-none">
         </div>
 
         <div id="login-error-msg" class="hidden text-xs text-red-600 font-bold bg-red-50 p-2 rounded-lg border border-red-200 text-center">
@@ -451,17 +396,10 @@
           <span>🔒 Entrar no Painel</span>
         </button>
       </form>
-
-      <div class="text-[11px] text-gray-400 border-t border-gray-100 pt-3">
-        🔒 Acesso protegido para gestão e pedidos da loja.
-      </div>
-
     </div>
   </div>
 
-  <!-- =====================================================================
-       MODAL DE EDIÇÃO DE ITEM (NOME, PREÇO, FOTO E LIMITES)
-       ===================================================================== -->
+  <!-- MODAL DE EDIÇÃO DE ITEM -->
   <div id="edit-item-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
       <div class="bg-acai-900 text-white p-4 flex items-center justify-between">
@@ -515,13 +453,18 @@
     </div>
   </div>
 
-  <!-- Firebase SDK (Realtime Database - pedidos ao vivo de qualquer dispositivo) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <!-- Scripts da Aplicação -->
   <script src="js/store.js"></script>
   <script src="js/painel.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').catch(function(err) { console.warn('SW:', err); });
+      });
+    }
+  </script>
 
 </body>
 </html>

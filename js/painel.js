@@ -284,12 +284,28 @@ function createOrderCardElement(order, currentStatus) {
         </div>`).join('')}
     </div>`;
 
+  let paymentTextHtml = '';
+  if (order.paymentMethod === 'combinado') {
+    paymentTextHtml = `
+      <span class="font-black text-purple-900 uppercase block text-[11px]">🔄 COMBINADO</span>
+      <span class="text-[10px] text-emerald-700 font-bold block">💠 Pix: ${window.Store.formatCurrency(order.pixAmount)}</span>
+      <span class="text-[10px] text-purple-900 font-bold block">💵 Dinheiro: ${window.Store.formatCurrency(order.cashAmount)}</span>
+      ${order.paymentChange ? `<span class="text-[10px] text-gray-500 block font-normal">Troco p/: ${order.paymentChange}</span>` : ''}
+    `;
+  } else if (order.paymentMethod === 'dinheiro') {
+    paymentTextHtml = `
+      <span class="font-bold text-gray-700 uppercase block">💵 DINHEIRO</span>
+      ${order.paymentChange ? `<span class="text-[10px] text-gray-500 block">Troco p/: ${order.paymentChange}</span>` : ''}
+    `;
+  } else {
+    paymentTextHtml = `<span class="font-bold text-emerald-700 uppercase block">💠 PIX (100%)</span>`;
+  }
+
   const paymentHtml = `
     <div class="flex items-center justify-between text-xs pt-1">
       <div>
         <span class="text-[10px] text-gray-400 block uppercase font-bold">Pagamento:</span>
-        <span class="font-bold text-gray-700 uppercase">${order.paymentMethod}</span>
-        ${order.paymentChange ? `<span class="text-[10px] text-gray-500 block">Troco p/: ${order.paymentChange}</span>` : ''}
+        ${paymentTextHtml}
       </div>
       <div class="text-right">
         <span class="text-[10px] text-gray-400 block uppercase font-bold">Total:</span>
@@ -337,6 +353,16 @@ function openReceiptModal(orderId) {
   const config = window.Store.getConfig();
   const container = document.getElementById('receipt-modal-content');
 
+  let paymentTextReceipt = order.paymentMethod.toUpperCase();
+  if (order.paymentMethod === 'combinado') {
+    paymentTextReceipt = `COMBINADO (PIX + DINHEIRO)<br>` +
+      `<span class="text-[10px]">💠 Pix: ${window.Store.formatCurrency(order.pixAmount)}</span><br>` +
+      `<span class="text-[10px]">💵 Dinheiro: ${window.Store.formatCurrency(order.cashAmount)}</span>` +
+      (order.paymentChange ? `<br><span class="text-[10px]">Troco em dinheiro: ${order.paymentChange}</span>` : '');
+  } else if (order.paymentChange) {
+    paymentTextReceipt += `<br><span class="text-[10px]">Troco para: ${order.paymentChange}</span>`;
+  }
+
   container.innerHTML = `
     <div class="text-center pb-2 border-b border-dashed border-gray-400">
       <div class="font-extrabold text-sm uppercase">*** ROTTA DO AÇAÍ ***</div>
@@ -364,8 +390,7 @@ function openReceiptModal(orderId) {
       <div class="flex justify-between"><span>Subtotal:</span><span>${window.Store.formatCurrency(order.subtotal)}</span></div>
       <div class="flex justify-between font-black text-sm pt-1 border-t border-gray-400"><span>TOTAL:</span><span>${window.Store.formatCurrency(order.total)}</span></div>
       <div class="text-center font-bold uppercase mt-2 pt-1 border-t border-dashed border-gray-400">
-        PAGAMENTO: ${order.paymentMethod}
-        ${order.paymentChange ? `<br><span class="text-[10px]">Troco para: ${order.paymentChange}</span>` : ''}
+        ${paymentTextReceipt}
       </div>
     </div>`;
 
@@ -651,13 +676,13 @@ function renderFinancialMetrics() {
   document.getElementById('metric-average-ticket').textContent = window.Store.formatCurrency(avgTicket);
 
   const pix = orders.filter(o => o.paymentMethod === 'pix');
-  const card = orders.filter(o => o.paymentMethod === 'cartao');
+  const combined = orders.filter(o => o.paymentMethod === 'combinado');
   const cash = orders.filter(o => o.paymentMethod === 'dinheiro');
 
   document.getElementById('metric-pix-total').textContent = window.Store.formatCurrency(pix.reduce((s, o) => s + o.total, 0));
   document.getElementById('metric-pix-count').textContent = pix.length + ' ped';
-  document.getElementById('metric-card-total').textContent = window.Store.formatCurrency(card.reduce((s, o) => s + o.total, 0));
-  document.getElementById('metric-card-count').textContent = card.length + ' ped';
+  document.getElementById('metric-card-total').textContent = window.Store.formatCurrency(combined.reduce((s, o) => s + o.total, 0));
+  document.getElementById('metric-card-count').textContent = combined.length + ' ped';
   document.getElementById('metric-cash-total').textContent = window.Store.formatCurrency(cash.reduce((s, o) => s + o.total, 0));
   document.getElementById('metric-cash-count').textContent = cash.length + ' ped';
 }
@@ -669,7 +694,7 @@ function loadConfigForm() {
   const config = window.Store.getConfig();
   document.getElementById('cfg-name').value = config.name || '';
   document.getElementById('cfg-phone').value = config.phone || '';
-  document.getElementById('cfg-pix').value = config.pixKey || '';
+  document.getElementById('cfg-pix').value = config.pixKey || '4b93bf67-9a91-4ffc-951c-ddd12184e042';
   document.getElementById('cfg-time').value = config.estimatedTime || '';
   document.getElementById('cfg-address').value = config.address || '';
 

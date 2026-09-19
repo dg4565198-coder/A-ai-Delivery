@@ -6,6 +6,14 @@
   <title>Rotta do Açaí | Cardápio Digital & Pedidos Online</title>
   <meta name="description" content="Peça o melhor açaí artesanal da cidade na Rotta do Açaí. Montagem personalizada e entrega rápida!">
 
+  <!-- PWA Meta Tags (Instalar na Tela Inicial) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4c0867">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Rotta Açaí">
+  <link rel="apple-touch-icon" href="assets/logo.jpg">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -61,7 +69,6 @@
     <span class="text-white/60 text-xs mt-3">Carregando cardápio fresquinho...</span>
   </div>
 
-  <!-- Garantia de fechamento da Splash Screen mesmo em conexão lenta -->
   <script>
     setTimeout(function() {
       var s = document.getElementById('splash-screen');
@@ -93,6 +100,12 @@
       </div>
 
       <div class="flex items-center space-x-2">
+        <!-- Botão Instalar App no Celular (PWA) -->
+        <button id="pwa-install-btn" onclick="installPWA()" class="hidden flex items-center space-x-1.5 bg-gold-500 hover:bg-gold-400 text-acai-950 px-3 py-1.5 rounded-full text-xs font-black shadow-md transition transform active:scale-95">
+          <span>📱</span>
+          <span>Instalar App</span>
+        </button>
+
         <a id="header-whatsapp-btn" href="#" target="_blank" class="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-full text-xs font-bold transition shadow-md">
           <span>💬</span>
           <span class="hidden sm:inline">WhatsApp</span>
@@ -343,29 +356,56 @@
         <div class="space-y-2">
           <span class="font-bold text-gray-800 text-sm block">Forma de Pagamento *</span>
           <div class="grid grid-cols-3 gap-2">
-            <label class="payment-card cursor-pointer border-2 border-acai-600 bg-purple-50/60 rounded-xl p-3 flex flex-col items-center justify-center text-center transition">
-              <input type="radio" name="payment-method" value="pix" checked onchange="togglePaymentChange(false)" class="hidden">
+            
+            <!-- 1. Pix -->
+            <label id="lbl-pay-pix" class="payment-card cursor-pointer border-2 border-acai-600 bg-purple-50/60 rounded-xl p-3 flex flex-col items-center justify-center text-center transition">
+              <input type="radio" name="payment-method" value="pix" checked onchange="togglePaymentMethod('pix')" class="hidden">
               <span class="text-xl">💠</span>
               <span class="text-xs font-bold text-gray-800 mt-1">Pix</span>
-              <span class="text-[10px] text-emerald-600 font-medium">Aprovação imediata</span>
+              <span class="text-[10px] text-emerald-600 font-medium">100% no Pix</span>
             </label>
 
-            <label class="payment-card cursor-pointer border-2 border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center transition">
-              <input type="radio" name="payment-method" value="cartao" onchange="togglePaymentChange(false)" class="hidden">
-              <span class="text-xl">💳</span>
-              <span class="text-xs font-bold text-gray-800 mt-1">Cartão</span>
-              <span class="text-[10px] text-gray-500 font-medium">Débito/Crédito</span>
+            <!-- 2. Combinado (Pix + Dinheiro) -->
+            <label id="lbl-pay-combinado" class="payment-card cursor-pointer border-2 border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center transition">
+              <input type="radio" name="payment-method" value="combinado" onchange="togglePaymentMethod('combinado')" class="hidden">
+              <span class="text-xl">🔄</span>
+              <span class="text-xs font-bold text-gray-800 mt-1">Combinado</span>
+              <span class="text-[10px] text-purple-700 font-medium">Pix + Dinheiro</span>
             </label>
 
-            <label class="payment-card cursor-pointer border-2 border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center transition">
-              <input type="radio" name="payment-method" value="dinheiro" onchange="togglePaymentChange(true)" class="hidden">
+            <!-- 3. Dinheiro -->
+            <label id="lbl-pay-dinheiro" class="payment-card cursor-pointer border-2 border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center transition">
+              <input type="radio" name="payment-method" value="dinheiro" onchange="togglePaymentMethod('dinheiro')" class="hidden">
               <span class="text-xl">💵</span>
               <span class="text-xs font-bold text-gray-800 mt-1">Dinheiro</span>
-              <span class="text-[10px] text-gray-500 font-medium">Pagar na entrega</span>
+              <span class="text-[10px] text-gray-500 font-medium">Na entrega</span>
             </label>
           </div>
 
-          <!-- Troco para Dinheiro -->
+          <!-- Campos de Pagamento Combinado (Pix + Dinheiro) -->
+          <div id="combinado-fields-container" class="hidden space-y-2.5 pt-3 bg-purple-50 p-3.5 rounded-2xl border border-purple-200">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-acai-900">Divisão do Pagamento:</span>
+              <span class="text-[10px] bg-purple-200 text-acai-900 font-bold px-2 py-0.5 rounded">Cálculo Automático</span>
+            </div>
+
+            <div>
+              <label class="text-xs text-gray-700 font-bold block mb-1">Quanto você vai pagar no Pix? (R$) *</label>
+              <input id="order-pix-amount" type="number" step="1" min="1" placeholder="Ex: 20,00" oninput="calculateCombinedPayment()" class="w-full text-xs px-3 py-2.5 rounded-xl border border-purple-300 focus:border-acai-600 focus:outline-none font-bold text-emerald-700">
+            </div>
+
+            <div class="bg-white p-2.5 rounded-xl border border-purple-200 flex items-center justify-between">
+              <span class="text-xs text-gray-600 font-bold">Restante no Dinheiro:</span>
+              <span id="order-cash-remaining-label" class="text-sm font-black text-acai-900">R$ 0,00</span>
+            </div>
+
+            <div>
+              <label class="text-xs text-gray-600 font-semibold block mb-1">Precisa de troco para a parte em dinheiro?</label>
+              <input id="order-combined-change" type="text" placeholder="Ex: Troco para R$ 50 ou Não preciso" class="w-full text-xs px-3 py-2 rounded-xl border border-gray-200 focus:border-acai-600 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Troco para Dinheiro (100% Dinheiro) -->
           <div id="change-field-container" class="hidden pt-2">
             <label class="text-xs text-gray-600 font-semibold block mb-1">Precisa de troco para quanto?</label>
             <input id="order-change" type="text" placeholder="Ex: R$ 50,00 ou Não preciso" class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:border-acai-600 focus:outline-none">
@@ -401,10 +441,10 @@
   </div>
 
   <!-- =====================================================================
-       7. MODAL DE CONFIRMAÇÃO & RASTREIO AO VIVO
+       7. MODAL DE CONFIRMAÇÃO & RASTREIO AO VIVO (COM QR CODE PIX)
        ===================================================================== -->
   <div id="success-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl text-center space-y-5 animate-in zoom-in-95 duration-200">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl text-center space-y-5 animate-in zoom-in-95 duration-200 max-h-[95vh] overflow-y-auto">
       
       <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner border border-emerald-300">
         ✓
@@ -427,18 +467,35 @@
         </div>
       </div>
 
-      <!-- Instruções Pix -->
-      <div id="pix-payment-box" class="hidden bg-emerald-50 p-4 rounded-2xl border border-emerald-200 text-left space-y-2">
+      <!-- Instruções Pix & QR Code da KEVILLYN MARTINS DOS SANTOS -->
+      <div id="pix-payment-box" class="hidden bg-emerald-50 p-4 rounded-2xl border border-emerald-200 text-left space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-emerald-900">Pagamento via Pix:</span>
-          <span class="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded">Copia e Cola</span>
+          <span class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+            <span>💠</span>
+            <span>Pagamento via Pix</span>
+          </span>
+          <span class="text-[10px] bg-emerald-200 text-emerald-800 font-extrabold px-2.5 py-0.5 rounded-full">Banco Inter</span>
         </div>
-        <p class="text-xs text-emerald-700">Copie a chave Pix abaixo para pagar no app do seu banco:</p>
-        <div class="flex items-center space-x-2">
-          <input id="pix-copy-input" type="text" readonly value="" class="w-full text-xs px-3 py-2 bg-white rounded-xl border border-emerald-300 font-mono text-emerald-900 focus:outline-none">
-          <button onclick="copyPixKey()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0 transition">
-            Copiar
-          </button>
+
+        <div id="pix-combined-notice" class="hidden bg-purple-100 text-acai-900 p-2.5 rounded-xl border border-purple-200 text-xs font-bold">
+          <!-- Inserido dinamicamente se for pagamento combinado -->
+        </div>
+
+        <!-- Exibição da Imagem do QR Code -->
+        <div class="bg-white p-3 rounded-2xl border border-emerald-200 text-center flex flex-col items-center">
+          <img id="pix-qr-code-img" src="assets/pix_qr.jpg" alt="QR Code Pix" class="w-48 h-auto object-contain rounded-xl border border-gray-200 shadow-sm">
+          <span class="text-[11px] font-bold text-gray-800 mt-2 block">KEVILLYN MARTINS DOS SANTOS</span>
+          <span class="text-[10px] text-gray-500 block">Banco Inter • Escaneie com o app do seu banco</span>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-bold text-emerald-900 block mb-1">Chave Pix Copia e Cola:</label>
+          <div class="flex items-center space-x-2">
+            <input id="pix-copy-input" type="text" readonly value="4b93bf67-9a91-4ffc-951c-ddd12184e042" class="w-full text-xs px-3 py-2 bg-white rounded-xl border border-emerald-300 font-mono text-emerald-900 focus:outline-none">
+            <button onclick="copyPixKey()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-3 py-2 rounded-xl shrink-0 transition shadow">
+              Copiar
+            </button>
+          </div>
         </div>
       </div>
 
@@ -458,9 +515,20 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <!-- Scripts da Aplicação -->
+  <!-- Scripts da Aplicação & Service Worker PWA -->
   <script src="js/store.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').then(function(reg) {
+          console.log('PWA ServiceWorker registrado com sucesso:', reg.scope);
+        }).catch(function(err) {
+          console.warn('PWA ServiceWorker erro:', err);
+        });
+      });
+    }
+  </script>
 
 </body>
 </html>

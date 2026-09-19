@@ -1,8 +1,7 @@
 /**
- * ROTTA DO AÇAÍ - APLICATIVO DO CLIENTE (CARDÁPIO DIGITAL)
+ * ROTTA DO AÇAÍ - APLICATIVO DO CLIENTE (CARDÁPIO DIGITAL & PWA)
  */
 
-// Estado da Aplicação do Cliente
 const state = {
   activeCategory: 'todos',
   cart: [],
@@ -10,8 +9,9 @@ const state = {
   selectedBase: null,
   selectedFreeToppings: [],
   selectedFruits: [],
-  deliveryType: 'entrega', // 'entrega' | 'retirada'
-  lastCreatedOrderId: null
+  deliveryType: 'entrega',
+  lastCreatedOrderId: null,
+  deferredPWAInstall: null
 };
 
 function startApp() {
@@ -20,6 +20,7 @@ function startApp() {
   try { renderStoreHeader(); } catch (e) { console.error('Header:', e); }
   try { renderProducts(); } catch (e) { console.error('Products:', e); }
   try { setupSyncListener(); } catch (e) { console.error('Sync:', e); }
+  try { setupPWAInstaller(); } catch (e) { console.error('PWA:', e); }
 }
 
 if (document.readyState === 'loading') {
@@ -42,6 +43,30 @@ function setupSplashScreen() {
   splash.addEventListener('click', dismiss);
   splash.addEventListener('touchstart', dismiss, { passive: true });
   setTimeout(dismiss, 1500);
+}
+
+function setupPWAInstaller() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    state.deferredPWAInstall = e;
+    const btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.classList.remove('hidden');
+  });
+}
+
+function installPWA() {
+  if (state.deferredPWAInstall) {
+    state.deferredPWAInstall.prompt();
+    state.deferredPWAInstall.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        const btn = document.getElementById('pwa-install-btn');
+        if (btn) btn.classList.add('hidden');
+      }
+      state.deferredPWAInstall = null;
+    });
+  } else {
+    alert("📲 Para instalar o App da Rotta do Açaí no celular:\n\n• No Android/Chrome: Toque no menu (3 pontinhos) do navegador e escolha 'Instalar aplicativo' ou 'Adicionar à tela inicial'.\n\n• No iPhone/Safari: Toque no botão Compartilhar 📤 e escolha 'Adicionar à Tela de Início'.");
+  }
 }
 
 function renderStoreHeader() {
@@ -354,7 +379,7 @@ function addItemDirectlyToCart(product) {
 }
 
 // ==========================================================================
-// 4. CARRINHO & SACOLA
+// 4. CARRINHO & FORMAS DE PAGAMENTO (PIX, COMBINADO, DINHEIRO)
 // ==========================================================================
 function updateCartUI() {
   const cartBar = document.getElementById('floating-cart-bar');
@@ -450,6 +475,50 @@ function updateCheckoutCalculations() {
 
   const grandTotalElem = document.getElementById('checkout-grand-total');
   if (grandTotalElem) grandTotalElem.textContent = window.Store.formatCurrency(grandTotal);
+
+  calculateCombinedPayment();
+}
+
+function togglePaymentMethod(method) {
+  const lblPix = document.getElementById('lbl-pay-pix');
+  const lblCombinado = document.getElementById('lbl-pay-combinado');
+  const lblDinheiro = document.getElementById('lbl-pay-dinheiro');
+  const combinadoFields = document.getElementById('combinado-fields-container');
+  const changeFields = document.getElementById('change-field-container');
+
+  lblPix.className = "payment-card cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition " +
+    (method === 'pix' ? "border-acai-600 bg-purple-50/60" : "border-gray-200 bg-white");
+
+  lblCombinado.className = "payment-card cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition " +
+    (method === 'combinado' ? "border-acai-600 bg-purple-50/60" : "border-gray-200 bg-white");
+
+  lblDinheiro.className = "payment-card cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center text-center transition " +
+    (method === 'dinheiro' ? "border-acai-600 bg-purple-50/60" : "border-gray-200 bg-white");
+
+  if (method === 'combinado') {
+    if (combinadoFields) combinadoFields.classList.remove('hidden');
+    if (changeFields) changeFields.classList.add('hidden');
+    calculateCombinedPayment();
+  } else if (method === 'dinheiro') {
+    if (changeFields) changeFields.classList.remove('hidden');
+    if (combinadoFields) combinadoFields.classList.add('hidden');
+  } else {
+    if (changeFields) changeFields.classList.add('hidden');
+    if (combinadoFields) combinadoFields.classList.add('hidden');
+  }
+}
+
+function calculateCombinedPayment() {
+  const subtotal = state.cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+  const pixInput = document.getElementById('order-pix-amount');
+  const remainingLabel = document.getElementById('order-cash-remaining-label');
+
+  if (!pixInput || !remainingLabel) return;
+
+  const pixVal = parseFloat(pixInput.value) || 0;
+  const cashRemaining = Math.max(0, subtotal - pixVal);
+
+  remainingLabel.textContent = window.Store.formatCurrency(cashRemaining);
 }
 
 function setDeliveryType(type) {
@@ -471,17 +540,8 @@ function setDeliveryType(type) {
   updateCheckoutCalculations();
 }
 
-function togglePaymentChange(show) {
-  const changeField = document.getElementById('change-field-container');
-  if (show) {
-    if (changeField) changeField.classList.remove('hidden');
-  } else {
-    if (changeField) changeField.classList.add('hidden');
-  }
-}
-
 // ==========================================================================
-// 5. ENVIO DO PEDIDO (DIRETO PARA O SISTEMA DA LOJA!)
+// 5. ENVIO DO PEDIDO
 // ==========================================================================
 async function submitFinalOrder() {
   const config = window.Store.getConfig();
@@ -521,9 +581,27 @@ async function submitFinalOrder() {
   }
 
   const paymentMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'pix';
-  const paymentChange = paymentMethod === 'dinheiro' ? document.getElementById('order-change').value.trim() : null;
-
   const subtotal = state.cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+  let pixAmount = 0;
+  let cashAmount = 0;
+  let paymentChange = null;
+
+  if (paymentMethod === 'combinado') {
+    pixAmount = parseFloat(document.getElementById('order-pix-amount').value) || 0;
+    if (pixAmount <= 0 || pixAmount >= subtotal) {
+      alert(`Para pagamento combinado, informe um valor válido no Pix (entre R$ 1,00 e ${window.Store.formatCurrency(subtotal - 1)}).`);
+      document.getElementById('order-pix-amount').focus();
+      return;
+    }
+    cashAmount = Math.max(0, subtotal - pixAmount);
+    paymentChange = document.getElementById('order-combined-change').value.trim();
+  } else if (paymentMethod === 'dinheiro') {
+    cashAmount = subtotal;
+    paymentChange = document.getElementById('order-change').value.trim();
+  } else {
+    pixAmount = subtotal;
+  }
+
   const deliveryFee = 0;
   const total = subtotal;
 
@@ -538,6 +616,8 @@ async function submitFinalOrder() {
       deliveryType: state.deliveryType,
       address,
       paymentMethod,
+      pixAmount,
+      cashAmount,
       paymentChange,
       subtotal,
       deliveryFee,
@@ -568,15 +648,34 @@ function showSuccessOrderModal(order) {
   document.getElementById('confirmed-status-text').textContent = '🥣 Pedido aceito automaticamente! Já estamos preparando seu açaí fresquinho!';
 
   const pixBox = document.getElementById('pix-payment-box');
-  if (order.paymentMethod === 'pix') {
+  const combinedNotice = document.getElementById('pix-combined-notice');
+
+  if (order.paymentMethod === 'pix' || order.paymentMethod === 'combinado') {
     pixBox.classList.remove('hidden');
-    document.getElementById('pix-copy-input').value = config.pixKey;
+    document.getElementById('pix-copy-input').value = config.pixKey || '4b93bf67-9a91-4ffc-951c-ddd12184e042';
+
+    if (order.paymentMethod === 'combinado') {
+      combinedNotice.classList.remove('hidden');
+      combinedNotice.innerHTML = `
+        👉 <strong>Pagamento Combinado:</strong><br>
+        • Pagar <strong class="text-emerald-700">${window.Store.formatCurrency(order.pixAmount)}</strong> no Pix agora.<br>
+        • Restante de <strong class="text-purple-800">${window.Store.formatCurrency(order.cashAmount)}</strong> será pago em Dinheiro na entrega.
+      `;
+    } else {
+      combinedNotice.classList.add('hidden');
+    }
   } else {
     pixBox.classList.add('hidden');
   }
 
   const whatsappBtn = document.getElementById('btn-whatsapp-optional');
   const storeName = config.name || 'ROTTA DO AÇAÍ';
+
+  let paymentText = order.paymentMethod.toUpperCase();
+  if (order.paymentMethod === 'combinado') {
+    paymentText = `COMBINADO (Pix: ${window.Store.formatCurrency(order.pixAmount)} + Dinheiro: ${window.Store.formatCurrency(order.cashAmount)})`;
+  }
+
   const textMsg = encodeURIComponent(
     `*NOVO PEDIDO ${order.orderNumber} - ${storeName.toUpperCase()}*\n\n` +
     `Olá! Acabei de enviar meu pedido pelo Cardápio Digital.\n\n` +
@@ -584,7 +683,7 @@ function showSuccessOrderModal(order) {
     `📱 *Telefone:* ${order.customer.phone}\n` +
     `🛵 *Tipo:* ${order.deliveryType === 'entrega' ? 'Entrega em Casa' : 'Retirada no Balcão'}\n` +
     (order.address ? `📍 *Endereço:* ${order.address.street}, ${order.address.number} - ${order.address.neighborhood}\n` : '') +
-    `💳 *Pagamento:* ${order.paymentMethod.toUpperCase()}\n` +
+    `💳 *Pagamento:* ${paymentText}\n` +
     `💰 *Total:* ${window.Store.formatCurrency(order.total)}\n\n` +
     `Aguardando meu pedido!`
   );
@@ -613,7 +712,7 @@ function copyPixKey() {
   const input = document.getElementById('pix-copy-input');
   input.select();
   navigator.clipboard.writeText(input.value).then(() => {
-    alert('Chave Pix copiada para a área de transferência! Abra o app do seu banco e cole.');
+    alert('✅ Chave Pix (Kevillyn Martins dos Santos) copiada com sucesso! Abra o app do seu banco e cole na opção Pix Copia e Cola.');
   }).catch(() => {
     alert('Chave Pix: ' + input.value);
   });
@@ -642,7 +741,9 @@ window.closeCartModal = closeCartModal;
 window.clearCart = clearCart;
 window.removeCartItem = removeCartItem;
 window.setDeliveryType = setDeliveryType;
-window.togglePaymentChange = togglePaymentChange;
+window.togglePaymentMethod = togglePaymentMethod;
+window.calculateCombinedPayment = calculateCombinedPayment;
 window.submitFinalOrder = submitFinalOrder;
 window.copyPixKey = copyPixKey;
 window.closeSuccessModal = closeSuccessModal;
+window.installPWA = installPWA;

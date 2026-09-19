@@ -26,8 +26,9 @@ const DEFAULT_CONFIG = {
   name: 'Rotta do Açaí',
   slogan: 'O sabor que conquista seu dia!',
   phone: '5511999999999',
-  pixKey: 'rotta.acai.pix@gmail.com (Chave E-mail ou Celular)',
-  pixReceiver: 'Rotta do Açaí',
+  pixKey: '4b93bf67-9a91-4ffc-951c-ddd12184e042',
+  pixReceiver: 'KEVILLYN MARTINS DOS SANTOS (Banco Inter)',
+  pixQrImage: 'assets/pix_qr.jpg',
   estimatedTime: '30 a 50 min',
   isOpen: true,
   address: 'Rua Principal, 123 - Centro'

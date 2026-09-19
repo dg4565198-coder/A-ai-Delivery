@@ -1,0 +1,24 @@
+{
+  "name": "Rotta do Açaí - Cardápio Digital",
+  "short_name": "Rotta Açaí",
+  "description": "Cardápio Digital & Pedidos Online da Rotta do Açaí",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1e022b",
+  "theme_color": "#4c0867",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
