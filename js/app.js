@@ -9,6 +9,7 @@ const state = {
   selectedBase: null,
   selectedFreeToppings: [],
   selectedFruits: [],
+  builderQuantity: 1,
   deliveryType: 'entrega',
   lastCreatedOrderId: null,
   deferredPWAInstall: null
@@ -18,9 +19,12 @@ function startApp() {
   try { window.Store.init(); } catch (e) { console.error('Store init:', e); }
   try { setupSplashScreen(); } catch (e) { console.error('Splash:', e); }
   try { renderStoreHeader(); } catch (e) { console.error('Header:', e); }
+  try { renderFavorites(); } catch (e) { console.error('Favorites:', e); }
+  try { loadSavedCustomerData(); } catch (e) { console.error('Customer data:', e); }
   try { renderProducts(); } catch (e) { console.error('Products:', e); }
   try { setupSyncListener(); } catch (e) { console.error('Sync:', e); }
   try { setupPWAInstaller(); } catch (e) { console.error('PWA:', e); }
+  try { setupOrderNotificationListeners(); } catch (e) { console.error('Notifications:', e); }
 }
 
 if (document.readyState === 'loading') {
@@ -208,11 +212,15 @@ function handleProductClick(productId) {
   state.selectedBase = null;
   state.selectedFreeToppings = [];
   state.selectedFruits = [];
+  state.builderQuantity = 1;
 
   document.getElementById('builder-product-name').textContent = product.name;
   document.getElementById('builder-icon').innerHTML = product.image ? `<img src="${product.image}" class="w-full h-full object-cover rounded-xl">` : (product.icon || '🍧');
   document.getElementById('builder-base-price').textContent = window.Store.formatCurrency(product.price);
   document.getElementById('builder-notes').value = '';
+
+  const qtyElem = document.getElementById('builder-quantity');
+  if (qtyElem) qtyElem.textContent = '1';
 
   const fruitLimit = product.freeFruitLimit || 3;
   const fruitLimitLabel = document.getElementById('builder-fruit-limit-label');
@@ -326,10 +334,24 @@ function toggleFreeTopping(toppingId) {
   renderBuilderFreeToppings();
 }
 
+function changeBuilderQuantity(delta) {
+  let newQty = (state.builderQuantity || 1) + delta;
+  if (newQty < 1) newQty = 1;
+  if (newQty > 5) {
+    alert('Você pode adicionar no máximo 5 unidades por vez deste açaí.');
+    newQty = 5;
+  }
+  state.builderQuantity = newQty;
+  const qtyElem = document.getElementById('builder-quantity');
+  if (qtyElem) qtyElem.textContent = newQty;
+  updateBuilderTotal();
+}
+
 function updateBuilderTotal() {
   if (!state.currentBuildingProduct) return;
 
-  let total = state.currentBuildingProduct.price;
+  let unitPrice = state.currentBuildingProduct.price;
+  let total = unitPrice * (state.builderQuantity || 1);
 
   const priceElem = document.getElementById('builder-total-price');
   if (priceElem) {
@@ -353,7 +375,7 @@ function confirmAddItemToCart() {
     freeToppings: [...state.selectedFreeToppings],
     fruits: [...state.selectedFruits],
     notes,
-    quantity: 1
+    quantity: state.builderQuantity || 1
   };
 
   state.cart.push(cartItem);
@@ -442,8 +464,14 @@ function renderCartModalContent() {
 
         ${item.notes ? `<p class="text-[10px] italic text-purple-600 mt-0.5">Obs: "${item.notes}"</p>` : ''}
 
-        <div class="mt-2 text-xs font-bold text-acai-900">
-          ${window.Store.formatCurrency(item.unitPrice * item.quantity)}
+        <div class="mt-2.5 flex items-center justify-between">
+          <span class="text-xs font-bold text-acai-900">${window.Store.formatCurrency(item.unitPrice * item.quantity)}</span>
+          
+          <div class="flex items-center space-x-2 border border-purple-200 rounded-lg px-2 py-0.5 bg-white shadow-sm">
+            <button onclick="changeCartItemQuantity(${idx}, -1)" class="text-acai-900 font-extrabold px-1.5 hover:bg-purple-100 rounded text-sm">&minus;</button>
+            <span class="font-extrabold text-xs text-acai-900">${item.quantity}</span>
+            <button onclick="changeCartItemQuantity(${idx}, 1)" class="text-acai-900 font-extrabold px-1.5 hover:bg-purple-100 rounded text-sm">&plus;</button>
+          </div>
         </div>
       </div>
 
@@ -454,6 +482,22 @@ function renderCartModalContent() {
   `).join('');
 
   updateCheckoutCalculations();
+}
+
+function changeCartItemQuantity(index, delta) {
+  if (!state.cart[index]) return;
+  let newQty = state.cart[index].quantity + delta;
+  if (newQty <= 0) {
+    removeCartItem(index);
+    return;
+  }
+  if (newQty > 5) {
+    alert('Limite máximo de 5 unidades por item atingido.');
+    newQty = 5;
+  }
+  state.cart[index].quantity = newQty;
+  updateCartUI();
+  renderCartModalContent();
 }
 
 function removeCartItem(index) {
@@ -526,18 +570,58 @@ function setDeliveryType(type) {
   const btnEntrega = document.getElementById('btn-type-entrega');
   const btnRetirada = document.getElementById('btn-type-retirada');
   const fields = document.getElementById('delivery-fields');
+  const noticeBox = document.getElementById('pickup-notice-box');
+  const titleElem = document.getElementById('address-box-title');
 
   if (type === 'entrega') {
     if (btnEntrega) btnEntrega.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-acai-700 text-white border-acai-700 shadow-sm";
     if (btnRetirada) btnRetirada.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-white text-gray-700 border-gray-200";
     if (fields) fields.classList.remove('hidden');
+    if (noticeBox) noticeBox.classList.add('hidden');
+    if (titleElem) titleElem.textContent = 'Endereço de Entrega';
   } else {
     if (btnRetirada) btnRetirada.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-acai-700 text-white border-acai-700 shadow-sm";
     if (btnEntrega) btnEntrega.className = "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-white text-gray-700 border-gray-200";
     if (fields) fields.classList.add('hidden');
+    if (noticeBox) noticeBox.classList.remove('hidden');
+    if (titleElem) titleElem.textContent = 'Opção de Retirada';
   }
 
   updateCheckoutCalculations();
+}
+
+function loadSavedCustomerData() {
+  const customer = window.Store.getSavedCustomer();
+  if (!customer) return;
+
+  const nameInput = document.getElementById('order-customer-name');
+  const phoneInput = document.getElementById('order-customer-phone');
+  const streetInput = document.getElementById('order-street');
+  const numberInput = document.getElementById('order-number');
+  const neighborhoodInput = document.getElementById('order-neighborhood');
+  const refInput = document.getElementById('order-ref');
+
+  if (nameInput && customer.name) nameInput.value = customer.name;
+  if (phoneInput && customer.phone) phoneInput.value = customer.phone;
+  if (streetInput && customer.street) streetInput.value = customer.street;
+  if (numberInput && customer.number) numberInput.value = customer.number;
+  if (neighborhoodInput && customer.neighborhood) neighborhoodInput.value = customer.neighborhood;
+  if (refInput && customer.ref) refInput.value = customer.ref;
+}
+
+function saveCustomerDataIfRequested(name, phone, address) {
+  const checkbox = document.getElementById('save-customer-checkbox');
+  if (checkbox && checkbox.checked) {
+    const data = {
+      name,
+      phone,
+      street: address?.street || '',
+      number: address?.number || '',
+      neighborhood: address?.neighborhood || '',
+      ref: address?.ref || ''
+    };
+    window.Store.saveCustomer(data);
+  }
 }
 
 // ==========================================================================
@@ -579,6 +663,8 @@ async function submitFinalOrder() {
 
     address = { street, number, neighborhood, ref };
   }
+
+  saveCustomerDataIfRequested(name, phone, address);
 
   const paymentMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'pix';
   const subtotal = state.cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
@@ -625,6 +711,8 @@ async function submitFinalOrder() {
     });
 
     state.lastCreatedOrderId = newOrder.id;
+    window.Store.addMyOrder(newOrder.id);
+    setupOrderNotificationListeners();
 
     state.cart = [];
     updateCartUI();
@@ -729,6 +817,252 @@ function setupSyncListener() {
   });
 }
 
+// ==========================================================================
+// 6. AÇAÍS FAVORITOS
+// ==========================================================================
+function saveCurrentBuildAsFavorite() {
+  if (!state.currentBuildingProduct) return;
+
+  const namePrompt = prompt("Dê um nome para o seu Açaí Favorito (ex: Meu Açaí Especial):", `${state.currentBuildingProduct.name} Especial`);
+  if (!namePrompt) return;
+
+  const favorite = {
+    id: 'fav_' + Date.now(),
+    customName: namePrompt.trim(),
+    productId: state.currentBuildingProduct.id,
+    productName: state.currentBuildingProduct.name,
+    icon: state.currentBuildingProduct.icon || '🍧',
+    unitPrice: state.currentBuildingProduct.price,
+    freeToppings: [...state.selectedFreeToppings],
+    fruits: [...state.selectedFruits],
+    notes: document.getElementById('builder-notes').value.trim()
+  };
+
+  window.Store.saveFavorite(favorite);
+  renderFavorites();
+  alert(`⭐ "${favorite.customName}" foi salvo nos seus Açaís Favoritos!`);
+}
+
+function renderFavorites() {
+  const container = document.getElementById('favorites-container');
+  const list = document.getElementById('favorites-list');
+  if (!container || !list) return;
+
+  const favs = window.Store.getFavorites();
+  if (!favs || favs.length === 0) {
+    container.classList.add('hidden');
+    return;
+  }
+
+  container.classList.remove('hidden');
+  list.innerHTML = favs.map(fav => `
+    <div class="bg-white/10 backdrop-blur-md border border-white/20 p-3 rounded-xl flex flex-col justify-between space-y-2">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="font-extrabold text-xs text-gold-300 flex items-center gap-1">
+            <span>⭐</span> ${fav.customName}
+          </div>
+          <div class="text-[11px] text-purple-100 mt-0.5">
+            ${fav.productName}
+          </div>
+          ${fav.fruits && fav.fruits.length > 0 ? `<div class="text-[10px] text-purple-200">🍓 ${fav.fruits.map(f => f.name).join(', ')}</div>` : ''}
+          ${fav.freeToppings && fav.freeToppings.length > 0 ? `<div class="text-[10px] text-purple-200">🥣 ${fav.freeToppings.map(t => t.name).join(', ')}</div>` : ''}
+        </div>
+        <button onclick="deleteFavorite('${fav.id}')" class="text-rose-300 hover:text-rose-100 text-xs p-1" title="Excluir Favorito">&times;</button>
+      </div>
+      
+      <div class="flex items-center justify-between pt-1 border-t border-white/10">
+        <span class="text-xs font-bold text-white">${window.Store.formatCurrency(fav.unitPrice)}</span>
+        <button onclick="addFavoriteToCart('${fav.id}')" class="bg-gold-500 hover:bg-gold-400 text-acai-950 font-black text-xs px-3 py-1.5 rounded-lg shadow transition transform active:scale-95 flex items-center gap-1">
+          <span>🛒 Adicionar</span>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addFavoriteToCart(favId) {
+  const fav = window.Store.getFavorites().find(f => f.id === favId);
+  if (!fav) return;
+
+  const cartItem = {
+    cartId: 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+    productId: fav.productId,
+    name: `${fav.productName} (${fav.customName})`,
+    icon: fav.icon || '🍧',
+    unitPrice: fav.unitPrice,
+    base: null,
+    freeToppings: [...(fav.freeToppings || [])],
+    fruits: [...(fav.fruits || [])],
+    notes: fav.notes || '',
+    quantity: 1
+  };
+
+  state.cart.push(cartItem);
+  updateCartUI();
+  alert(`🛒 "${fav.customName}" foi adicionado à sua sacola!`);
+}
+
+function deleteFavorite(favId) {
+  if (confirm("Remover este açaí dos seus favoritos?")) {
+    window.Store.removeFavorite(favId);
+    renderFavorites();
+  }
+}
+
+// ==========================================================================
+// 7. NOTIFICAÇÕES EM TEMPO REAL & MEUS PEDIDOS
+// ==========================================================================
+const _notifiedStatuses = {};
+
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+}
+
+function sendPushNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, {
+        body,
+        icon: 'assets/logo.jpg',
+        badge: 'assets/logo.jpg'
+      });
+    } catch (e) {
+      console.warn('Erro notificação push:', e);
+    }
+  }
+}
+
+function setupOrderNotificationListeners() {
+  requestNotificationPermission();
+
+  const myOrderIds = window.Store.getMyOrders();
+  if (!myOrderIds || myOrderIds.length === 0) return;
+
+  myOrderIds.forEach(orderId => {
+    window.Store.listenToOrder(orderId, (order) => {
+      if (!order || !order.status) return;
+
+      const lastStatus = _notifiedStatuses[orderId];
+      if (lastStatus && lastStatus !== order.status) {
+        const messages = {
+          preparo: `🥣 Seu Pedido ${order.orderNumber} está sendo preparado com muito carinho!`,
+          entrega: order.deliveryType === 'entrega' 
+            ? `🛵 Seu Pedido ${order.orderNumber} saiu para entrega! Fique atento(a)!`
+            : `🏬 Seu Pedido ${order.orderNumber} está pronto para retirada no balcão!`,
+          concluido: `✅ Pedido ${order.orderNumber} concluído! Bom apetite!`,
+          cancelado: `❌ Pedido ${order.orderNumber} foi cancelado pela loja.`
+        };
+
+        if (messages[order.status]) {
+          sendPushNotification('Rotta do Açaí 🍇', messages[order.status]);
+          try { window.Store.playNotificationSound(); } catch {}
+        }
+      }
+      _notifiedStatuses[orderId] = order.status;
+
+      const modal = document.getElementById('my-orders-modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        renderMyOrders();
+      }
+    });
+  });
+}
+
+function openMyOrdersModal() {
+  renderMyOrders();
+  document.getElementById('my-orders-modal').classList.remove('hidden');
+}
+
+function closeMyOrdersModal() {
+  document.getElementById('my-orders-modal').classList.add('hidden');
+}
+
+function renderMyOrders() {
+  const container = document.getElementById('my-orders-list');
+  if (!container) return;
+
+  const orderIds = window.Store.getMyOrders();
+  if (!orderIds || orderIds.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-12 text-gray-400">
+        <span class="text-4xl block mb-2">📋</span>
+        <p class="font-bold text-gray-700">Nenhum pedido realizado ainda.</p>
+        <p class="text-xs text-gray-500 mt-1">Seus últimos pedidos aparecerão aqui para você acompanhar ao vivo!</p>
+      </div>
+    `;
+    return;
+  }
+
+  const db = window.Store.getDB ? window.Store.getDB() : null;
+
+  container.innerHTML = `<div class="text-center py-6 text-gray-500 text-xs">Carregando seus pedidos...</div>`;
+
+  if (!db) {
+    container.innerHTML = `<div class="text-center py-6 text-red-500 text-xs">Erro ao conectar com o servidor.</div>`;
+    return;
+  }
+
+  const promises = orderIds.slice(0, 10).map(id => {
+    return db.ref('orders/' + id).once('value').then(snap => snap.val());
+  });
+
+  Promise.all(promises).then(orders => {
+    const validOrders = orders.filter(o => o !== null).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    if (validOrders.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-12 text-gray-400">
+          <span class="text-4xl block mb-2">📋</span>
+          <p class="font-bold text-gray-700">Nenhum pedido recente encontrado.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const statusBadges = {
+      novo: '<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> Pedido Recebido</span>',
+      preparo: '<span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Em Preparo</span>',
+      entrega: '<span class="bg-purple-100 text-purple-800 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-500 animate-bounce"></span> Saiu / Pronto</span>',
+      concluido: '<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">✅ Concluído</span>',
+      cancelado: '<span class="bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">❌ Cancelado</span>'
+    };
+
+    container.innerHTML = validOrders.map(order => `
+      <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+          <div>
+            <span class="font-black text-acai-900 text-base">${order.orderNumber || '#'}</span>
+            <span class="text-[11px] text-gray-400 block">${order.createdAt ? new Date(order.createdAt).toLocaleString('pt-BR') : ''}</span>
+          </div>
+          <div>
+            ${statusBadges[order.status] || statusBadges['novo']}
+          </div>
+        </div>
+
+        <div class="space-y-1 text-xs">
+          ${(order.items || []).map(i => `
+            <div class="flex justify-between text-gray-700 font-medium">
+              <span>${i.quantity}x ${i.name}</span>
+              <span>${window.Store.formatCurrency(i.unitPrice * i.quantity)}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-gray-100 text-xs font-extrabold">
+          <span class="text-gray-600">Total do Pedido:</span>
+          <span class="text-acai-900 text-sm">${window.Store.formatCurrency(order.total)}</span>
+        </div>
+      </div>
+    `).join('');
+  }).catch(err => {
+    console.error("Erro ao carregar Meus Pedidos:", err);
+    container.innerHTML = `<div class="text-center py-6 text-red-500 text-xs">Erro ao carregar histórico de pedidos.</div>`;
+  });
+}
+
 // Funções Globais
 window.filterCategory = filterCategory;
 window.handleProductClick = handleProductClick;
@@ -736,6 +1070,8 @@ window.closeBuilderModal = closeBuilderModal;
 window.toggleFruit = toggleFruit;
 window.toggleFreeTopping = toggleFreeTopping;
 window.confirmAddItemToCart = confirmAddItemToCart;
+window.changeBuilderQuantity = changeBuilderQuantity;
+window.changeCartItemQuantity = changeCartItemQuantity;
 window.openCartModal = openCartModal;
 window.closeCartModal = closeCartModal;
 window.clearCart = clearCart;
@@ -747,3 +1083,8 @@ window.submitFinalOrder = submitFinalOrder;
 window.copyPixKey = copyPixKey;
 window.closeSuccessModal = closeSuccessModal;
 window.installPWA = installPWA;
+window.saveCurrentBuildAsFavorite = saveCurrentBuildAsFavorite;
+window.addFavoriteToCart = addFavoriteToCart;
+window.deleteFavorite = deleteFavorite;
+window.openMyOrdersModal = openMyOrdersModal;
+window.closeMyOrdersModal = closeMyOrdersModal;

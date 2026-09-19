@@ -100,6 +100,12 @@
       </div>
 
       <div class="flex items-center space-x-2">
+        <!-- Botão Meus Pedidos -->
+        <button onclick="openMyOrdersModal()" class="flex items-center space-x-1.5 bg-purple-800/80 hover:bg-purple-700 text-white px-3 py-1.5 rounded-full text-xs font-bold transition shadow border border-purple-500/40">
+          <span>📋</span>
+          <span class="hidden sm:inline">Meus Pedidos</span>
+        </button>
+
         <!-- Botão Instalar App no Celular (PWA) -->
         <button id="pwa-install-btn" onclick="installPWA()" class="hidden flex items-center space-x-1.5 bg-gold-500 hover:bg-gold-400 text-acai-950 px-3 py-1.5 rounded-full text-xs font-black shadow-md transition transform active:scale-95">
           <span>📱</span>
@@ -158,6 +164,20 @@
        3. LISTA DE PRODUTOS
        ===================================================================== -->
   <main class="max-w-4xl mx-auto px-4 py-6">
+
+    <!-- Seção de Açaís Favoritos -->
+    <div id="favorites-container" class="hidden mb-6 bg-gradient-to-r from-purple-900 via-acai-800 to-acai-900 rounded-2xl p-4 text-white shadow-lg border border-purple-600/30">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-base flex items-center gap-2">
+          <span>⭐</span> Meus Açaís Favoritos
+        </h3>
+        <span class="text-[11px] text-purple-200">Adicione com 1 clique</span>
+      </div>
+      <div id="favorites-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Inserido dinamicamente -->
+      </div>
+    </div>
+
     <div class="flex items-center justify-between mb-4">
       <h3 id="current-category-title" class="text-lg font-bold text-gray-900 flex items-center gap-2">
         <span>🍧</span> Cardápio Completo
@@ -255,24 +275,50 @@
           </div>
         </div>
 
-        <!-- Observações do Cliente -->
-        <div class="space-y-1.5 pt-2">
-          <label class="text-xs font-bold text-gray-700 block">Alguma observação?</label>
-          <input id="builder-notes" type="text" placeholder="Ex: pouco leite condensado, fruta separada..." class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-acai-600 focus:ring-1 focus:ring-acai-600">
+        <!-- Observações e Opções Extras -->
+        <div class="space-y-3 pt-2">
+          <div>
+            <label class="text-xs font-bold text-gray-700 block mb-1">Alguma observação?</label>
+            <input id="builder-notes" type="text" placeholder="Ex: pouco leite condensado, fruta separada..." class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:border-acai-600 focus:ring-1 focus:ring-acai-600">
+          </div>
+
+          <!-- Seletor de Quantidade (até 5) & Botão Favoritar -->
+          <div class="flex items-center justify-between bg-purple-50/70 p-3 rounded-2xl border border-purple-100">
+            <div>
+              <span class="text-xs font-bold text-acai-900 block">Quantidade do item:</span>
+              <span class="text-[10px] text-gray-500">Máximo 5 por vez</span>
+            </div>
+            <div class="flex items-center space-x-3 bg-white px-3 py-1.5 rounded-xl border border-purple-200 shadow-sm">
+              <button type="button" onclick="changeBuilderQuantity(-1)" class="w-7 h-7 rounded-lg bg-purple-100 hover:bg-purple-200 text-acai-900 font-extrabold flex items-center justify-center text-base transition">&minus;</button>
+              <span id="builder-quantity" class="font-extrabold text-sm text-acai-900 w-4 text-center">1</span>
+              <button type="button" onclick="changeBuilderQuantity(1)" class="w-7 h-7 rounded-lg bg-purple-100 hover:bg-purple-200 text-acai-900 font-extrabold flex items-center justify-center text-base transition">&plus;</button>
+            </div>
+          </div>
         </div>
 
       </div>
 
-      <!-- Rodapé do Montador: Total e Botão Adicionar -->
-      <div class="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-4">
-        <div>
-          <span class="text-xs text-gray-500 block">Total do Açaí:</span>
-          <span id="builder-total-price" class="text-xl font-extrabold text-acai-900">R$ 0,00</span>
+      <!-- Rodapé do Montador: Total e Botões -->
+      <div class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center justify-between w-full sm:w-auto">
+          <div>
+            <span class="text-xs text-gray-500 block">Total do Açaí:</span>
+            <span id="builder-total-price" class="text-xl font-extrabold text-acai-900">R$ 0,00</span>
+          </div>
+          <button type="button" onclick="saveCurrentBuildAsFavorite()" class="sm:hidden flex items-center space-x-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold px-3 py-2 rounded-xl transition">
+            <span>⭐ Favoritar</span>
+          </button>
         </div>
-        <button onclick="confirmAddItemToCart()" class="flex-1 bg-acai-700 hover:bg-acai-800 text-white font-bold py-3 px-5 rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center space-x-2">
-          <span>Adicionar à Sacola</span>
-          <svg class="w-4 h-4 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-        </button>
+
+        <div class="flex items-center space-x-2 w-full sm:w-auto flex-1">
+          <button type="button" onclick="saveCurrentBuildAsFavorite()" class="hidden sm:flex items-center space-x-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold px-3.5 py-3 rounded-xl transition shrink-0">
+            <span>⭐ Favoritar</span>
+          </button>
+          <button onclick="confirmAddItemToCart()" class="flex-1 bg-acai-700 hover:bg-acai-800 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center space-x-2">
+            <span>Adicionar à Sacola</span>
+            <svg class="w-4 h-4 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -309,6 +355,21 @@
           </div>
         </div>
 
+        <!-- Tipo de Recebimento (Entrega vs Retirada) -->
+        <div class="space-y-2 bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100">
+          <span class="font-bold text-acai-900 text-sm block">Como deseja receber seu pedido? *</span>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-type-entrega" type="button" onclick="setDeliveryType('entrega')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-acai-700 text-white border-acai-700 shadow-sm">
+              <span>🛵</span>
+              <span>Entrega em Casa</span>
+            </button>
+            <button id="btn-type-retirada" type="button" onclick="setDeliveryType('retirada')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center space-x-2 border-2 transition bg-white text-gray-700 border-gray-200">
+              <span>🏪</span>
+              <span>Retirar no Balcão</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Identificação do Cliente -->
         <div class="space-y-3 bg-purple-50/50 p-3.5 rounded-2xl border border-purple-100">
           <span class="font-bold text-acai-900 text-sm block">Seus Dados de Contato</span>
@@ -322,11 +383,21 @@
               <input id="order-customer-phone" type="tel" placeholder="Ex: (11) 99999-9999" class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:border-acai-600 focus:outline-none">
             </div>
           </div>
+          <div class="pt-1 flex items-center space-x-2">
+            <input id="save-customer-checkbox" type="checkbox" checked class="rounded text-acai-600 focus:ring-acai-500 h-4 w-4">
+            <label for="save-customer-checkbox" class="text-xs text-gray-700 font-semibold cursor-pointer">Salvar meus dados para os próximos pedidos</label>
+          </div>
         </div>
 
-        <!-- Endereço de Entrega -->
-        <div class="space-y-2 bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100">
-          <label class="text-xs font-bold text-acai-900 block">Endereço (Sítio/Rural)</label>
+        <!-- Endereço de Entrega ou Aviso de Retirada -->
+        <div id="address-container-box" class="space-y-2 bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100">
+          <label id="address-box-title" class="text-xs font-bold text-acai-900 block">Endereço de Entrega</label>
+
+          <div id="pickup-notice-box" class="hidden bg-emerald-100 text-emerald-900 p-3 rounded-xl border border-emerald-300 text-xs font-bold text-center space-y-1">
+            <div class="text-base">🏬 Retirada no Balcão</div>
+            <div>Você irá retirar seu açaí diretamente na nossa loja física. Avisaremos quando estiver pronto!</div>
+          </div>
+
           <div id="delivery-fields" class="space-y-2.5 pt-1">
             <div class="grid grid-cols-3 gap-2">
               <div class="col-span-2">
@@ -507,6 +578,34 @@
       <button onclick="closeSuccessModal()" class="text-xs text-gray-400 hover:text-gray-600 font-medium">
         Fechar Janela
       </button>
+
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       8. MODAL MEUS PEDIDOS (HISTÓRICO E RASTREIO)
+       ===================================================================== -->
+  <div id="my-orders-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden flex items-end md:items-center justify-center p-0 md:p-4">
+    <div class="bg-white w-full md:max-w-xl rounded-t-3xl md:rounded-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <!-- Topo Modal -->
+      <div class="bg-acai-900 text-white p-4 flex items-center justify-between border-b border-acai-700">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">📋</span>
+          <div>
+            <h4 class="font-bold text-base text-white leading-tight">Meus Pedidos</h4>
+            <span class="text-[10px] text-purple-200">Acompanhamento em tempo real</span>
+          </div>
+        </div>
+        <button onclick="closeMyOrdersModal()" class="w-8 h-8 rounded-full bg-acai-800 hover:bg-acai-700 text-gray-300 hover:text-white flex items-center justify-center text-lg font-bold">
+          &times;
+        </button>
+      </div>
+
+      <!-- Lista de Pedidos -->
+      <div id="my-orders-list" class="overflow-y-auto p-4 md:p-6 space-y-4 flex-1 text-sm bg-gray-50">
+        <!-- Inserido dinamicamente via JS -->
+      </div>
 
     </div>
   </div>

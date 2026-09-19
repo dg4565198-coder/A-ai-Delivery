@@ -19,7 +19,10 @@ const STORAGE_KEYS = {
   PRODUCTS: 'rotta_products_v4',
   BASES: 'rotta_bases_v4',
   FREE_TOPPINGS: 'rotta_free_toppings_v4',
-  FRUITS: 'rotta_fruits_v4'
+  FRUITS: 'rotta_fruits_v4',
+  CUSTOMER: 'rotta_customer_data',
+  MY_ORDERS: 'rotta_my_orders_v1',
+  FAVORITES: 'rotta_favorites_v1'
 };
 
 const DEFAULT_CONFIG = {
@@ -378,5 +381,60 @@ window.Store = {
     } catch (e) {
       console.warn('Áudio não permitido pelo navegador:', e);
     }
+  },
+
+  getSavedCustomer() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CUSTOMER);
+      return data ? JSON.parse(data) : null;
+    } catch { return null; }
+  },
+
+  saveCustomer(data) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CUSTOMER, JSON.stringify(data));
+    } catch {}
+  },
+
+  getMyOrders() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.MY_ORDERS);
+      return data ? JSON.parse(data) : [];
+    } catch { return []; }
+  },
+
+  addMyOrder(orderId) {
+    try {
+      const list = this.getMyOrders();
+      if (!list.includes(orderId)) {
+        list.unshift(orderId);
+        localStorage.setItem(STORAGE_KEYS.MY_ORDERS, JSON.stringify(list.slice(0, 30)));
+      }
+    } catch {}
+  },
+
+  getFavorites() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.FAVORITES);
+      return data ? JSON.parse(data) : [];
+    } catch { return []; }
+  },
+
+  saveFavorite(favorite) {
+    try {
+      const list = this.getFavorites();
+      list.unshift(favorite);
+      localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(list.slice(0, 10)));
+      return list;
+    } catch { return []; }
+  },
+
+  removeFavorite(favId) {
+    try {
+      let list = this.getFavorites();
+      list = list.filter(f => f.id !== favId);
+      localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(list));
+      return list;
+    } catch { return []; }
   }
 };
