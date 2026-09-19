@@ -39,20 +39,15 @@ function setupSplashScreen() {
     }, 400);
   };
 
-  // Se o usuário tocar ou clicar, fecha imediatamente
   splash.addEventListener('click', dismiss);
   splash.addEventListener('touchstart', dismiss, { passive: true });
-
-  // Fecha automaticamente após 1.5s
   setTimeout(dismiss, 1500);
 }
 
 function renderStoreHeader() {
   const config = window.Store.getConfig();
   const statusBadge = document.getElementById('store-status-badge');
-  const deliveryFee = document.getElementById('header-delivery-fee');
   const deliveryTime = document.getElementById('header-delivery-time');
-  const minOrder = document.getElementById('header-min-order');
   const storeName = document.getElementById('header-store-name');
   const closedBanner = document.getElementById('store-closed-banner');
   const headerWhatsApp = document.getElementById('header-whatsapp-btn');
@@ -79,16 +74,8 @@ function renderStoreHeader() {
     }
   }
 
-  if (deliveryFee) {
-    deliveryFee.textContent = window.Store.formatCurrency(config.deliveryFee);
-  }
-
   if (deliveryTime && config.estimatedTime) {
     deliveryTime.textContent = `Entrega rápida • ${config.estimatedTime}`;
-  }
-
-  if (minOrder && config.minOrder) {
-    minOrder.textContent = window.Store.formatCurrency(config.minOrder);
   }
 
   if (headerWhatsApp) {
@@ -103,7 +90,6 @@ function renderStoreHeader() {
 function filterCategory(category) {
   state.activeCategory = category;
 
-  // Atualizar botões visuais
   document.querySelectorAll('.cat-btn').forEach(btn => {
     if (btn.dataset.cat === category) {
       btn.className = "cat-btn px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-acai-700 text-white shadow-sm transition";
@@ -148,25 +134,21 @@ function renderProducts() {
 
   grid.innerHTML = filtered.map(prod => `
     <div class="product-card bg-white rounded-2xl p-4 border border-gray-200 shadow-sm flex flex-col justify-between relative overflow-hidden ${!prod.available ? 'opacity-60 grayscale' : ''}">
-      ${prod.badge ? `
-        <span class="absolute top-3 right-3 bg-gold-500 text-acai-950 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow-sm">
-          ${prod.badge}
-        </span>
-      ` : ''}
-
+      ${prod.badge ? `<span class="absolute top-3 right-3 bg-gold-500 text-acai-950 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow-sm">${prod.badge}</span>` : ''}
+      
       <div class="flex items-start space-x-3.5">
-        <div class="w-14 h-14 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-3xl shrink-0 shadow-inner">
-          ${prod.icon || '🍧'}
+        <div class="w-14 h-14 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-3xl shrink-0 shadow-inner overflow-hidden">
+          ${prod.image ? `<img src="${prod.image}" class="w-full h-full object-cover">` : (prod.icon || '🍧')}
         </div>
         <div class="flex-1 pr-12">
           <h4 class="font-bold text-gray-900 text-base leading-snug">${prod.name}</h4>
-          <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">${prod.description}</p>
+          <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">${prod.description || ''}</p>
         </div>
       </div>
 
       <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
         <div>
-          <span class="text-[10px] text-gray-400 block uppercase font-bold">A partir de</span>
+          <span class="text-[10px] text-gray-400 block uppercase font-bold">${prod.allowsCustomization ? 'A partir de' : 'Valor'}</span>
           <span class="text-base font-extrabold text-acai-900">${window.Store.formatCurrency(prod.price)}</span>
         </div>
 
@@ -176,7 +158,9 @@ function renderProducts() {
             <span class="text-gold-400 font-extrabold">+</span>
           </button>
         ` : `
-          <span class="text-xs font-bold text-gray-400 bg-gray-100 px-3 py-1.5 rounded-xl">Esgotado</span>
+          <span class="bg-gray-200 text-gray-500 font-bold text-xs px-3 py-1.5 rounded-xl">
+            Esgotado
+          </span>
         `}
       </div>
     </div>
@@ -184,7 +168,7 @@ function renderProducts() {
 }
 
 // ==========================================================================
-// 3. MONTADOR DE AÇAÍ (MODAL DE PERSONALIZAÇÃO)
+// 3. MONTADOR DE AÇAÍ (MODAL CUSTOMIZADOR)
 // ==========================================================================
 function handleProductClick(productId) {
   const product = window.Store.getProducts().find(p => p.id === productId);
@@ -196,22 +180,23 @@ function handleProductClick(productId) {
   }
 
   state.currentBuildingProduct = product;
-  state.selectedBase = window.Store.getBases().find(b => b.available) || null;
+  state.selectedBase = null;
   state.selectedFreeToppings = [];
   state.selectedFruits = [];
 
   document.getElementById('builder-product-name').textContent = product.name;
-  document.getElementById('builder-icon').textContent = product.icon || '🍧';
+  document.getElementById('builder-icon').innerHTML = product.image ? `<img src="${product.image}" class="w-full h-full object-cover rounded-xl">` : (product.icon || '🍧');
   document.getElementById('builder-base-price').textContent = window.Store.formatCurrency(product.price);
   document.getElementById('builder-notes').value = '';
 
-  const freeLimit = product.freeToppingLimit || 3;
-  document.getElementById('builder-free-limit-label').textContent = `Escolha até ${freeLimit} opções`;
-  
   const fruitLimit = product.freeFruitLimit || 3;
-  document.getElementById('builder-fruit-limit-label').textContent = `Escolha até ${fruitLimit} opções`;
+  const fruitLimitLabel = document.getElementById('builder-fruit-limit-label');
+  if (fruitLimitLabel) fruitLimitLabel.textContent = `Escolha até ${fruitLimit} opções`;
 
-  renderBuilderBases();
+  const freeLimit = product.freeToppingLimit || 3;
+  const freeLimitLabel = document.getElementById('builder-free-limit-label');
+  if (freeLimitLabel) freeLimitLabel.textContent = `Escolha até ${freeLimit} opções`;
+
   renderBuilderFruits();
   renderBuilderFreeToppings();
   updateBuilderTotal();
@@ -220,38 +205,66 @@ function handleProductClick(productId) {
   modal.classList.remove('hidden');
 }
 
-function renderBuilderBases() {
-  const container = document.getElementById('builder-bases-list');
-  const bases = window.Store.getBases().filter(b => b.available);
-
-  container.innerHTML = bases.map(base => `
-    <label class="selectable-item flex items-center justify-between p-3 rounded-xl border-2 transition ${state.selectedBase?.id === base.id ? 'selected border-acai-600 bg-purple-50/70' : 'border-gray-200 bg-white hover:border-gray-300'}">
-      <div class="flex items-center space-x-3">
-        <input type="radio" name="builder-base" value="${base.id}" ${state.selectedBase?.id === base.id ? 'checked' : ''} onchange="selectBase('${base.id}')" class="text-acai-700 focus:ring-acai-600 h-4 w-4">
-        <span class="font-medium text-gray-800 text-xs">${base.name}</span>
-      </div>
-      <span class="text-xs font-bold ${base.extraPrice > 0 ? 'text-acai-700' : 'text-emerald-600'}">
-        ${base.extraPrice > 0 ? `+ ${window.Store.formatCurrency(base.extraPrice)}` : 'Incluso'}
-      </span>
-    </label>
-  `).join('');
+function closeBuilderModal() {
+  document.getElementById('builder-modal').classList.add('hidden');
+  state.currentBuildingProduct = null;
 }
 
-function selectBase(baseId) {
-  const base = window.Store.getBases().find(b => b.id === baseId);
-  if (base) {
-    state.selectedBase = base;
-    renderBuilderBases();
-    updateBuilderTotal();
+function renderBuilderFruits() {
+  const container = document.getElementById('builder-fruits-list');
+  if (!container) return;
+
+  const fruits = window.Store.getFruits().filter(a => a.available);
+  const limit = state.currentBuildingProduct?.freeFruitLimit || 3;
+
+  const counterElem = document.getElementById('builder-fruit-counter');
+  if (counterElem) counterElem.textContent = `${state.selectedFruits.length} / ${limit}`;
+
+  container.innerHTML = fruits.map(fruit => {
+    const isSelected = state.selectedFruits.some(a => a.id === fruit.id);
+    return `
+      <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-emerald-500 bg-emerald-50/70 font-semibold' : 'border-gray-200 bg-white'}">
+        <div class="flex items-center space-x-2.5">
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFruit('${fruit.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+          ${fruit.image ? `<img src="${fruit.image}" class="w-6 h-6 object-cover rounded">` : `<span class="text-base">${fruit.icon || '🍓'}</span>`}
+          <span class="text-gray-800">${fruit.name}</span>
+        </div>
+        <span class="text-[11px] text-emerald-700 font-bold">Grátis</span>
+      </label>
+    `;
+  }).join('');
+}
+
+function toggleFruit(fruitId) {
+  const fruit = window.Store.getFruits().find(a => a.id === fruitId);
+  if (!fruit) return;
+
+  const limit = state.currentBuildingProduct?.freeFruitLimit || 3;
+  const index = state.selectedFruits.findIndex(a => a.id === fruitId);
+
+  if (index !== -1) {
+    state.selectedFruits.splice(index, 1);
+  } else {
+    if (state.selectedFruits.length >= limit) {
+      alert(`Você já atingiu o limite de ${limit} frutas para este tamanho. Desmarque uma para poder escolher outra!`);
+      return;
+    }
+    state.selectedFruits.push(fruit);
   }
+
+  renderBuilderFruits();
+  updateBuilderTotal();
 }
 
 function renderBuilderFreeToppings() {
   const container = document.getElementById('builder-free-list');
+  if (!container) return;
+
   const toppings = window.Store.getFreeToppings().filter(t => t.available);
   const limit = state.currentBuildingProduct?.freeToppingLimit || 3;
 
-  document.getElementById('builder-free-counter').textContent = `${state.selectedFreeToppings.length} / ${limit}`;
+  const counterElem = document.getElementById('builder-free-counter');
+  if (counterElem) counterElem.textContent = `${state.selectedFreeToppings.length} / ${limit}`;
 
   container.innerHTML = toppings.map(top => {
     const isSelected = state.selectedFreeToppings.some(t => t.id === top.id);
@@ -259,6 +272,7 @@ function renderBuilderFreeToppings() {
       <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-emerald-600 bg-emerald-50/60 font-semibold' : 'border-gray-200 bg-white'}">
         <div class="flex items-center space-x-2">
           <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFreeTopping('${top.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+          ${top.image ? `<img src="${top.image}" class="w-6 h-6 object-cover rounded">` : `<span class="text-base">${top.icon || '🥣'}</span>`}
           <span class="text-gray-800">${top.name}</span>
         </div>
         <span class="text-[11px] text-emerald-700 font-bold">Grátis</span>
@@ -278,7 +292,7 @@ function toggleFreeTopping(toppingId) {
     state.selectedFreeToppings.splice(index, 1);
   } else {
     if (state.selectedFreeToppings.length >= limit) {
-      alert(`Você já atingiu o limite de ${limit} acompanhamentos grátis para este tamanho. Você pode desmarcar um ou escolher adicionais gourmet abaixo!`);
+      alert(`Você já atingiu o limite de ${limit} complementos grátis para este tamanho. Desmarque um para poder escolher outro!`);
       return;
     }
     state.selectedFreeToppings.push(topping);
@@ -287,56 +301,10 @@ function toggleFreeTopping(toppingId) {
   renderBuilderFreeToppings();
 }
 
-function renderBuilderFruits() {
-  const container = document.getElementById('builder-fruits-list');
-  const fruits = window.Store.getFruits().filter(a => a.available);
-  const limit = state.currentBuildingProduct?.freeFruitLimit || 3;
-
-  document.getElementById('builder-fruit-counter').textContent = `${state.selectedFruits.length} / ${limit}`;
-
-  container.innerHTML = fruits.map(fruit => {
-    const isSelected = state.selectedFruits.some(a => a.id === fruit.id);
-    return `
-      <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-emerald-500 bg-emerald-50/70 font-semibold' : 'border-gray-200 bg-white'}">
-        <div class="flex items-center space-x-2.5">
-          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFruit('${fruit.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
-          <span class="text-base">${fruit.icon || '🍓'}</span>
-          <span class="text-gray-800">${fruit.name}</span>
-        </div>
-        <span class="text-[11px] text-emerald-700 font-bold">Grátis</span>
-      </label>
-    `;
-  }).join('');
-}
-
-function toggleFruit(fruitId) {
-  const fruit = window.Store.getFruits().find(a => a.id === fruitId);
-  if (!fruit) return;
-
-  const limit = state.currentBuildingProduct?.freeFruitLimit || 3;
-  const index = state.selectedFruits.findIndex(a => a.id === fruitId);
-  
-  if (index !== -1) {
-    state.selectedFruits.splice(index, 1);
-  } else {
-    if (state.selectedFruits.length >= limit) {
-      alert(`Você já atingiu o limite de ${limit} frutas para este tamanho. Você pode desmarcar uma se quiser trocar.`);
-      return;
-    }
-    state.selectedFruits.push(fruit);
-  }
-
-  renderBuilderFruits();
-  updateBuilderTotal();
-}
-
 function updateBuilderTotal() {
   if (!state.currentBuildingProduct) return;
 
   let total = state.currentBuildingProduct.price;
-  if (state.selectedBase && state.selectedBase.extraPrice) {
-    total += state.selectedBase.extraPrice;
-  }
 
   const priceElem = document.getElementById('builder-total-price');
   if (priceElem) {
@@ -344,18 +312,10 @@ function updateBuilderTotal() {
   }
 }
 
-function closeBuilderModal() {
-  const modal = document.getElementById('builder-modal');
-  modal.classList.add('hidden');
-  state.currentBuildingProduct = null;
-}
-
 function confirmAddItemToCart() {
   if (!state.currentBuildingProduct) return;
 
   let unitPrice = state.currentBuildingProduct.price;
-  if (state.selectedBase?.extraPrice) unitPrice += state.selectedBase.extraPrice;
-
   const notes = document.getElementById('builder-notes').value.trim();
 
   const cartItem = {
@@ -364,7 +324,7 @@ function confirmAddItemToCart() {
     name: state.currentBuildingProduct.name,
     icon: state.currentBuildingProduct.icon || '🍧',
     unitPrice,
-    base: state.selectedBase ? state.selectedBase.name : null,
+    base: null,
     freeToppings: [...state.selectedFreeToppings],
     fruits: [...state.selectedFruits],
     notes,
@@ -398,19 +358,21 @@ function addItemDirectlyToCart(product) {
 // ==========================================================================
 function updateCartUI() {
   const cartBar = document.getElementById('floating-cart-bar');
-  const countBadge = document.getElementById('cart-item-count');
-  const barTotal = document.getElementById('cart-bar-total');
+  const cartCount = document.getElementById('cart-item-count');
+  const cartTotal = document.getElementById('cart-bar-total');
 
-  const totalItems = state.cart.reduce((sum, i) => sum + i.quantity, 0);
-  const subtotal = state.cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+  const totalItems = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = state.cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
 
-  if (totalItems > 0) {
-    cartBar.classList.remove('hidden');
-    countBadge.textContent = totalItems;
-    barTotal.textContent = window.Store.formatCurrency(subtotal);
-  } else {
-    cartBar.classList.add('hidden');
-    closeCartModal();
+  if (cartCount) cartCount.textContent = totalItems;
+  if (cartTotal) cartTotal.textContent = window.Store.formatCurrency(totalPrice);
+
+  if (cartBar) {
+    if (totalItems > 0) {
+      cartBar.classList.remove('hidden');
+    } else {
+      cartBar.classList.add('hidden');
+    }
   }
 }
 
@@ -427,6 +389,7 @@ function closeCartModal() {
 function clearCart() {
   state.cart = [];
   updateCartUI();
+  closeCartModal();
 }
 
 function renderCartModalContent() {
@@ -440,17 +403,15 @@ function renderCartModalContent() {
           <h5 class="font-bold text-gray-900 text-xs">${item.name}</h5>
         </div>
 
-        ${item.base ? `<p class="text-[11px] text-acai-700 font-semibold mt-1">Base: ${item.base}</p>` : ''}
-        
-        ${item.freeToppings.length > 0 ? `
-          <p class="text-[10px] text-gray-500 mt-0.5">
-            <strong>Grátis:</strong> ${item.freeToppings.map(t => t.name).join(', ')}
-          </p>
-        ` : ''}
-
         ${item.fruits && item.fruits.length > 0 ? `
           <p class="text-[10px] text-emerald-700 font-medium mt-0.5">
             <strong>Frutas:</strong> ${item.fruits.map(f => f.name).join(', ')}
+          </p>
+        ` : ''}
+
+        ${item.freeToppings && item.freeToppings.length > 0 ? `
+          <p class="text-[10px] text-gray-500 mt-0.5">
+            <strong>Grátis:</strong> ${item.freeToppings.map(t => t.name).join(', ')}
           </p>
         ` : ''}
 
@@ -475,6 +436,8 @@ function removeCartItem(index) {
   updateCartUI();
   if (state.cart.length > 0) {
     renderCartModalContent();
+  } else {
+    closeCartModal();
   }
 }
 
@@ -550,7 +513,7 @@ async function submitFinalOrder() {
     const ref = document.getElementById('order-ref').value.trim();
 
     if (!street || !number || !neighborhood) {
-      alert('Para entrega em casa, preencha o endereço completo (Rua, Número e Bairro).');
+      alert('Para entrega em casa, preencha o endereço completo (Rua/Comunidade, Número e Bairro/Zona).');
       return;
     }
 
@@ -631,13 +594,12 @@ function showSuccessOrderModal(order) {
 
   document.getElementById('success-modal').classList.remove('hidden');
 
-  // Rastreio em tempo real via Firebase - status do pedido atualiza automaticamente
   window.Store.listenToOrder(order.id, (updatedOrder) => {
     const statusMap = {
       novo: '🥣 Pedido aceito! Já estamos preparando seu açaí!',
       preparo: '🥣 Pedido aceito! Seu açaí está sendo montado com muito carinho!',
-      entrega: order.deliveryType === 'entrega' ? '🛵 Seu açaí saiu para entrega! Fique atento à porta!' : '🏬 Seu açaí está pronto para retirada no balcão!',
-      concluido: '🎉 Pedido entregue! Bom apetite com a Rotta do Açaí!',
+      entrega: order.deliveryType === 'entrega' ? '🛵 Seu açaí saiu para entrega! Fique atento!' : '🏬 Seu açaí está pronto para retirada no balcão!',
+      concluido: '✅ Pedido entregue! Bom apetite com a Rotta do Açaí!',
       cancelado: '❌ Pedido cancelado pela loja. Entre em contato.'
     };
     const textElem = document.getElementById('confirmed-status-text');
@@ -662,25 +624,18 @@ function closeSuccessModal() {
 }
 
 function setupSyncListener() {
-  // Sincronização em tempo real das configurações da loja (WhatsApp, Pix, Taxa, Aberto/Fechado)
   window.Store.listenToConfig(config => {
     renderStoreHeader();
     updateCheckoutCalculations();
   });
-
-  // Sincronização em tempo real do estoque (itens pausados/esgotados)
-  window.Store.listenToStock(() => {
-    renderProducts();
-  });
 }
 
-// Vincula funções globais
+// Funções Globais
 window.filterCategory = filterCategory;
 window.handleProductClick = handleProductClick;
-window.selectBase = selectBase;
-window.toggleFreeTopping = toggleFreeTopping;
-window.togglePaidAddon = togglePaidAddon;
 window.closeBuilderModal = closeBuilderModal;
+window.toggleFruit = toggleFruit;
+window.toggleFreeTopping = toggleFreeTopping;
 window.confirmAddItemToCart = confirmAddItemToCart;
 window.openCartModal = openCartModal;
 window.closeCartModal = closeCartModal;

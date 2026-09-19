@@ -1,10 +1,9 @@
 /**
  * ROTTA DO AÇAÍ - PAINEL DE GESTÃO DA LOJA (v2 - Firebase)
- * Pedidos chegam em tempo real de qualquer celular do mundo!
  */
 
 let currentViewingOrder = null;
-let _firstLoad = true; // controla se é o carregamento inicial (sem tocar alarme)
+let _firstLoad = true;
 
 const AUTH_SESSION_KEY = 'rotta_panel_session';
 const CREDS_KEY = 'rotta_panel_creds';
@@ -71,7 +70,7 @@ if (document.readyState === 'loading') {
 }
 
 // ==========================================================================
-// 2. LISTENER FIREBASE - CORAÇÃO DO SISTEMA EM TEMPO REAL
+// 2. LISTENER FIREBASE
 // ==========================================================================
 function setupFirebaseListener() {
   const badge = document.getElementById('firebase-status-badge');
@@ -79,7 +78,6 @@ function setupFirebaseListener() {
   const text = document.getElementById('firebase-status-text');
 
   window.Store.listenToOrders(
-    // Callback para novo pedido ou carregamento inicial
     function onNewOrder(order) {
       if (badge && dot && text) {
         badge.className = "flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 shadow";
@@ -88,14 +86,12 @@ function setupFirebaseListener() {
       }
 
       if (order === null) {
-        // Carregamento inicial completo - renderiza sem alarme
         _firstLoad = false;
         renderKanbanBoard();
         renderFinancialMetrics();
         return;
       }
 
-      // Pedido novo de verdade com aceite automático - toca alarme na cozinha!
       if (!_firstLoad) {
         window.Store.playNotificationSound();
         showNewOrderNotification(order);
@@ -104,14 +100,10 @@ function setupFirebaseListener() {
       renderKanbanBoard();
       renderFinancialMetrics();
     },
-
-    // Callback para qualquer mudança (status, remoção, etc.)
     function onOrderChanged(_ignored) {
       renderKanbanBoard();
       renderFinancialMetrics();
     },
-
-    // Callback de ERRO do Firebase (ex: regras bloqueadas)
     function onFirebaseError(err) {
       console.error("Firebase Error:", err);
       if (badge && dot && text) {
@@ -122,20 +114,17 @@ function setupFirebaseListener() {
     }
   );
 
-  // Sincroniza status da loja e formulário de configurações em tempo real
   window.Store.listenToConfig(cfg => {
     updateStoreStatusButton();
     loadConfigForm();
   });
 
-  // Sincroniza estoque em tempo real
   window.Store.listenToStock(() => {
     renderStockManagement();
   });
 }
 
 function showNewOrderNotification(order) {
-  // Badge numérico na aba (pedidos ativos em preparo)
   const badge = document.getElementById('kanban-new-badge');
   const orders = window.Store.getOrdersArray();
   const preparoCount = orders.filter(o => o.status === 'preparo' || o.status === 'novo').length;
@@ -213,7 +202,6 @@ function renderKanbanBoard() {
   Object.values(columns).forEach(col => { if (col) col.innerHTML = ''; });
 
   orders.forEach(order => {
-    // Aceite automático: se o pedido for 'novo' ou 'preparo', exibe direto em preparo!
     let status = order.status || 'preparo';
     if (status === 'novo') status = 'preparo';
 
@@ -222,12 +210,10 @@ function renderKanbanBoard() {
     if (col) col.appendChild(createOrderCardElement(order, status));
   });
 
-  // Atualiza contadores das 3 colunas
   if (document.getElementById('count-col-preparo')) document.getElementById('count-col-preparo').textContent = counts.preparo;
   if (document.getElementById('count-col-entrega')) document.getElementById('count-col-entrega').textContent = counts.entrega;
   if (document.getElementById('count-col-concluido')) document.getElementById('count-col-concluido').textContent = counts.concluido;
 
-  // Badge da aba (pedidos ativos em preparo)
   const badge = document.getElementById('kanban-new-badge');
   if (badge) {
     if (counts.preparo > 0) {
@@ -238,7 +224,6 @@ function renderKanbanBoard() {
     }
   }
 
-  // Placeholders para colunas vazias
   Object.keys(columns).forEach(key => {
     if (counts[key] === 0 && columns[key]) {
       const messages = {
@@ -293,9 +278,8 @@ function createOrderCardElement(order, currentStatus) {
             <span>${item.quantity}x ${item.name}</span>
             <span>${window.Store.formatCurrency(item.unitPrice * item.quantity)}</span>
           </div>
-          ${item.base ? `<div class="text-[10px] text-acai-700 font-semibold">Base: ${item.base}</div>` : ''}
-          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="text-[9px] text-gray-600">✓ ${item.freeToppings.map(t => t.name).join(', ')}</div>` : ''}
-          ${item.paidAddons && item.paidAddons.length > 0 ? `<div class="text-[9px] text-amber-700 font-semibold">★ ${item.paidAddons.map(a => a.name).join(', ')}</div>` : ''}
+          ${item.fruits && item.fruits.length > 0 ? `<div class="text-[9px] text-emerald-700 font-semibold">🍓 Frutas: ${item.fruits.map(f => f.name).join(', ')}</div>` : ''}
+          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="text-[9px] text-gray-600">✓ Grátis: ${item.freeToppings.map(t => t.name).join(', ')}</div>` : ''}
           ${item.notes ? `<div class="text-[9px] italic text-purple-600 bg-purple-50 p-0.5 rounded mt-0.5">Obs: "${item.notes}"</div>` : ''}
         </div>`).join('')}
     </div>`;
@@ -334,7 +318,6 @@ function createOrderCardElement(order, currentStatus) {
 
 function advanceOrderStatus(orderId, newStatus) {
   window.Store.updateOrderStatus(orderId, newStatus);
-  // O Firebase vai notificar o painel automaticamente via listener
 }
 
 function confirmClearOrders() {
@@ -372,15 +355,13 @@ function openReceiptModal(orderId) {
       ${order.items.map(item => `
         <div class="text-[11px] pb-1 border-b border-gray-100 last:border-0">
           <div class="flex justify-between font-extrabold"><span>[${item.quantity}x] ${item.name}</span><span>${window.Store.formatCurrency(item.unitPrice * item.quantity)}</span></div>
-          ${item.base ? `<div class="font-semibold ml-2">» Base: ${item.base}</div>` : ''}
+          ${item.fruits && item.fruits.length > 0 ? `<div class="font-semibold ml-2">» Frutas: ${item.fruits.map(f => f.name).join(' + ')}</div>` : ''}
           ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="ml-2">» Grátis: ${item.freeToppings.map(t => t.name).join(' + ')}</div>` : ''}
-          ${item.paidAddons && item.paidAddons.length > 0 ? `<div class="font-bold ml-2">★ Extras: ${item.paidAddons.map(a => a.name).join(' + ')}</div>` : ''}
           ${item.notes ? `<div class="italic ml-2 bg-yellow-50 p-0.5">OBS: "${item.notes}"</div>` : ''}
         </div>`).join('')}
     </div>
     <div class="pt-2 text-[11px] space-y-1">
       <div class="flex justify-between"><span>Subtotal:</span><span>${window.Store.formatCurrency(order.subtotal)}</span></div>
-      ${order.deliveryFee > 0 ? `<div class="flex justify-between"><span>Taxa Entrega:</span><span>${window.Store.formatCurrency(order.deliveryFee)}</span></div>` : ''}
       <div class="flex justify-between font-black text-sm pt-1 border-t border-gray-400"><span>TOTAL:</span><span>${window.Store.formatCurrency(order.total)}</span></div>
       <div class="text-center font-bold uppercase mt-2 pt-1 border-t border-dashed border-gray-400">
         PAGAMENTO: ${order.paymentMethod}
@@ -689,7 +670,6 @@ function loadConfigForm() {
   document.getElementById('cfg-name').value = config.name || '';
   document.getElementById('cfg-phone').value = config.phone || '';
   document.getElementById('cfg-pix').value = config.pixKey || '';
-  document.getElementById('cfg-delivery-fee').value = config.deliveryFee || 6.00;
   document.getElementById('cfg-time').value = config.estimatedTime || '';
   document.getElementById('cfg-address').value = config.address || '';
 
@@ -706,14 +686,12 @@ function saveStoreSettings(e) {
   config.name = document.getElementById('cfg-name').value.trim();
   config.phone = window.Store.formatWhatsAppPhone(document.getElementById('cfg-phone').value.trim());
   config.pixKey = document.getElementById('cfg-pix').value.trim();
-  config.deliveryFee = parseFloat(document.getElementById('cfg-delivery-fee').value) || 0;
+  config.deliveryFee = 0;
   config.estimatedTime = document.getElementById('cfg-time').value.trim();
   config.address = document.getElementById('cfg-address').value.trim();
-  
-  // Atualiza o campo com o telefone formatado
+
   document.getElementById('cfg-phone').value = config.phone;
 
-  // Salva no LocalStorage e no Firebase Realtime Database
   window.Store.saveConfig(config);
 
   const newUser = document.getElementById('cfg-username')?.value.trim();
@@ -722,10 +700,9 @@ function saveStoreSettings(e) {
     localStorage.setItem(CREDS_KEY, JSON.stringify({ user: newUser, pass: newPass }));
   }
 
-  alert('✅ Configurações salvas com sucesso!\n\nO número de WhatsApp (' + config.phone + '), Chave Pix, Taxa de Entrega e Horário já foram sincronizados em tempo real com todos os clientes!');
+  alert('✅ Configurações salvas com sucesso!');
 }
 
-// Vincula funções globais
 window.handlePanelLogin = handlePanelLogin;
 window.handlePanelLogout = handlePanelLogout;
 window.toggleStoreOpenStatus = toggleStoreOpenStatus;
@@ -737,7 +714,7 @@ window.confirmClearOrders = confirmClearOrders;
 window.openReceiptModal = openReceiptModal;
 window.closeReceiptModal = closeReceiptModal;
 window.toggleProductAvailability = toggleProductAvailability;
-window.toggleAddonAvailability = toggleAddonAvailability;
+window.toggleAddonAvailability = toggleFruitAvailability;
 window.toggleFruitAvailability = toggleFruitAvailability;
 window.toggleToppingAvailability = toggleToppingAvailability;
 window.openEditModal = openEditModal;

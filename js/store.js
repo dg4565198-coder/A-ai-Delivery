@@ -1,12 +1,8 @@
 /**
  * ROTTA DO AÇAÍ - STORE & DATA LAYER
  * Versão 2.0 com Firebase Realtime Database para sincronização entre dispositivos.
- * Pedidos em tempo real! Funciona de qualquer celular ou computador do mundo.
  */
 
-// ==========================================
-// CONFIGURAÇÃO DO FIREBASE (Google)
-// ==========================================
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAaHO4ZemS5SCw42SxC-ekHsHcW1nlazhg",
   authDomain: "rotta-do-acai.firebaseapp.com",
@@ -18,9 +14,6 @@ const FIREBASE_CONFIG = {
   measurementId: "G-VB785L6695"
 };
 
-// ==========================================
-// DADOS ESTÁTICOS (LocalStorage - não precisam de sync entre devices)
-// ==========================================
 const STORAGE_KEYS = {
   CONFIG: 'rotta_config',
   PRODUCTS: 'rotta_products_v4',
@@ -52,13 +45,7 @@ const DEFAULT_PRODUCTS = [
   { id: 'suco-laranja', name: 'Suco Natural de Laranja 400ml', category: 'bebidas', price: 9.00, description: '100% fruta natural feito na hora.', allowsCustomization: false, available: true, icon: '🍊', image: '' }
 ];
 
-const DEFAULT_BASES = [
-  { id: 'base-trad', name: 'Açaí Tradicional Cremoso (Receita da Casa)', extraPrice: 0, available: true },
-  { id: 'base-trufado', name: 'Açaí Trufado com Chocolate', extraPrice: 3.00, available: true },
-  { id: 'base-cupuacu', name: 'Cupuaçu Puro Cremoso do Pará', extraPrice: 2.00, available: true },
-  { id: 'base-meio', name: 'Meio a Meio (Açaí Tradicional + Cupuaçu)', extraPrice: 1.50, available: true },
-  { id: 'base-zero', name: 'Açaí Zero Adição de Açúcar (Fit)', extraPrice: 2.50, available: true }
-];
+const DEFAULT_BASES = [];
 
 const DEFAULT_FRUITS = [
   { id: 'fruta-morango', name: 'Morango Fresco', available: true, icon: '🍓', image: '' },
@@ -69,23 +56,20 @@ const DEFAULT_FRUITS = [
 ];
 
 const DEFAULT_FREE_TOPPINGS = [
-  { id: 'top-leite-po', name: 'Leite em Pó (Ninho)', available: true, image: '' },
-  { id: 'top-leite-cond', name: 'Leite Condensado Moça', available: true, image: '' },
-  { id: 'top-granola', name: 'Granola Tradicional Crocante', available: true, image: '' },
-  { id: 'top-aveia', name: 'Aveia em Flocos Finos', available: true, image: '' },
-  { id: 'top-pacoca', name: 'Farinha de Paçoca Doce', available: true, image: '' },
-  { id: 'top-mel', name: 'Mel de Abelha Puro', available: true, image: '' },
-  { id: 'top-chocoball', name: 'Chocoball Crocante', available: true, image: '' },
-  { id: 'top-gotas', name: 'Gotas de Chocolate Nobre', available: true, image: '' },
-  { id: 'top-confetes', name: 'Confetes de Chocolate', available: true, image: '' }
+  { id: 'top-leite-po', name: 'Leite em Pó (Ninho)', available: true, icon: '🥛', image: '' },
+  { id: 'top-leite-cond', name: 'Leite Condensado', available: true, icon: '🍯', image: '' },
+  { id: 'top-granola', name: 'Granola Tradicional', available: true, icon: '🌾', image: '' },
+  { id: 'top-aveia', name: 'Aveia em Flocos', available: true, icon: '🥣', image: '' },
+  { id: 'top-pacoca', name: 'Farinha de Paçoca', available: true, icon: '🥜', image: '' },
+  { id: 'top-mel', name: 'Mel de Abelha', available: true, icon: '🐝', image: '' },
+  { id: 'top-chocoball', name: 'Chocoball', available: true, icon: '🍫', image: '' },
+  { id: 'top-gotas', name: 'Gotas de Chocolate', available: true, icon: '🍫', image: '' },
+  { id: 'top-confetes', name: 'Confetes de Chocolate', available: true, icon: '🍬', image: '' }
 ];
 
-// ==========================================
-// FIREBASE & STORE
-// ==========================================
 let _db = null;
-let _ordersCache = {}; 
-let _orderCount = 0;   
+let _ordersCache = {};
+let _orderCount = 0;
 let _currentConfig = DEFAULT_CONFIG;
 let _stockCache = {
   products: null,
@@ -113,8 +97,6 @@ function getDB() {
 }
 
 window.Store = {
-
-  // ---------- Inicialização ----------
   init() {
     try {
       const savedCfg = localStorage.getItem(STORAGE_KEYS.CONFIG);
@@ -128,11 +110,9 @@ window.Store = {
     } catch (e) {
       console.warn('LocalStorage inacessível:', e);
     }
-    // Inicializa conexão com Firebase
     getDB();
   },
 
-  // ---------- Configurações (Sincronizadas via Firebase) ----------
   getConfig() {
     return _currentConfig || DEFAULT_CONFIG;
   },
@@ -161,7 +141,6 @@ window.Store = {
         try { localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(_currentConfig)); } catch {}
         if (callback) callback(_currentConfig);
       } else {
-        // Se ainda não existir no Firebase, inicializa com o atual
         db.ref('config').set(_currentConfig);
         if (callback) callback(_currentConfig);
       }
@@ -171,7 +150,6 @@ window.Store = {
     });
   },
 
-  // ---------- Estoque & Cardápio (Sincronizados via Firebase) ----------
   getProducts() {
     if (_stockCache.products && _stockCache.products.length > 0) return _stockCache.products;
     try {
@@ -189,19 +167,11 @@ window.Store = {
   },
 
   getBases() {
-    if (_stockCache.bases && _stockCache.bases.length > 0) return _stockCache.bases;
-    try {
-      const b = JSON.parse(localStorage.getItem(STORAGE_KEYS.BASES));
-      if (Array.isArray(b) && b.length > 0) return b;
-    } catch {}
-    return DEFAULT_BASES;
+    return [];
   },
 
   saveBases(bases) {
-    _stockCache.bases = bases;
-    try { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(bases)); } catch {}
-    const db = getDB();
-    if (db) db.ref('stock/bases').set(bases);
+    _stockCache.bases = [];
   },
 
   getFreeToppings() {
@@ -252,18 +222,12 @@ window.Store = {
       if (snapshot.exists()) {
         const data = snapshot.val();
         if (data.products) { _stockCache.products = data.products; try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(data.products)); } catch {} }
-        if (data.bases) { _stockCache.bases = data.bases; try { localStorage.setItem(STORAGE_KEYS.BASES, JSON.stringify(data.bases)); } catch {} }
         if (data.toppings) { _stockCache.toppings = data.toppings; try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(data.toppings)); } catch {} }
         if (data.fruits) { _stockCache.fruits = data.fruits; try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(data.fruits)); } catch {} }
         if (callback) callback();
       }
     });
   },
-
-  // ==============================================
-  // PEDIDOS - 100% Firebase Realtime Database
-  // Funciona entre QUALQUER celular ou computador!
-  // ==============================================
 
   async createOrder(orderData) {
     const db = getDB();
@@ -275,7 +239,7 @@ window.Store = {
       createdAt: now.toISOString(),
       timeFormatted: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       dateFormatted: now.toLocaleDateString('pt-BR'),
-      status: 'preparo', // Aceite automático: entra direto em preparo na cozinha!
+      status: 'preparo',
       customer: orderData.customer,
       items: orderData.items,
       deliveryType: orderData.deliveryType,
@@ -283,12 +247,11 @@ window.Store = {
       paymentMethod: orderData.paymentMethod,
       paymentChange: orderData.paymentChange || null,
       subtotal: orderData.subtotal,
-      deliveryFee: orderData.deliveryFee || 0,
+      deliveryFee: 0,
       total: orderData.total,
       notes: orderData.notes || ''
     };
 
-    // Salva no Firebase e aguarda confirmação
     const ref = db.ref('orders').push();
     newOrder.id = ref.key;
     await ref.set(newOrder);
@@ -322,11 +285,15 @@ window.Store = {
     });
   },
 
-  // Escuta pedidos em TEMPO REAL do Firebase
   listenToOrders(onNewOrder, onOrderChanged, onError) {
     const db = getDB();
     let _isFirstLoad = true;
     let _knownKeys = new Set();
+
+    if (!db) {
+      if (onError) onError(new Error("Firebase indisponível"));
+      return;
+    }
 
     db.ref('orders').on('value', snapshot => {
       const newCache = {};
@@ -340,16 +307,14 @@ window.Store = {
       }
 
       if (_isFirstLoad) {
-        // Primeiro carregamento: popula o cache silenciosamente
         _ordersCache = newCache;
         _knownKeys = newKeys;
         _orderCount = Object.keys(newCache).length;
         _isFirstLoad = false;
-        if (onNewOrder) onNewOrder(null); // sinal de carga inicial com sucesso
+        if (onNewOrder) onNewOrder(null);
         return;
       }
 
-      // Detecta pedidos NOVOS (chaves que não existiam antes)
       newKeys.forEach(key => {
         if (!_knownKeys.has(key)) {
           if (onNewOrder) onNewOrder(newCache[key]);
@@ -360,17 +325,17 @@ window.Store = {
       _knownKeys = newKeys;
       _orderCount = Object.keys(newCache).length;
 
-      // Notifica mudanças (status, remoções, etc.)
-      if (onOrderChanged) onOrderChanged(null);
+      if (onOrderChanged) onOrderChanged(_ordersCache);
     }, error => {
-      console.error('Firebase listenToOrders error:', error);
+      console.warn('Erro no listener de pedidos do Firebase:', error);
       if (onError) onError(error);
     });
   },
 
-  // Escuta status de um pedido específico (usado na tela do cliente para rastreio)
   listenToOrder(orderId, callback) {
     const db = getDB();
+    if (!db) return;
+
     db.ref('orders/' + orderId).on('value', snapshot => {
       if (snapshot.exists() && callback) {
         callback(snapshot.val());
@@ -378,53 +343,39 @@ window.Store = {
     });
   },
 
-  stopListeningToOrder(orderId) {
-    const db = getDB();
-    db.ref('orders/' + orderId).off();
+  formatCurrency(val) {
+    return (val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   },
 
-  // Mantido para compatibilidade (não usado mais ativamente)
-  broadcast() {},
-  onSync() {},
-
-  // ---------- Áudio de Notificação (Web Audio API) ----------
-  playNotificationSound() {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const playTone = (freq, start, duration) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0.35, ctx.currentTime + start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + duration);
-      };
-      playTone(587.33, 0.0, 0.25);
-      playTone(739.99, 0.15, 0.3);
-      playTone(880.00, 0.32, 0.6);
-    } catch (e) {
-      console.warn('Áudio não disponível:', e);
-    }
-  },
-
-  // ---------- Formatador de Moeda ----------
-  formatCurrency(value) {
-    return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  },
-
-  // ---------- Formatador de Telefone WhatsApp ----------
   formatWhatsAppPhone(phone) {
     if (!phone) return '5511999999999';
-    let clean = ('' + phone).replace(/\D/g, '');
+    let clean = phone.replace(/\D/g, '');
     if (clean.length === 10 || clean.length === 11) {
       clean = '55' + clean;
     }
     return clean;
+  },
+
+  playNotificationSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch (e) {
+      console.warn('Áudio não permitido pelo navegador:', e);
+    }
   }
 };
