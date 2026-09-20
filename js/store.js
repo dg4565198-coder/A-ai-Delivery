@@ -707,10 +707,11 @@ window.Store = {
     if (!db) return Promise.reject(new Error('Firebase não inicializado'));
 
     const targetOrderId = ratingData.orderId || ('order_' + Date.now());
-
     const ratingRef = db.ref('ratings').push();
+    const ratingId = ratingRef.key;
+
     const payload = {
-      id: ratingRef.key,
+      id: ratingId,
       orderId: targetOrderId,
       orderNumber: ratingData.orderNumber || '#',
       customerName: ratingData.customerName || 'Cliente',
@@ -722,19 +723,23 @@ window.Store = {
 
     this.markOrderAsRatedLocally(targetOrderId);
 
-    // Salvar no nó ratings e atualizar nó orders
-    const updates = {};
-    updates['ratings/' + payload.id] = payload;
+    // Salvar diretamente no nó ratings
+    const p1 = db.ref('ratings/' + ratingId).set(payload);
+
+    // Atualizar também no pedido individual se existir
+    let p2 = Promise.resolve();
     if (ratingData.orderId) {
-      updates['orders/' + ratingData.orderId + '/rated'] = true;
-      updates['orders/' + ratingData.orderId + '/rating'] = {
-        stars: payload.stars,
-        comment: payload.comment,
-        createdAt: payload.createdAt
-      };
+      p2 = db.ref('orders/' + ratingData.orderId).update({
+        rated: true,
+        rating: {
+          stars: payload.stars,
+          comment: payload.comment,
+          createdAt: payload.createdAt
+        }
+      });
     }
 
-    return db.ref().update(updates);
+    return Promise.all([p1, p2]);
   },
 
   deleteRating(ratingId) {
@@ -745,11 +750,49 @@ window.Store = {
 
   listenToRatings(callback) {
     const db = getDB();
-    if (!db) return;
+    if (!db) {
+      if (callback) callback({});
+      return;
+    }
 
+    const ratingsMap = {};
+
+    function trigger() {
+      if (callback) callback(ratingsMap);
+    }
+
+    // 1. Escuta nó /ratings
     db.ref('ratings').on('value', snapshot => {
-      const val = snapshot.exists() ? snapshot.val() : {};
-      if (callback) callback(val);
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        Object.assign(ratingsMap, val);
+      }
+      trigger();
+    });
+
+    // 2. Escuta nó /orders para resgatar avaliações inseridas direto no pedido
+    db.ref('orders').on('value', snapshot => {
+      if (snapshot.exists()) {
+        snapshot.forEach(child => {
+          const o = child.val();
+          if (o && o.rating && o.rating.stars) {
+            const rId = 'rating_order_' + child.key;
+            if (!ratingsMap[rId]) {
+              ratingsMap[rId] = {
+                id: rId,
+                orderId: child.key,
+                orderNumber: o.orderNumber || '#',
+                customerName: (o.customer && o.customer.name) ? o.customer.name : 'Cliente',
+                customerPhone: (o.customer && o.customer.phone) ? o.customer.phone : '',
+                stars: o.rating.stars,
+                comment: o.rating.comment || '',
+                createdAt: o.rating.createdAt || Date.now()
+              };
+            }
+          }
+        });
+      }
+      trigger();
     });
   }
 };
