@@ -1213,10 +1213,35 @@ function saveStoreSettings(e) {
 // ==========================================================================
 // 10. HORÁRIOS DE FUNCIONAMENTO & PROMOÇÕES PUSH
 // ==========================================================================
+const DAYS_KEYS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+
 function loadHoursTab() {
   const config = window.Store.getConfig();
-  const input = document.getElementById('cfg-hours-text');
-  if (input) input.value = config.businessHours || 'Terça a Domingo • 14:00 às 22:00';
+  const summaryInput = document.getElementById('cfg-hours-text');
+  if (summaryInput) summaryInput.value = config.businessHours || 'Terça a Domingo • 14:00 às 22:00';
+
+  const weekly = config.weeklyHours || {
+    segunda: { active: false, hours: 'Fechado' },
+    terca: { active: true, hours: '14:00 às 22:00' },
+    quarta: { active: true, hours: '14:00 às 22:00' },
+    quinta: { active: true, hours: '14:00 às 22:00' },
+    sexta: { active: true, hours: '14:00 às 22:00' },
+    sabado: { active: true, hours: '14:00 às 22:00' },
+    domingo: { active: true, hours: '14:00 às 22:00' }
+  };
+
+  DAYS_KEYS.forEach(day => {
+    const activeCb = document.getElementById(`wh-${day}-active`);
+    const hoursInput = document.getElementById(`wh-${day}-hours`);
+    const dayData = weekly[day] || { active: true, hours: '14:00 às 22:00' };
+
+    if (activeCb) activeCb.checked = dayData.active;
+    if (hoursInput) {
+      hoursInput.value = dayData.hours || '';
+      hoursInput.disabled = !dayData.active;
+      if (!dayData.active && !hoursInput.value) hoursInput.value = 'Fechado';
+    }
+  });
 
   const statusText = document.getElementById('hours-tab-store-status');
   if (statusText) {
@@ -1224,13 +1249,36 @@ function loadHoursTab() {
   }
 }
 
+function toggleDayInput(day) {
+  const activeCb = document.getElementById(`wh-${day}-active`);
+  const hoursInput = document.getElementById(`wh-${day}-hours`);
+  if (hoursInput && activeCb) {
+    hoursInput.disabled = !activeCb.checked;
+    if (!activeCb.checked) {
+      hoursInput.value = 'Fechado';
+    } else if (hoursInput.value === 'Fechado') {
+      hoursInput.value = '14:00 às 22:00';
+    }
+  }
+}
+
 function handleSaveBusinessHours(e) {
   e.preventDefault();
-  const text = document.getElementById('cfg-hours-text').value.trim();
   const config = window.Store.getConfig();
-  config.businessHours = text;
+  const summaryText = document.getElementById('cfg-hours-text')?.value.trim();
+
+  const weeklyHours = {};
+  DAYS_KEYS.forEach(day => {
+    const active = document.getElementById(`wh-${day}-active`)?.checked || false;
+    const hours = document.getElementById(`wh-${day}-hours`)?.value.trim() || (active ? '14:00 às 22:00' : 'Fechado');
+    weeklyHours[day] = { active, hours };
+  });
+
+  config.weeklyHours = weeklyHours;
+  if (summaryText) config.businessHours = summaryText;
+
   window.Store.saveConfig(config);
-  alert("✅ Horário de funcionamento salvo com sucesso!");
+  alert("✅ Horários de funcionamento salvos com sucesso!");
 }
 
 async function handleSendInstantPromo(e) {
@@ -1375,6 +1423,7 @@ window.closeEditModal = closeEditModal;
 window.handleSaveItemEdit = handleSaveItemEdit;
 window.saveStoreSettings = saveStoreSettings;
 window.loadHoursTab = loadHoursTab;
+window.toggleDayInput = toggleDayInput;
 window.handleSaveBusinessHours = handleSaveBusinessHours;
 window.handleSendInstantPromo = handleSendInstantPromo;
 window.handleSchedulePromo = handleSchedulePromo;

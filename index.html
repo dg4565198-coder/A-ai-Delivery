@@ -92,7 +92,7 @@
         <div>
           <h1 id="header-store-name" class="font-bold text-lg text-white leading-tight">Rotta do Açaí</h1>
           <p id="header-delivery-time" class="text-xs text-purple-200/80">Entrega rápida • 30 a 50 min</p>
-          <p id="header-business-hours-mobile" class="md:hidden text-[10px] text-gold-300 font-semibold mt-0.5 flex items-center gap-1">
+          <p id="header-business-hours-mobile" onclick="openWeeklyHoursModal()" title="Clique para ver horários da semana" class="md:hidden text-[10px] text-gold-300 font-semibold mt-0.5 flex items-center gap-1 cursor-pointer hover:underline">
             <span>🕒</span>
             <span id="hours-text-mobile">Terça a Domingo • 14h às 22h</span>
           </p>
@@ -100,7 +100,7 @@
       </div>
 
       <!-- Centro (Local marcado com Risco Amarelo): Horário de Funcionamento -->
-      <div id="header-business-hours-container" class="hidden md:flex items-center space-x-2 bg-acai-800/80 border border-gold-500/40 px-4 py-2 rounded-2xl shadow-sm text-xs font-bold">
+      <div id="header-business-hours-container" onclick="openWeeklyHoursModal()" title="Clique para ver a programação da semana" class="hidden md:flex items-center space-x-2 bg-acai-800/80 hover:bg-acai-800 border border-gold-500/40 px-4 py-2 rounded-2xl shadow-sm text-xs font-bold cursor-pointer transition transform active:scale-95">
         <span class="text-base text-gold-400">🕒</span>
         <div class="text-left">
           <span class="text-[10px] text-purple-200 uppercase tracking-wider block font-semibold leading-none mb-0.5">Horário de Funcionamento</span>
@@ -596,6 +596,28 @@
         Fechar Janela
       </button>
 
+    </div>
+  <!-- Modal Horários da Semana (Visão do Cliente) -->
+  <div id="weekly-hours-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-gray-900 border border-purple-100">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-2xl">🕒</span>
+          <div>
+            <h3 class="font-extrabold text-base text-acai-900 leading-tight">Horários de Funcionamento</h3>
+            <p class="text-[11px] text-gray-500 font-medium">Programação Semanal da Loja</p>
+          </div>
+        </div>
+        <button onclick="closeWeeklyHoursModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm">✕</button>
+      </div>
+
+      <div id="weekly-hours-modal-list" class="space-y-2 text-xs">
+        <!-- Renderizado dinamicamente pelo JS -->
+      </div>
+
+      <button onclick="closeWeeklyHoursModal()" class="w-full bg-acai-700 hover:bg-acai-800 text-white font-bold py-2.5 rounded-2xl shadow transition text-xs">
+        Entendi
+      </button>
     </div>
   </div>
 

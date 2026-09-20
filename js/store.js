@@ -38,7 +38,16 @@ const DEFAULT_CONFIG = {
   estimatedTime: '30 a 50 min',
   isOpen: true,
   address: 'Rua Principal, 123 - Centro',
-  businessHours: 'Terça a Domingo - 14:00 às 22:00'
+  businessHours: 'Terça a Domingo • 14:00 às 22:00',
+  weeklyHours: {
+    segunda: { active: false, hours: 'Fechado' },
+    terca: { active: true, hours: '14:00 às 22:00' },
+    quarta: { active: true, hours: '14:00 às 22:00' },
+    quinta: { active: true, hours: '14:00 às 22:00' },
+    sexta: { active: true, hours: '14:00 às 22:00' },
+    sabado: { active: true, hours: '14:00 às 22:00' },
+    domingo: { active: true, hours: '14:00 às 22:00' }
+  }
 };
 
 const DEFAULT_PRODUCTS = [
