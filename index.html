@@ -84,32 +84,44 @@
        2. TOPO & BANNER DA LOJA
        ===================================================================== -->
   <header class="sticky top-0 z-40 bg-acai-900/95 backdrop-blur-md text-white shadow-lg border-b border-acai-700/50">
-    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      
+      <!-- Esquerda: Logo + Nome + Tempo de Entrega -->
       <div class="flex items-center space-x-3">
         <img src="assets/logo.jpg" alt="Rotta do Açaí" class="w-11 h-11 rounded-full border-2 border-gold-500 object-cover shadow-sm">
         <div>
-          <div class="flex items-center space-x-2">
-            <h1 id="header-store-name" class="font-bold text-lg text-white leading-tight">Rotta do Açaí</h1>
-            <span id="store-status-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 badge-pulse"></span>
-              Aberto
-            </span>
-          </div>
+          <h1 id="header-store-name" class="font-bold text-lg text-white leading-tight">Rotta do Açaí</h1>
           <p id="header-delivery-time" class="text-xs text-purple-200/80">Entrega rápida • 30 a 50 min</p>
-          <p id="header-business-hours" class="text-[10px] text-gold-300 font-semibold mt-0.5 flex items-center gap-1">
+          <p id="header-business-hours-mobile" class="md:hidden text-[10px] text-gold-300 font-semibold mt-0.5 flex items-center gap-1">
             <span>🕒</span>
-            <span id="hours-text">Terça a Domingo • 14h às 22h</span>
+            <span id="hours-text-mobile">Terça a Domingo • 14h às 22h</span>
           </p>
         </div>
       </div>
 
-      <div class="flex items-center space-x-2">
+      <!-- Centro (Local marcado com Risco Amarelo): Horário de Funcionamento -->
+      <div id="header-business-hours-container" class="hidden md:flex items-center space-x-2 bg-acai-800/80 border border-gold-500/40 px-4 py-2 rounded-2xl shadow-sm text-xs font-bold">
+        <span class="text-base text-gold-400">🕒</span>
+        <div class="text-left">
+          <span class="text-[10px] text-purple-200 uppercase tracking-wider block font-semibold leading-none mb-0.5">Horário de Funcionamento</span>
+          <span id="hours-text" class="text-gold-300 font-extrabold">Terça a Domingo • 14:00 às 22:00</span>
+        </div>
+      </div>
+
+      <!-- Direita (Local marcado com Risco Escuro): Status da Loja (Aberto/Fechado) -->
+      <div class="flex items-center space-x-2.5">
+        <span id="store-status-badge" class="inline-flex items-center px-3.5 py-1.5 rounded-2xl text-xs font-extrabold bg-emerald-950/80 text-emerald-300 border border-emerald-500/60 shadow">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2 badge-pulse"></span>
+          Loja Aberta
+        </span>
+
         <!-- Botão Instalar App no Celular (PWA) -->
-        <button id="pwa-install-btn" onclick="installPWA()" class="hidden flex items-center space-x-1.5 bg-gold-500 hover:bg-gold-400 text-acai-950 px-3.5 py-1.5 rounded-full text-xs font-black shadow-md transition transform active:scale-95">
+        <button id="pwa-install-btn" onclick="installPWA()" class="hidden flex items-center space-x-1.5 bg-gold-500 hover:bg-gold-400 text-acai-950 px-3 py-1.5 rounded-2xl text-xs font-black shadow-md transition transform active:scale-95">
           <span>📱</span>
-          <span>Instalar App</span>
+          <span class="hidden sm:inline">Instalar App</span>
         </button>
       </div>
+
     </div>
   </header>
 

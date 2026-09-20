@@ -89,11 +89,11 @@ function renderStoreHeader() {
 
   if (statusBadge) {
     if (config.isOpen) {
-      statusBadge.className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
-      statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 badge-pulse"></span> Aberto`;
+      statusBadge.className = "inline-flex items-center px-3.5 py-1.5 rounded-2xl text-xs font-extrabold bg-emerald-950/80 text-emerald-300 border border-emerald-500/60 shadow";
+      statusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2 badge-pulse"></span> Loja Aberta`;
     } else {
-      statusBadge.className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30";
-      statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400 mr-1.5"></span> Fechado`;
+      statusBadge.className = "inline-flex items-center px-3.5 py-1.5 rounded-2xl text-xs font-extrabold bg-rose-950/80 text-rose-300 border border-rose-500/60 shadow";
+      statusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-rose-400 mr-2"></span> Loja Fechada`;
     }
   }
 
@@ -112,6 +112,11 @@ function renderStoreHeader() {
   const hoursElem = document.getElementById('hours-text');
   if (hoursElem && config.businessHours) {
     hoursElem.textContent = config.businessHours;
+  }
+
+  const hoursMobileElem = document.getElementById('hours-text-mobile');
+  if (hoursMobileElem && config.businessHours) {
+    hoursMobileElem.textContent = config.businessHours;
   }
 
   const dockWhatsApp = document.getElementById('dock-whatsapp-btn');
