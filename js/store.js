@@ -151,6 +151,18 @@ window.Store = {
     return promoRef.set(payload);
   },
 
+  deletePromotion(promoId) {
+    const db = getDB();
+    if (!db) return Promise.reject(new Error('Firebase não inicializado'));
+    return db.ref('promotions/' + promoId).remove();
+  },
+
+  clearAllPromotions() {
+    const db = getDB();
+    if (!db) return Promise.reject(new Error('Firebase não inicializado'));
+    return db.ref('promotions').remove();
+  },
+
   listenToPromotions(callback) {
     const db = getDB();
     if (!db) return;

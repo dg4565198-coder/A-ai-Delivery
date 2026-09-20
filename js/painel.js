@@ -1293,22 +1293,51 @@ function renderPromotionsHistory() {
     const list = Object.values(data).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
     container.innerHTML = list.map(p => `
-      <div class="bg-purple-50/70 p-3 rounded-xl border border-purple-100 flex items-start justify-between">
-        <div>
-          <div class="font-extrabold text-acai-900 flex items-center gap-2">
+      <div class="bg-purple-50/70 p-3.5 rounded-xl border border-purple-100 flex items-center justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="font-extrabold text-acai-900 flex flex-wrap items-center gap-2">
             <span>📢 ${p.title}</span>
             ${p.scheduledTime 
               ? `<span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full font-bold">⏰ Agendado para ${new Date(p.scheduledTime).toLocaleString('pt-BR')}</span>`
               : `<span class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">⚡ Disparado em ${p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : ''}</span>`
             }
           </div>
-          <p class="text-gray-600 mt-1 text-xs">${p.message}</p>
+          <p class="text-gray-600 mt-1 text-xs leading-relaxed">${p.message}</p>
         </div>
+        <button onclick="handleDeletePromotion('${p.id}')" title="Excluir esta promoção" class="p-2 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg font-bold text-xs transition shrink-0 flex items-center gap-1">
+          <span>🗑️</span>
+          <span class="hidden sm:inline">Excluir</span>
+        </button>
       </div>
     `).join('');
   }).catch(err => {
     container.innerHTML = `<div class="text-red-500 text-xs">Erro ao carregar histórico: ${err.message}</div>`;
   });
+}
+
+async function handleDeletePromotion(promoId) {
+  if (!promoId) return;
+  if (confirm("Deseja realmente excluir esta promoção do histórico?")) {
+    try {
+      await window.Store.deletePromotion(promoId);
+      alert("✅ Promoção excluída com sucesso!");
+      renderPromotionsHistory();
+    } catch (err) {
+      alert("Erro ao excluir promoção: " + err.message);
+    }
+  }
+}
+
+async function handleClearAllPromotions() {
+  if (confirm("Deseja realmente apagar TODAS as promoções enviadas e agendadas do histórico?")) {
+    try {
+      await window.Store.clearAllPromotions();
+      alert("✅ Histórico de promoções limpo com sucesso!");
+      renderPromotionsHistory();
+    } catch (err) {
+      alert("Erro ao limpar histórico: " + err.message);
+    }
+  }
 }
 
 window.handlePanelLogin = handlePanelLogin;
@@ -1345,5 +1374,7 @@ window.loadHoursTab = loadHoursTab;
 window.handleSaveBusinessHours = handleSaveBusinessHours;
 window.handleSendInstantPromo = handleSendInstantPromo;
 window.handleSchedulePromo = handleSchedulePromo;
+window.handleDeletePromotion = handleDeletePromotion;
+window.handleClearAllPromotions = handleClearAllPromotions;
 window.sendPushNotification = sendPushNotification;
 window.showInAppToast = showInAppToast;
