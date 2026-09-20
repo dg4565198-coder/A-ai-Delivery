@@ -264,7 +264,7 @@ function renderBuilderFruits() {
       <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-emerald-500 bg-emerald-50/70 font-semibold' : 'border-gray-200 bg-white'}">
         <div class="flex items-center space-x-2.5">
           <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFruit('${fruit.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
-          ${fruit.image ? `<img src="${fruit.image}" class="w-6 h-6 object-cover rounded">` : `<span class="text-base">${fruit.icon || '🍓'}</span>`}
+          ${fruit.image ? `<img src="${fruit.image}" class="w-8 h-8 object-cover rounded-lg border border-purple-100 shadow-sm shrink-0">` : `<span class="text-base">${fruit.icon || '🍓'}</span>`}
           <span class="text-gray-800">${fruit.name}</span>
         </div>
       </label>
@@ -307,9 +307,9 @@ function renderBuilderFreeToppings() {
     const isSelected = state.selectedFreeToppings.some(t => t.id === top.id);
     return `
       <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-emerald-600 bg-emerald-50/60 font-semibold' : 'border-gray-200 bg-white'}">
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2.5">
           <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFreeTopping('${top.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
-          ${top.image ? `<img src="${top.image}" class="w-6 h-6 object-cover rounded">` : `<span class="text-base">${top.icon || '🥣'}</span>`}
+          ${top.image ? `<img src="${top.image}" class="w-8 h-8 object-cover rounded-lg border border-purple-100 shadow-sm shrink-0">` : `<span class="text-base">${top.icon || '🥣'}</span>`}
           <span class="text-gray-800">${top.name}</span>
         </div>
       </label>
@@ -351,9 +351,9 @@ function renderBuilderCaldas() {
     const isSelected = state.selectedCalda && state.selectedCalda.id === calda.id;
     return `
       <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs cursor-pointer ${isSelected ? 'border-amber-500 bg-amber-50/80 font-bold shadow-sm' : 'border-gray-200 bg-white'}" onclick="selectCalda('${calda.id}')">
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2.5">
           <input type="radio" name="builder_calda_choice" ${isSelected ? 'checked' : ''} class="text-amber-600 focus:ring-amber-500 h-3.5 w-3.5">
-          ${calda.image ? `<img src="${calda.image}" class="w-6 h-6 object-cover rounded">` : `<span class="text-base">${calda.icon || '🍯'}</span>`}
+          ${calda.image ? `<img src="${calda.image}" class="w-8 h-8 object-cover rounded-lg border border-purple-100 shadow-sm shrink-0">` : `<span class="text-base">${calda.icon || '🍯'}</span>`}
           <span class="text-gray-800">${calda.name}</span>
         </div>
       </label>

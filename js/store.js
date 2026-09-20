@@ -260,7 +260,8 @@ window.Store = {
     _stockCache.products = products || [];
     try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(_stockCache.products)); } catch {}
     const db = getDB();
-    if (db) db.ref('stock/products').set(_stockCache.products);
+    if (db) return db.ref('stock/products').set(_stockCache.products).catch(e => console.warn('Firebase set stock/products:', e));
+    return Promise.resolve();
   },
 
   getBases() {
@@ -302,7 +303,8 @@ window.Store = {
     _stockCache.toppings = cleaned;
     try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(_stockCache.toppings)); } catch {}
     const db = getDB();
-    if (db) db.ref('stock/toppings').set(_stockCache.toppings);
+    if (db) return db.ref('stock/toppings').set(_stockCache.toppings).catch(e => console.warn('Firebase set stock/toppings:', e));
+    return Promise.resolve();
   },
 
   getFruits() {
@@ -326,7 +328,8 @@ window.Store = {
     _stockCache.fruits = fruits || [];
     try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(_stockCache.fruits)); } catch {}
     const db = getDB();
-    if (db) db.ref('stock/fruits').set(_stockCache.fruits);
+    if (db) return db.ref('stock/fruits').set(_stockCache.fruits).catch(e => console.warn('Firebase set stock/fruits:', e));
+    return Promise.resolve();
   },
 
   getCaldas() {
@@ -350,7 +353,8 @@ window.Store = {
     _stockCache.caldas = caldas || [];
     try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(_stockCache.caldas)); } catch {}
     const db = getDB();
-    if (db) db.ref('stock/caldas').set(_stockCache.caldas);
+    if (db) return db.ref('stock/caldas').set(_stockCache.caldas).catch(e => console.warn('Firebase set stock/caldas:', e));
+    return Promise.resolve();
   },
 
   getPaidAddons() {
@@ -369,7 +373,15 @@ window.Store = {
       if (snapshot.exists()) {
         const data = snapshot.val();
         if (data.products !== undefined) {
-          _stockCache.products = Array.isArray(data.products) ? data.products : (data.products ? Object.values(data.products) : []);
+          const remoteProds = Array.isArray(data.products) ? data.products : (data.products ? Object.values(data.products) : []);
+          const localProds = _stockCache.products || [];
+          _stockCache.products = remoteProds.map(p => {
+            if (!p.image) {
+              const match = localProds.find(l => l.id === p.id);
+              if (match && match.image) p.image = match.image;
+            }
+            return p;
+          });
           try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(_stockCache.products)); } catch {}
         }
         if (data.toppings !== undefined) {
@@ -377,6 +389,15 @@ window.Store = {
           list = list.filter(t => {
             const nameLower = (t.name || '').toLowerCase();
             return !nameLower.includes('leite condesado') && !nameLower.includes('sem leite condes');
+          });
+
+          const localToppings = _stockCache.toppings || [];
+          list = list.map(t => {
+            if (!t.image) {
+              const match = localToppings.find(l => l.id === t.id || (l.name || '').toLowerCase() === (t.name || '').toLowerCase());
+              if (match && match.image) t.image = match.image;
+            }
+            return t;
           });
 
           let updatedToppings = false;
@@ -395,8 +416,16 @@ window.Store = {
         }
         if (data.fruits !== undefined) {
           let list = Array.isArray(data.fruits) ? data.fruits : (data.fruits ? Object.values(data.fruits) : []);
-          let updatedFruits = false;
+          const localFruits = _stockCache.fruits || [];
+          list = list.map(f => {
+            if (!f.image) {
+              const match = localFruits.find(l => l.id === f.id || (l.name || '').toLowerCase() === (f.name || '').toLowerCase());
+              if (match && match.image) f.image = match.image;
+            }
+            return f;
+          });
 
+          let updatedFruits = false;
           DEFAULT_FRUITS.forEach(defFruit => {
             if (!list.some(f => f.id === defFruit.id || (f.name || '').toLowerCase() === defFruit.name.toLowerCase())) {
               list.push(defFruit);
@@ -411,7 +440,15 @@ window.Store = {
           }
         }
         if (data.caldas !== undefined) {
-          _stockCache.caldas = Array.isArray(data.caldas) ? data.caldas : (data.caldas ? Object.values(data.caldas) : []);
+          const remoteCaldas = Array.isArray(data.caldas) ? data.caldas : (data.caldas ? Object.values(data.caldas) : []);
+          const localCaldas = _stockCache.caldas || [];
+          _stockCache.caldas = remoteCaldas.map(c => {
+            if (!c.image) {
+              const match = localCaldas.find(l => l.id === c.id);
+              if (match && match.image) c.image = match.image;
+            }
+            return c;
+          });
           try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(_stockCache.caldas)); } catch {}
         }
         if (callback) callback();
