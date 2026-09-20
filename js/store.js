@@ -209,12 +209,15 @@ window.Store = {
   },
 
   getProducts() {
-    if (_stockCache.products && _stockCache.products.length > 0) return _stockCache.products;
-    try {
-      const p = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS));
-      if (Array.isArray(p) && p.length > 0) return p;
-    } catch {}
-    return DEFAULT_PRODUCTS;
+    let list = DEFAULT_PRODUCTS;
+    if (_stockCache.products && _stockCache.products.length > 0) list = _stockCache.products;
+    else {
+      try {
+        const p = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS));
+        if (Array.isArray(p) && p.length > 0) list = p;
+      } catch {}
+    }
+    return list.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveProducts(products) {
@@ -233,12 +236,15 @@ window.Store = {
   },
 
   getFreeToppings() {
-    if (_stockCache.toppings && _stockCache.toppings.length > 0) return _stockCache.toppings;
-    try {
-      const f = JSON.parse(localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS));
-      if (Array.isArray(f) && f.length > 0) return f;
-    } catch {}
-    return DEFAULT_FREE_TOPPINGS;
+    let list = DEFAULT_FREE_TOPPINGS;
+    if (_stockCache.toppings && _stockCache.toppings.length > 0) list = _stockCache.toppings;
+    else {
+      try {
+        const f = JSON.parse(localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS));
+        if (Array.isArray(f) && f.length > 0) list = f;
+      } catch {}
+    }
+    return list.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveFreeToppings(toppings) {
@@ -249,12 +255,15 @@ window.Store = {
   },
 
   getFruits() {
-    if (_stockCache.fruits && _stockCache.fruits.length > 0) return _stockCache.fruits;
-    try {
-      const a = JSON.parse(localStorage.getItem(STORAGE_KEYS.FRUITS));
-      if (Array.isArray(a) && a.length > 0) return a;
-    } catch {}
-    return DEFAULT_FRUITS;
+    let list = DEFAULT_FRUITS;
+    if (_stockCache.fruits && _stockCache.fruits.length > 0) list = _stockCache.fruits;
+    else {
+      try {
+        const a = JSON.parse(localStorage.getItem(STORAGE_KEYS.FRUITS));
+        if (Array.isArray(a) && a.length > 0) list = a;
+      } catch {}
+    }
+    return list.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveFruits(fruits) {
@@ -265,12 +274,15 @@ window.Store = {
   },
 
   getCaldas() {
-    if (_stockCache.caldas && _stockCache.caldas.length > 0) return _stockCache.caldas;
-    try {
-      const c = JSON.parse(localStorage.getItem(STORAGE_KEYS.CALDAS));
-      if (Array.isArray(c) && c.length > 0) return c;
-    } catch {}
-    return DEFAULT_CALDAS;
+    let list = DEFAULT_CALDAS;
+    if (_stockCache.caldas && _stockCache.caldas.length > 0) list = _stockCache.caldas;
+    else {
+      try {
+        const c = JSON.parse(localStorage.getItem(STORAGE_KEYS.CALDAS));
+        if (Array.isArray(c) && c.length > 0) list = c;
+      } catch {}
+    }
+    return list.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveCaldas(caldas) {
@@ -550,28 +562,48 @@ window.Store = {
 
   addProduct(product) {
     let products = this.getProducts();
-    products.push(product);
+    const item = {
+      ...product,
+      id: product.id || 'prod_' + Date.now(),
+      available: product.available !== false
+    };
+    products.push(item);
     this.saveProducts(products);
     return products;
   },
 
   addFruit(fruit) {
     let fruits = this.getFruits();
-    fruits.push(fruit);
+    const item = {
+      ...fruit,
+      id: fruit.id || 'fruit_' + Date.now(),
+      available: fruit.available !== false
+    };
+    fruits.push(item);
     this.saveFruits(fruits);
     return fruits;
   },
 
   addFreeTopping(topping) {
     let toppings = this.getFreeToppings();
-    toppings.push(topping);
+    const item = {
+      ...topping,
+      id: topping.id || 'top_' + Date.now(),
+      available: topping.available !== false
+    };
+    toppings.push(item);
     this.saveFreeToppings(toppings);
     return toppings;
   },
 
   addCalda(calda) {
     let caldas = this.getCaldas();
-    caldas.push(calda);
+    const item = {
+      ...calda,
+      id: calda.id || 'calda_' + Date.now(),
+      available: calda.available !== false
+    };
+    caldas.push(item);
     this.saveCaldas(caldas);
     return caldas;
   },

@@ -153,7 +153,7 @@ function renderProducts() {
   const grid = document.getElementById('products-grid');
   if (!grid) return;
 
-  const products = window.Store.getProducts().filter(p => p.available);
+  const products = window.Store.getProducts().filter(p => p.available !== false);
   const filtered = state.activeCategory === 'todos' 
     ? products 
     : products.filter(p => p.category === state.activeCategory);
@@ -202,7 +202,7 @@ function renderProducts() {
 // ==========================================================================
 function handleProductClick(productId) {
   const product = window.Store.getProducts().find(p => p.id === productId);
-  if (!product || !product.available) return;
+  if (!product || product.available === false) return;
 
   if (!product.allowsCustomization) {
     addItemDirectlyToCart(product);
@@ -214,7 +214,7 @@ function handleProductClick(productId) {
   state.selectedFreeToppings = [];
   state.selectedFruits = [];
   const caldas = window.Store.getCaldas();
-  const defaultCalda = caldas.find(c => c.available && c.id === 'calda-leite-cond') || caldas.find(c => c.available) || { id: 'calda-leite-cond', name: 'Leite Condensado' };
+  const defaultCalda = caldas.find(c => c.available !== false && c.id === 'calda-leite-cond') || caldas.find(c => c.available !== false) || { id: 'calda-leite-cond', name: 'Leite Condensado' };
   state.selectedCalda = defaultCalda;
   state.builderQuantity = 1;
 
@@ -252,7 +252,7 @@ function renderBuilderFruits() {
   const container = document.getElementById('builder-fruits-list');
   if (!container) return;
 
-  const fruits = window.Store.getFruits().filter(a => a.available);
+  const fruits = window.Store.getFruits().filter(a => a.available !== false);
   const limit = state.currentBuildingProduct?.freeFruitLimit || 3;
 
   const counterElem = document.getElementById('builder-fruit-counter');
@@ -297,7 +297,7 @@ function renderBuilderFreeToppings() {
   const container = document.getElementById('builder-free-list');
   if (!container) return;
 
-  const toppings = window.Store.getFreeToppings().filter(t => t.available);
+  const toppings = window.Store.getFreeToppings().filter(t => t.available !== false);
   const limit = state.currentBuildingProduct?.freeToppingLimit || 3;
 
   const counterElem = document.getElementById('builder-free-counter');
@@ -341,7 +341,7 @@ function renderBuilderCaldas() {
   const container = document.getElementById('builder-calda-list');
   if (!container) return;
 
-  const caldas = window.Store.getCaldas().filter(c => c.available);
+  const caldas = window.Store.getCaldas().filter(c => c.available !== false);
   const tagElem = document.getElementById('builder-calda-selected-tag');
   if (tagElem) {
     tagElem.textContent = state.selectedCalda ? state.selectedCalda.name : 'Sem Calda';

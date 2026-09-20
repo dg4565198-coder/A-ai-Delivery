@@ -511,7 +511,7 @@ function renderStockProducts() {
         <button onclick="openEditModal('product', '${prod.id}')" title="Editar item" class="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs font-bold transition">✏️</button>
         <button onclick="handleDeleteProduct('${prod.id}')" title="Excluir item definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
         <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" ${prod.available ? 'checked' : ''} onchange="toggleProductAvailability('${prod.id}')" class="sr-only peer">
+          <input type="checkbox" ${prod.available !== false ? 'checked' : ''} onchange="toggleProductAvailability('${prod.id}')" class="sr-only peer">
           <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
         </label>
       </div>
@@ -521,7 +521,7 @@ function renderStockProducts() {
 function toggleProductAvailability(id) {
   const products = window.Store.getProducts();
   const prod = products.find(p => p.id === id);
-  if (prod) { prod.available = !prod.available; window.Store.saveProducts(products); renderStockProducts(); }
+  if (prod) { prod.available = !(prod.available !== false); window.Store.saveProducts(products); renderStockProducts(); }
 }
 
 function handleDeleteProduct(id) {
@@ -548,7 +548,7 @@ function renderStockAddons() {
         <button onclick="openEditModal('fruit', '${fruit.id}')" title="Editar item" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition">✏️</button>
         <button onclick="handleDeleteFruit('${fruit.id}')" title="Excluir fruta definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
         <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" ${fruit.available ? 'checked' : ''} onchange="toggleFruitAvailability('${fruit.id}')" class="sr-only peer">
+          <input type="checkbox" ${fruit.available !== false ? 'checked' : ''} onchange="toggleFruitAvailability('${fruit.id}')" class="sr-only peer">
           <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
         </label>
       </div>
@@ -558,7 +558,7 @@ function renderStockAddons() {
 function toggleFruitAvailability(id) {
   const fruits = window.Store.getFruits();
   const fruit = fruits.find(a => a.id === id);
-  if (fruit) { fruit.available = !fruit.available; window.Store.saveFruits(fruits); renderStockAddons(); }
+  if (fruit) { fruit.available = !(fruit.available !== false); window.Store.saveFruits(fruits); renderStockAddons(); }
 }
 
 function handleDeleteFruit(id) {
@@ -585,7 +585,7 @@ function renderStockToppings() {
         <button onclick="openEditModal('topping', '${top.id}')" title="Editar item" class="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold transition">✏️</button>
         <button onclick="handleDeleteTopping('${top.id}')" title="Excluir complemento definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
         <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" ${top.available ? 'checked' : ''} onchange="toggleToppingAvailability('${top.id}')" class="sr-only peer">
+          <input type="checkbox" ${top.available !== false ? 'checked' : ''} onchange="toggleToppingAvailability('${top.id}')" class="sr-only peer">
           <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
         </label>
       </div>
@@ -595,7 +595,7 @@ function renderStockToppings() {
 function toggleToppingAvailability(id) {
   const toppings = window.Store.getFreeToppings();
   const top = toppings.find(t => t.id === id);
-  if (top) { top.available = !top.available; window.Store.saveFreeToppings(toppings); renderStockToppings(); }
+  if (top) { top.available = !(top.available !== false); window.Store.saveFreeToppings(toppings); renderStockToppings(); }
 }
 
 function handleDeleteTopping(id) {
@@ -623,7 +623,7 @@ function renderStockCaldas() {
         <button onclick="openEditModal('calda', '${calda.id}')" title="Editar item" class="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition">✏️</button>
         <button onclick="handleDeleteCalda('${calda.id}')" title="Excluir calda definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
         <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" ${calda.available ? 'checked' : ''} onchange="toggleCaldaAvailability('${calda.id}')" class="sr-only peer">
+          <input type="checkbox" ${calda.available !== false ? 'checked' : ''} onchange="toggleCaldaAvailability('${calda.id}')" class="sr-only peer">
           <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
         </label>
       </div>
@@ -633,7 +633,7 @@ function renderStockCaldas() {
 function toggleCaldaAvailability(id) {
   const caldas = window.Store.getCaldas();
   const calda = caldas.find(c => c.id === id);
-  if (calda) { calda.available = !calda.available; window.Store.saveCaldas(caldas); renderStockCaldas(); }
+  if (calda) { calda.available = !(calda.available !== false); window.Store.saveCaldas(caldas); renderStockCaldas(); }
 }
 
 function handleDeleteCalda(id) {
@@ -887,24 +887,30 @@ async function handleCreateNewItem(e) {
     const allowsCustomization = category !== 'bebidas';
 
     window.Store.addProduct({
+      id: 'prod_' + Date.now(),
       name,
       price,
       category,
       allowsCustomization,
       freeFruitLimit: fruitLimit,
       freeToppingLimit: toppingLimit,
+      available: true,
       image: base64Image,
       icon: '🍧'
     });
   } else if (type === 'fruit') {
     window.Store.addFruit({
+      id: 'fruit_' + Date.now(),
       name,
+      available: true,
       image: base64Image,
       icon: '🍓'
     });
   } else if (type === 'topping') {
     window.Store.addFreeTopping({
+      id: 'top_' + Date.now(),
       name,
+      available: true,
       image: base64Image,
       icon: '🥣'
     });
