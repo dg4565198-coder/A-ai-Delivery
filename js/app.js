@@ -328,7 +328,7 @@ function toggleFreeTopping(toppingId) {
     state.selectedFreeToppings.splice(index, 1);
   } else {
     if (state.selectedFreeToppings.length >= limit) {
-      alert(`Você já atingiu o limite de ${limit} complementos grátis para este tamanho. Desmarque um para poder escolher outro!`);
+      alert(`Você já atingiu o limite de ${limit} complementos para este tamanho. Desmarque um para poder escolher outro!`);
       return;
     }
     state.selectedFreeToppings.push(topping);
@@ -499,7 +499,7 @@ function renderCartModalContent() {
 
         ${item.freeToppings && item.freeToppings.length > 0 ? `
           <p class="text-[10px] text-gray-500 mt-0.5">
-            <strong>Grátis:</strong> ${item.freeToppings.map(t => t.name).join(', ')}
+            <strong>Complementos:</strong> ${item.freeToppings.map(t => t.name).join(', ')}
           </p>
         ` : ''}
 

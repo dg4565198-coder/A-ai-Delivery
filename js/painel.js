@@ -361,7 +361,7 @@ function createOrderCardElement(order, currentStatus) {
           </div>
           ${item.calda ? `<div class="text-[9px] text-amber-800 font-bold">🍯 Calda: ${item.calda}</div>` : ''}
           ${item.fruits && item.fruits.length > 0 ? `<div class="text-[9px] text-emerald-700 font-semibold">🍓 Frutas: ${item.fruits.map(f => f.name).join(', ')}</div>` : ''}
-          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="text-[9px] text-gray-600">✓ Grátis: ${item.freeToppings.map(t => t.name).join(', ')}</div>` : ''}
+          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="text-[9px] text-gray-600">✓ Complementos: ${item.freeToppings.map(t => t.name).join(', ')}</div>` : ''}
           ${item.notes ? `<div class="text-[9px] italic text-purple-600 bg-purple-50 p-0.5 rounded mt-0.5">Obs: "${item.notes}"</div>` : ''}
         </div>`).join('')}
     </div>`;
@@ -465,7 +465,7 @@ function openReceiptModal(orderId) {
           <div class="flex justify-between font-extrabold"><span>[${item.quantity}x] ${item.name}</span><span>${window.Store.formatCurrency(item.unitPrice * item.quantity)}</span></div>
           ${item.calda ? `<div class="font-extrabold ml-2 text-amber-900">» Calda: ${item.calda}</div>` : ''}
           ${item.fruits && item.fruits.length > 0 ? `<div class="font-semibold ml-2">» Frutas: ${item.fruits.map(f => f.name).join(' + ')}</div>` : ''}
-          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="ml-2">» Grátis: ${item.freeToppings.map(t => t.name).join(' + ')}</div>` : ''}
+          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="ml-2">» Complementos: ${item.freeToppings.map(t => t.name).join(' + ')}</div>` : ''}
           ${item.notes ? `<div class="italic ml-2 bg-yellow-50 p-0.5">OBS: "${item.notes}"</div>` : ''}
         </div>`).join('')}
     </div>
@@ -578,7 +578,7 @@ function renderStockToppings() {
         ${top.image ? `<img src="${top.image}" class="w-10 h-10 object-cover rounded-lg border border-emerald-200">` : `<span class="text-xl">${top.icon || '🥣'}</span>`}
         <div>
           <h4 class="font-bold text-xs text-gray-800">${top.name}</h4>
-          <span class="text-[11px] text-emerald-700 font-semibold">Grátis</span>
+          <span class="text-[11px] text-purple-700 font-semibold">Complemento</span>
         </div>
       </div>
       <div class="flex items-center space-x-2">
