@@ -384,13 +384,24 @@ window.Store = {
   async createOrder(orderData) {
     const db = getDB();
     const now = new Date();
-    const orderNumber = '#' + (101 + _orderCount);
+    const todayStr = now.toLocaleDateString('pt-BR');
+
+    // Contar pedidos realizados no dia de hoje (das 00:00 às 23:59)
+    const allOrders = Object.values(_ordersCache || {});
+    const todayOrders = allOrders.filter(o => {
+      if (!o.createdAt) return false;
+      const d = new Date(o.createdAt);
+      return d.toLocaleDateString('pt-BR') === todayStr;
+    });
+
+    const nextSeq = todayOrders.length + 1;
+    const orderNumber = '#' + nextSeq;
 
     const newOrder = {
       orderNumber,
       createdAt: now.toISOString(),
       timeFormatted: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      dateFormatted: now.toLocaleDateString('pt-BR'),
+      dateFormatted: todayStr,
       status: 'preparo',
       customer: orderData.customer,
       items: orderData.items,

@@ -1358,11 +1358,12 @@ function openRatingModal(order) {
   modal.classList.remove('hidden');
 }
 
-async function submitRatingModal() {
+function submitRatingModal() {
   let orderId = document.getElementById('rating-target-order-id')?.value;
   let orderNumber = document.getElementById('rating-target-order-number')?.value;
   const comment = (document.getElementById('rating-comment-input')?.value || '').trim();
-  
+  const stars = currentRatingStars || 5;
+
   if (!orderId) {
     const myOrderIds = window.Store.getMyOrders();
     const localRated = window.Store.getRatedOrdersLocally();
@@ -1371,26 +1372,33 @@ async function submitRatingModal() {
       orderId = unrated[0];
     } else if (myOrderIds.length > 0) {
       orderId = myOrderIds[0];
+    } else {
+      orderId = 'order_' + Date.now();
     }
   }
 
+  // 1. Marca imediatamente como avaliado no localStorage para desbloquear o cliente
+  window.Store.markOrderAsRatedLocally(orderId);
+
+  // 2. Fecha o modal imediatamente
+  const modal = document.getElementById('rating-modal');
+  if (modal) modal.classList.add('hidden');
+
+  // 3. Exibe mensagem de agradecimento
+  alert("✨ Muito obrigado pela sua avaliação! Sua opinião é super importante para a Rotta do Açaí!");
+
+  // 4. Salva no Firebase em segundo plano sem travar o modal
   const customerData = window.Store.getCustomerData() || {};
-
-  try {
-    await window.Store.saveRating({
-      orderId: orderId || ('anon_' + Date.now()),
-      orderNumber: orderNumber || '#',
-      customerName: customerData.name || 'Cliente',
-      customerPhone: customerData.phone || '',
-      stars: currentRatingStars,
-      comment: comment
-    });
-
-    alert("✨ Muito obrigado pela sua avaliação! Sua opinião é super importante para a Rotta do Açaí!");
-    document.getElementById('rating-modal')?.classList.add('hidden');
-  } catch (err) {
-    alert("Erro ao enviar avaliação: " + err.message);
-  }
+  window.Store.saveRating({
+    orderId: orderId,
+    orderNumber: orderNumber || '#',
+    customerName: customerData.name || 'Cliente',
+    customerPhone: customerData.phone || '',
+    stars: stars,
+    comment: comment
+  }).catch(err => {
+    console.warn('Sincronização em segundo plano da avaliação:', err);
+  });
 }
 
 // Funções Globais
