@@ -438,20 +438,80 @@ window.Store = {
     });
   },
 
+  fixDuplicateOrderNumbers(ordersObj) {
+    if (!ordersObj || typeof ordersObj !== 'object') return;
+    const ordersList = Object.values(ordersObj);
+    if (ordersList.length === 0) return;
+
+    const groupsByDate = {};
+    ordersList.forEach(o => {
+      if (!o || !o.createdAt) return;
+      const dateStr = new Date(o.createdAt).toLocaleDateString('pt-BR');
+      if (!groupsByDate[dateStr]) groupsByDate[dateStr] = [];
+      groupsByDate[dateStr].push(o);
+    });
+
+    const db = getDB();
+    Object.keys(groupsByDate).forEach(dateStr => {
+      const group = groupsByDate[dateStr];
+      const numbersSeen = new Set();
+      let hasDuplicates = false;
+      for (const o of group) {
+        if (numbersSeen.has(o.orderNumber)) {
+          hasDuplicates = true;
+          break;
+        }
+        numbersSeen.add(o.orderNumber);
+      }
+
+      if (hasDuplicates) {
+        group.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        let num = 1;
+        group.forEach(order => {
+          const expectedNumber = '#' + num;
+          if (order.orderNumber !== expectedNumber && order.id) {
+            order.orderNumber = expectedNumber;
+            try {
+              db.ref('orders/' + order.id).update({ orderNumber: expectedNumber });
+            } catch (e) {}
+          }
+          num++;
+        });
+      }
+    });
+  },
+
   async createOrder(orderData) {
     const db = getDB();
     const now = new Date();
     const todayStr = now.toLocaleDateString('pt-BR');
 
-    // Contar pedidos realizados no dia de hoje (das 00:00 às 23:59)
-    const allOrders = Object.values(_ordersCache || {});
-    const todayOrders = allOrders.filter(o => {
-      if (!o.createdAt) return false;
-      const d = new Date(o.createdAt);
-      return d.toLocaleDateString('pt-BR') === todayStr;
-    });
+    let maxOrderNum = 0;
+    try {
+      // Buscar todos os pedidos no Firebase para calcular a sequência do dia corretamente
+      const snap = await db.ref('orders').once('value');
+      const firebaseOrders = snap.val() || {};
+      const allOrdersList = Object.values(firebaseOrders);
 
-    const nextSeq = todayOrders.length + 1;
+      allOrdersList.forEach(o => {
+        if (!o || !o.createdAt) return;
+        const d = new Date(o.createdAt);
+        if (d.toLocaleDateString('pt-BR') === todayStr) {
+          let num = 0;
+          if (o.orderNumber) {
+            const match = String(o.orderNumber).match(/\d+/);
+            if (match) num = parseInt(match[0], 10);
+          }
+          if (num > maxOrderNum) {
+            maxOrderNum = num;
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Erro ao consultar sequência de pedidos no Firebase:', e);
+    }
+
+    const nextSeq = maxOrderNum + 1;
     const orderNumber = '#' + nextSeq;
 
     const newOrder = {
@@ -525,6 +585,10 @@ window.Store = {
           newKeys.add(child.key);
         });
       }
+
+      try {
+        this.fixDuplicateOrderNumbers(newCache);
+      } catch (err) {}
 
       if (_isFirstLoad) {
         _ordersCache = newCache;
