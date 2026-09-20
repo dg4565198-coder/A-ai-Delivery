@@ -1130,6 +1130,67 @@ window.Store = {
     });
   },
 
+  async recalculateCustomerCupsFromOrders(phone) {
+    const key = this.cleanPhoneKey(phone);
+    if (!key) return 0;
+
+    const db = getDB();
+    let ordersList = Object.values(_ordersCache);
+
+    if (db) {
+      try {
+        const snap = await db.ref('orders').once('value');
+        if (snap.exists()) {
+          ordersList = Object.values(snap.val());
+        }
+      } catch (e) {}
+    }
+
+    let calculatedCups = 0;
+    let customerName = 'Cliente';
+
+    ordersList.forEach(order => {
+      if (!order || !order.customer || !order.customer.phone) return;
+      const orderPhoneKey = this.cleanPhoneKey(order.customer.phone);
+
+      if (orderPhoneKey === key && order.status === 'concluido') {
+        if (order.customer.name) customerName = order.customer.name;
+
+        let cupsInOrder = 0;
+        if (Array.isArray(order.items)) {
+          order.items.forEach(item => {
+            const nameLower = (item.name || '').toLowerCase();
+            const cat = (item.category || '').toLowerCase();
+            if (cat === 'copos' || nameLower.includes('copo') || nameLower.includes('pote') || nameLower.includes('açaí') || nameLower.includes('acai') || item.allowsCustomization !== false) {
+              cupsInOrder += (parseInt(item.quantity, 10) || 1);
+            }
+          });
+          if (cupsInOrder === 0) {
+            order.items.forEach(item => {
+              cupsInOrder += (parseInt(item.quantity, 10) || 1);
+            });
+          }
+        } else {
+          cupsInOrder = 1;
+        }
+
+        calculatedCups += cupsInOrder;
+      }
+    });
+
+    const customersMap = this.getCustomersLocally();
+    const existing = customersMap[key] || {};
+
+    const finalCups = Math.max(calculatedCups, parseInt(existing.totalCups, 10) || 0);
+
+    await this.saveCustomerFidelity(key, {
+      name: customerName !== 'Cliente' ? customerName : (existing.name || 'Cliente'),
+      totalCups: finalCups
+    });
+
+    return finalCups;
+  },
+
   updateCustomerPoints(phone, newTotalCups) {
     const key = this.cleanPhoneKey(phone);
     if (!key) return;

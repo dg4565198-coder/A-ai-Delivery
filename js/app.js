@@ -1662,10 +1662,11 @@ function getActiveCustomerData() {
   return null;
 }
 
+let _isRecalculatingFidelity = false;
+
 function renderFidelityModal() {
   const customer = getActiveCustomerData();
   const fidelityCfg = window.Store.getFidelityConfig();
-  const levels = fidelityCfg.levels || [];
 
   const nameElem = document.getElementById('fidelity-user-name');
   const phoneElem = document.getElementById('fidelity-user-phone');
@@ -1686,11 +1687,28 @@ function renderFidelityModal() {
 
     if (nameElem) nameElem.textContent = customerName;
     if (phoneElem) phoneElem.textContent = `Tel: ${customer.phone}`;
+
+    if (!_isRecalculatingFidelity) {
+      _isRecalculatingFidelity = true;
+      window.Store.recalculateCustomerCupsFromOrders(customer.phone).then(finalCups => {
+        _isRecalculatingFidelity = false;
+        if (finalCups !== currentCups) {
+          if (cupsElem) cupsElem.textContent = `${finalCups} 🍧`;
+          renderFidelityModalUI(customer, fidelityCfg, finalCups);
+        }
+      }).catch(() => { _isRecalculatingFidelity = false; });
+    }
   } else {
     if (nameElem) nameElem.textContent = 'Cliente (Não Identificado)';
     if (phoneElem) phoneElem.textContent = 'Toque em "Alterar Telefone" para consultar seus pontos';
   }
 
+  renderFidelityModalUI(customer, fidelityCfg, currentCups);
+}
+
+function renderFidelityModalUI(customer, fidelityCfg, currentCups) {
+  const levels = fidelityCfg.levels || [];
+  const cupsElem = document.getElementById('fidelity-user-cups');
   if (cupsElem) cupsElem.textContent = `${currentCups} 🍧`;
 
   let maxTargetCups = 35;

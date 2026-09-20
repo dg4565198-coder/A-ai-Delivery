@@ -1,9 +1,9 @@
 /**
- * ROTTA DO AÇAÍ - SERVICE WORKER (v34)
+ * ROTTA DO AÇAÍ - SERVICE WORKER (v35)
  * Background Order Tracking & Push Notification Engine
  */
 
-const CACHE_NAME = 'rotta-acai-v34';
+const CACHE_NAME = 'rotta-acai-v35';
 const urlsToCache = [
   './',
   './index.html',
