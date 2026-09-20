@@ -550,7 +550,7 @@ window.Store = {
     return newOrder;
   },
 
-  updateOrderStatus(orderId, newStatus) {
+  async updateOrderStatus(orderId, newStatus) {
     const db = getDB();
     const updateObj = {
       status: newStatus,
@@ -558,20 +558,35 @@ window.Store = {
     };
 
     if (newStatus === 'concluido') {
-      const order = this.getOrderById(orderId);
+      let order = this.getOrderById(orderId);
+      if (!order && db) {
+        try {
+          const snap = await db.ref('orders/' + orderId).once('value');
+          if (snap.exists()) order = snap.val();
+        } catch (e) {}
+      }
+
       if (order && !order.fidelityCredited && order.customer && order.customer.phone) {
         let cupsCount = 0;
         if (Array.isArray(order.items)) {
           order.items.forEach(item => {
             const nameLower = (item.name || '').toLowerCase();
             const cat = (item.category || '').toLowerCase();
-            if (cat === 'copos' || nameLower.includes('copo') || nameLower.includes('pote') || nameLower.includes('açaí') || nameLower.includes('acai')) {
+            if (cat === 'copos' || nameLower.includes('copo') || nameLower.includes('pote') || nameLower.includes('açaí') || nameLower.includes('acai') || item.allowsCustomization !== false) {
               cupsCount += (parseInt(item.quantity, 10) || 1);
             }
           });
+          if (cupsCount === 0) {
+            order.items.forEach(item => {
+              cupsCount += (parseInt(item.quantity, 10) || 1);
+            });
+          }
+        } else {
+          cupsCount = 1;
         }
+
         if (cupsCount > 0) {
-          this.addCupsToCustomer(order.customer.phone, order.customer.name, cupsCount);
+          await this.addCupsToCustomer(order.customer.phone, order.customer.name, cupsCount);
           updateObj.fidelityCredited = true;
           updateObj.cupsCredited = cupsCount;
         }
@@ -1005,7 +1020,11 @@ window.Store = {
   // --- PROGRAMA DE FIDELIDADE & GESTÃO DE CLIENTES ---
   cleanPhoneKey(phone) {
     if (!phone) return '';
-    return String(phone).replace(/\D/g, '');
+    let digits = String(phone).replace(/\D/g, '');
+    if (digits.length === 10 || digits.length === 11) {
+      digits = '55' + digits;
+    }
+    return digits;
   },
 
   getFidelityConfig() {

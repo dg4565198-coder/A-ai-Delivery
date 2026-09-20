@@ -818,6 +818,10 @@ async function submitFinalOrder() {
 
     state.lastCreatedOrderId = newOrder.id;
     window.Store.addMyOrder(newOrder.id);
+    try {
+      localStorage.setItem('rotta_customer_data', JSON.stringify({ name, phone }));
+      window.Store.saveCustomerFidelity(phone, { name, phone });
+    } catch (e) {}
     setupOrderNotificationListeners();
 
     state.cart = [];
@@ -1209,8 +1213,11 @@ function setupOrderNotificationListeners() {
           try { window.Store.playNotificationSound(); } catch {}
         }
 
-        if (order.status === 'concluido' && !order.rated && !window.Store.getRatedOrdersLocally().includes(orderId)) {
-          setTimeout(() => { openRatingModal({ id: orderId, ...order }); }, 1000);
+        if (order.status === 'concluido') {
+          try { renderFidelityModal(); } catch (e) {}
+          if (!order.rated && !window.Store.getRatedOrdersLocally().includes(orderId)) {
+            setTimeout(() => { openRatingModal({ id: orderId, ...order }); }, 1000);
+          }
         }
       }
       _notifiedStatuses[orderId] = order.status;
