@@ -374,15 +374,41 @@ window.Store = {
         }
         if (data.toppings !== undefined) {
           let list = Array.isArray(data.toppings) ? data.toppings : (data.toppings ? Object.values(data.toppings) : []);
-          _stockCache.toppings = list.filter(t => {
+          list = list.filter(t => {
             const nameLower = (t.name || '').toLowerCase();
             return !nameLower.includes('leite condesado') && !nameLower.includes('sem leite condes');
           });
+
+          let updatedToppings = false;
+          DEFAULT_FREE_TOPPINGS.forEach(defTop => {
+            if (!list.some(t => t.id === defTop.id || (t.name || '').toLowerCase() === defTop.name.toLowerCase())) {
+              list.push(defTop);
+              updatedToppings = true;
+            }
+          });
+
+          _stockCache.toppings = list;
           try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(_stockCache.toppings)); } catch {}
+          if (updatedToppings) {
+            db.ref('stock/toppings').set(_stockCache.toppings).catch(e => {});
+          }
         }
         if (data.fruits !== undefined) {
-          _stockCache.fruits = Array.isArray(data.fruits) ? data.fruits : (data.fruits ? Object.values(data.fruits) : []);
+          let list = Array.isArray(data.fruits) ? data.fruits : (data.fruits ? Object.values(data.fruits) : []);
+          let updatedFruits = false;
+
+          DEFAULT_FRUITS.forEach(defFruit => {
+            if (!list.some(f => f.id === defFruit.id || (f.name || '').toLowerCase() === defFruit.name.toLowerCase())) {
+              list.push(defFruit);
+              updatedFruits = true;
+            }
+          });
+
+          _stockCache.fruits = list;
           try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(_stockCache.fruits)); } catch {}
+          if (updatedFruits) {
+            db.ref('stock/fruits').set(_stockCache.fruits).catch(e => {});
+          }
         }
         if (data.caldas !== undefined) {
           _stockCache.caldas = Array.isArray(data.caldas) ? data.caldas : (data.caldas ? Object.values(data.caldas) : []);
