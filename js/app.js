@@ -114,6 +114,12 @@ function renderStoreHeader() {
     hoursElem.textContent = config.businessHours;
   }
 
+  const dockWhatsApp = document.getElementById('dock-whatsapp-btn');
+  if (dockWhatsApp) {
+    const cleanPhone = window.Store.formatWhatsAppPhone(config.phone);
+    dockWhatsApp.href = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent('Olá! Gostaria de tirar dúvidas ou falar com a equipe da Rotta do Açaí.')}`;
+  }
+
   if (headerWhatsApp) {
     const cleanPhone = window.Store.formatWhatsAppPhone(config.phone);
     headerWhatsApp.href = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent('Olá! Gostaria de tirar dúvidas ou saber mais sobre o cardápio da Rotta do Açaí.')}`;
