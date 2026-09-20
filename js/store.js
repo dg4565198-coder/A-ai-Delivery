@@ -16,11 +16,11 @@ const FIREBASE_CONFIG = {
 
 const STORAGE_KEYS = {
   CONFIG: 'rotta_config',
-  PRODUCTS: 'rotta_products_v4',
-  BASES: 'rotta_bases_v4',
-  FREE_TOPPINGS: 'rotta_free_toppings_v4',
-  FRUITS: 'rotta_fruits_v4',
-  CALDAS: 'rotta_caldas_v4',
+  PRODUCTS: 'rotta_products_v5',
+  BASES: 'rotta_bases_v5',
+  FREE_TOPPINGS: 'rotta_free_toppings_v5',
+  FRUITS: 'rotta_fruits_v5',
+  CALDAS: 'rotta_caldas_v5',
   CUSTOMER: 'rotta_customer_data',
   MY_ORDERS: 'rotta_my_orders_v1',
   FAVORITES: 'rotta_favorites_v1',
@@ -56,6 +56,7 @@ const DEFAULT_PRODUCTS = [
 const DEFAULT_BASES = [];
 
 const DEFAULT_FRUITS = [
+  { id: 'fruta-sem-fruta', name: 'Não Querer (Sem Frutas)', available: true, icon: '🚫', image: '' },
   { id: 'fruta-morango', name: 'Morango Fresco', available: true, icon: '🍓', image: '' },
   { id: 'fruta-banana', name: 'Banana Fatiada', available: true, icon: '🍌', image: '' },
   { id: 'fruta-kiwi', name: 'Kiwi em Fatias', available: true, icon: '🥝', image: '' },
@@ -68,6 +69,7 @@ const DEFAULT_FREE_TOPPINGS = [
   { id: 'top-granola', name: 'Granola Tradicional', available: true, icon: '🌾', image: '' },
   { id: 'top-aveia', name: 'Aveia em Flocos', available: true, icon: '🥣', image: '' },
   { id: 'top-pacoca', name: 'Farinha de Paçoca', available: true, icon: '🥜', image: '' },
+  { id: 'top-amendoim', name: 'Amendoim Triturado', available: true, icon: '🥜', image: '' },
   { id: 'top-chocoball', name: 'Chocoball', available: true, icon: '🍫', image: '' },
   { id: 'top-gotas', name: 'Gotas de Chocolate', available: true, icon: '🍫', image: '' },
   { id: 'top-confetes', name: 'Confetes de Chocolate', available: true, icon: '🍬', image: '' }
@@ -143,8 +145,17 @@ window.Store = {
       console.warn('LocalStorage inacessível:', e);
     }
     const db = getDB();
-    if (db && _stockCache.toppings) {
-      db.ref('stock/toppings').set(_stockCache.toppings);
+    if (db) {
+      db.ref('stock').once('value').then(snapshot => {
+        if (!snapshot.exists()) {
+          db.ref('stock').set({
+            products: DEFAULT_PRODUCTS,
+            toppings: DEFAULT_FREE_TOPPINGS,
+            fruits: DEFAULT_FRUITS,
+            caldas: DEFAULT_CALDAS
+          });
+        }
+      }).catch(e => console.warn('Erro ao verificar estoque Firebase:', e));
     }
   },
 

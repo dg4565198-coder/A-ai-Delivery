@@ -886,6 +886,12 @@ function setupSyncListener() {
 
   window.Store.listenToStock(() => {
     renderProducts();
+    const builderModal = document.getElementById('builder-modal');
+    if (builderModal && !builderModal.classList.contains('hidden') && state.currentBuildingProduct) {
+      renderBuilderFruits();
+      renderBuilderFreeToppings();
+      renderBuilderCaldas();
+    }
   });
 }
 
