@@ -1097,12 +1097,16 @@ function syncOrderTrackingToServiceWorker() {
   const myOrderIds = window.Store.getMyOrders();
   if (!myOrderIds || myOrderIds.length === 0) return;
 
+  const rated = window.Store.getRatedOrdersLocally();
+  const unratedIds = myOrderIds.filter(id => !rated.includes(id));
+  if (unratedIds.length === 0) return;
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(reg => {
       if (reg.active) {
         reg.active.postMessage({
           type: 'TRACK_ORDERS',
-          orderIds: myOrderIds
+          orderIds: unratedIds
         });
       }
     }).catch(() => {});
@@ -1110,7 +1114,7 @@ function syncOrderTrackingToServiceWorker() {
     if (navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
         type: 'TRACK_ORDERS',
-        orderIds: myOrderIds
+        orderIds: unratedIds
       });
     }
   }
@@ -1423,6 +1427,22 @@ function submitRatingModal() {
 
   // 1. Marca imediatamente como avaliado no localStorage para desbloquear o cliente
   window.Store.markOrderAsRatedLocally(orderId);
+
+  // Cancela o rastreamento no Service Worker e remove a notificação da barra do celular
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(reg => {
+      if (reg.active) {
+        reg.active.postMessage({ type: 'STOP_TRACKING', orderId: orderId });
+      }
+      if (reg.getNotifications) {
+        reg.getNotifications().then(notifications => {
+          notifications.forEach(n => {
+            if (n.data && n.data.orderId === orderId) n.close();
+          });
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+  }
 
   // 2. Fecha o modal imediatamente
   const modal = document.getElementById('rating-modal');
