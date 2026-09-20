@@ -51,16 +51,34 @@ function setupSplashScreen() {
   setTimeout(dismiss, 1500);
 }
 
+function isInstagramOrInAppBrowser() {
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  return /Instagram|FB_IAB|FBAV|FBAN|Musical_ly|TikTok/i.test(ua);
+}
+
 function setupPWAInstaller() {
+  const btn = document.getElementById('pwa-install-btn');
+  const banner = document.getElementById('inapp-browser-banner');
+
+  if (isInstagramOrInAppBrowser()) {
+    if (banner) banner.classList.remove('hidden');
+    if (btn) btn.classList.remove('hidden');
+    return;
+  }
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     state.deferredPWAInstall = e;
-    const btn = document.getElementById('pwa-install-btn');
     if (btn) btn.classList.remove('hidden');
   });
 }
 
 function installPWA() {
+  if (isInstagramOrInAppBrowser()) {
+    alert("📸 VOCÊ ESTÁ NO INSTAGRAM!\n\nConforme mostra seu menu (nos 3 pontinhos no topo):\n\n1. Toque nos 3 pontinhos (⋮) no canto superior direito.\n2. Selecione a opção 'Abrir no Chrome' (ou 'Abrir no Safari').\n3. Pronto! O aplicativo poderá ser instalado normalmente na tela do seu celular!");
+    return;
+  }
+
   if (state.deferredPWAInstall) {
     state.deferredPWAInstall.prompt();
     state.deferredPWAInstall.userChoice.then((choiceResult) => {

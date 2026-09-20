@@ -80,6 +80,17 @@
     }, 1500);
   </script>
 
+  <!-- Banner Guia de Instalação para Clientes vindo do Instagram / TikTok -->
+  <div id="inapp-browser-banner" class="hidden bg-gradient-to-r from-purple-950 via-acai-900 to-acai-950 text-white text-xs px-4 py-2 border-b border-gold-500/40 shadow-md">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2">
+        <span class="text-base shrink-0">📸</span>
+        <span>Você está no <strong>Instagram</strong>. Para baixar o App, toque nos <strong>3 pontinhos (⋮)</strong> no topo e escolha <strong>"Abrir no Chrome"</strong>!</span>
+      </div>
+      <button onclick="document.getElementById('inapp-browser-banner').classList.add('hidden')" class="text-gold-300 hover:text-white font-bold text-sm shrink-0">✕</button>
+    </div>
+  </div>
+
   <!-- =====================================================================
        2. TOPO & BANNER DA LOJA
        ===================================================================== -->
