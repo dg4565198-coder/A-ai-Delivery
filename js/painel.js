@@ -245,7 +245,7 @@ function testAudioAlert() {
 // 4. NAVEGAÇÃO POR ABAS
 // ==========================================================================
 function switchTab(tabId) {
-  const tabs = ['kanban', 'estoque', 'horarios', 'promocoes', 'caixa', 'config'];
+  const tabs = ['kanban', 'estoque', 'horarios', 'promocoes', 'caixa', 'config', 'avaliacoes'];
   tabs.forEach(t => {
     const content = document.getElementById('tab-content-' + t);
     const btn = document.getElementById('tab-btn-' + t);
@@ -263,6 +263,7 @@ function switchTab(tabId) {
   if (tabId === 'caixa') renderFinancialMetrics();
   if (tabId === 'horarios') loadHoursTab();
   if (tabId === 'promocoes') renderPromotionsHistory();
+  if (tabId === 'avaliacoes') renderRatingsTab();
 }
 
 // ==========================================================================
@@ -1378,3 +1379,141 @@ window.handleDeletePromotion = handleDeletePromotion;
 window.handleClearAllPromotions = handleClearAllPromotions;
 window.sendPushNotification = sendPushNotification;
 window.showInAppToast = showInAppToast;
+
+// ==========================================================================
+// 12. GESTÃO DE AVALIAÇÕES DOS CLIENTES
+// ==========================================================================
+let _ratingsCacheData = [];
+let _ratingsCurrentFilter = 'all';
+
+function renderRatingsTab() {
+  if (!window.Store || !window.Store.listenToRatings) return;
+
+  window.Store.listenToRatings(ratingsMap => {
+    _ratingsCacheData = ratingsMap ? Object.values(ratingsMap) : [];
+    updateRatingsMetricsAndList();
+  });
+}
+
+function updateRatingsMetricsAndList() {
+  const container = document.getElementById('ratings-list-container');
+  if (!container) return;
+
+  const total = _ratingsCacheData.length;
+  const fiveCount = _ratingsCacheData.filter(r => (r.stars || 5) === 5).length;
+  const improvementsCount = _ratingsCacheData.filter(r => (r.stars || 5) < 5).length;
+  const sumStars = _ratingsCacheData.reduce((acc, r) => acc + (r.stars || 5), 0);
+  const avg = total > 0 ? (sumStars / total).toFixed(1) : '0.0';
+
+  const avgElem = document.getElementById('rating-avg-score');
+  const totalElem = document.getElementById('rating-total-count');
+  const fiveElem = document.getElementById('rating-five-star-count');
+  const impElem = document.getElementById('rating-improvements-count');
+
+  if (avgElem) avgElem.textContent = `${avg} ⭐`;
+  if (totalElem) totalElem.textContent = `${total}`;
+  if (fiveElem) fiveElem.textContent = `${fiveCount}`;
+  if (impElem) impElem.textContent = `${improvementsCount}`;
+
+  let filtered = [..._ratingsCacheData];
+  if (_ratingsCurrentFilter === 'five') {
+    filtered = filtered.filter(r => (r.stars || 5) === 5);
+  } else if (_ratingsCurrentFilter === 'improvements') {
+    filtered = filtered.filter(r => (r.stars || 5) < 5);
+  }
+
+  filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-10 text-gray-400 bg-purple-50/50 rounded-xl border border-purple-100">
+        <span class="text-3xl block mb-2">⭐</span>
+        <p class="font-bold text-gray-700 text-sm">Nenhuma avaliação encontrada nesta categoria.</p>
+        <p class="text-xs text-gray-500 mt-1">As avaliações enviadas pelos clientes após a conclusão dos pedidos aparecerão aqui!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(r => {
+    const stars = r.stars || 5;
+    const starsDisplay = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+    const isFive = stars === 5;
+    const badge = isFive 
+      ? `<span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">🌟 5★ Excelente</span>`
+      : `<span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">💡 ${stars}★ Sugestão de Melhoria</span>`;
+
+    const cleanPhone = (r.customerPhone || '').replace(/\D/g, '');
+    const waLink = cleanPhone ? `https://wa.me/55${cleanPhone}` : '#';
+
+    return `
+      <div class="bg-gradient-to-r from-purple-50/70 to-white p-4 rounded-2xl border border-purple-100 shadow-sm space-y-2">
+        <div class="flex items-start justify-between flex-wrap gap-2 border-b border-purple-100/60 pb-2">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-acai-800 text-gold-400 font-black flex items-center justify-center text-sm shadow">
+              ${(r.customerName || 'C')[0].toUpperCase()}
+            </div>
+            <div>
+              <div class="font-extrabold text-gray-900 text-sm flex items-center gap-2">
+                <span>${r.customerName || 'Cliente'}</span>
+                ${cleanPhone ? `<a href="${waLink}" target="_blank" class="text-xs text-emerald-600 hover:underline font-bold flex items-center gap-1">📱 WhatsApp</a>` : ''}
+              </div>
+              <div class="text-[11px] text-gray-400">
+                <span>Pedido ${r.orderNumber || '#'}</span> • <span>${r.createdAt ? new Date(r.createdAt).toLocaleString('pt-BR') : ''}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            ${badge}
+            <button onclick="handleDeleteRating('${r.id}')" title="Excluir Avaliação" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition text-xs font-bold flex items-center gap-1">
+              <span>🗑️</span>
+              <span class="hidden sm:inline">Excluir</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-1 pt-1">
+          <div class="text-amber-500 font-black text-sm tracking-wider">
+            ${starsDisplay} <span class="text-xs text-gray-600 font-bold ml-1">(${stars}/5)</span>
+          </div>
+          <p class="text-xs text-gray-700 leading-relaxed bg-white p-3 rounded-xl border border-purple-50 italic">
+            "${r.comment ? r.comment : 'O cliente não digitou um comentário por extenso.'}"
+          </p>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterRatings(type) {
+  _ratingsCurrentFilter = type;
+
+  const btnAll = document.getElementById('rating-filter-all');
+  const btnFive = document.getElementById('rating-filter-five');
+  const btnImp = document.getElementById('rating-filter-improvements');
+
+  const activeClass = "px-3 py-1.5 rounded-lg bg-acai-800 text-gold-400 font-bold shadow-sm";
+  const inactiveClass = "px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold";
+
+  if (btnAll) btnAll.className = type === 'all' ? activeClass : inactiveClass;
+  if (btnFive) btnFive.className = type === 'five' ? activeClass : inactiveClass;
+  if (btnImp) btnImp.className = type === 'improvements' ? activeClass : inactiveClass;
+
+  updateRatingsMetricsAndList();
+}
+
+async function handleDeleteRating(ratingId) {
+  if (!ratingId) return;
+  if (confirm("Deseja realmente excluir esta avaliação do painel?")) {
+    try {
+      await window.Store.deleteRating(ratingId);
+      alert("✅ Avaliação excluída com sucesso!");
+    } catch (err) {
+      alert("Erro ao excluir avaliação: " + err.message);
+    }
+  }
+}
+
+window.renderRatingsTab = renderRatingsTab;
+window.filterRatings = filterRatings;
+window.handleDeleteRating = handleDeleteRating;

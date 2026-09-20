@@ -119,6 +119,9 @@
       <button onclick="switchTab('promocoes')" id="tab-btn-promocoes" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
         <span>📢 Promoções & Push</span>
       </button>
+      <button onclick="switchTab('avaliacoes')" id="tab-btn-avaliacoes" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+        <span>⭐ Avaliações</span>
+      </button>
       <button onclick="switchTab('caixa')" id="tab-btn-caixa" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
         <span>📊 Caixa do Dia</span>
       </button>
@@ -562,6 +565,64 @@
         </div>
         <div id="promotions-history-list" class="space-y-2 text-xs">
           <!-- Inserido dinamicamente -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 7: AVALIAÇÕES DOS CLIENTES -->
+    <div id="tab-content-avaliacoes" class="space-y-6 hidden">
+      <!-- Header / Métricas -->
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+          <div>
+            <h3 class="font-black text-xl text-acai-900 flex items-center gap-2">
+              <span>⭐</span> Avaliações & Feedback dos Clientes
+            </h3>
+            <p class="text-xs text-gray-500 mt-1">Acompanhe a satisfação dos clientes e veja pontos de melhoria em tempo real.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="renderRatingsTab()" class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold px-3 py-2 rounded-xl transition flex items-center gap-1">
+              <span>🔄 Atualizar</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cards de Resumo -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="bg-amber-50 p-4 rounded-xl border border-amber-100 text-center">
+            <span class="text-xs text-amber-700 font-bold block">Média Geral</span>
+            <span id="rating-avg-score" class="text-2xl font-black text-amber-900 block mt-0.5">0.0 ⭐</span>
+          </div>
+          <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 text-center">
+            <span class="text-xs text-purple-700 font-bold block">Total Avaliações</span>
+            <span id="rating-total-count" class="text-2xl font-black text-purple-900 block mt-0.5">0</span>
+          </div>
+          <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center">
+            <span class="text-xs text-emerald-700 font-bold block">Excelente (5★)</span>
+            <span id="rating-five-star-count" class="text-2xl font-black text-emerald-900 block mt-0.5">0</span>
+          </div>
+          <div class="bg-rose-50 p-4 rounded-xl border border-rose-100 text-center">
+            <span class="text-xs text-rose-700 font-bold block">Sugestões (&lt;5★)</span>
+            <span id="rating-improvements-count" class="text-2xl font-black text-rose-900 block mt-0.5">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtros e Feed -->
+      <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h4 class="font-extrabold text-sm text-gray-900 flex items-center gap-2">
+            <span>💬</span> Depoimentos & Críticas
+          </h4>
+          <div class="flex items-center gap-2 text-xs font-bold">
+            <button onclick="filterRatings('all')" id="rating-filter-all" class="px-3 py-1.5 rounded-lg bg-acai-800 text-gold-400">Todas</button>
+            <button onclick="filterRatings('five')" id="rating-filter-five" class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">5 Estrelas 🌟</button>
+            <button onclick="filterRatings('improvements')" id="rating-filter-improvements" class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Melhorias (&lt;5★) 💡</button>
+          </div>
+        </div>
+
+        <div id="ratings-list-container" class="space-y-3">
+          <!-- Inserido dinamicamente pelo js/painel.js -->
         </div>
       </div>
     </div>

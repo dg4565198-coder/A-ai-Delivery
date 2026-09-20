@@ -675,6 +675,15 @@ async function submitFinalOrder() {
     return;
   }
 
+  // Bloqueio de novos pedidos se houver pedido concluído não avaliado
+  const pendingOrder = await checkPendingOrderRating();
+  if (pendingOrder) {
+    alert(`⭐ Por favor, avalie seu pedido anterior ${pendingOrder.orderNumber || '#'} antes de realizar um novo pedido!`);
+    closeCartModal();
+    openRatingModal(pendingOrder);
+    return;
+  }
+
   const name = document.getElementById('order-customer-name').value.trim();
   const phone = document.getElementById('order-customer-phone').value.trim();
 
@@ -1089,13 +1098,17 @@ function setupOrderNotificationListeners() {
           entrega: order.deliveryType === 'entrega' 
             ? `🛵 Seu Pedido ${order.orderNumber} saiu para entrega! Fique atento(a)!`
             : `🏬 Seu Pedido ${order.orderNumber} está pronto para retirada no balcão!`,
-          concluido: `✅ Pedido ${order.orderNumber} concluído! Bom apetite!`,
+          concluido: `✅ Pedido ${order.orderNumber} concluído! Por favor, avalie sua experiência!`,
           cancelado: `❌ Pedido ${order.orderNumber} foi cancelado pela loja.`
         };
 
         if (messages[order.status]) {
           sendPushNotification('Rotta do Açaí 🍇', messages[order.status]);
           try { window.Store.playNotificationSound(); } catch {}
+        }
+
+        if (order.status === 'concluido' && !order.rated && !window.Store.getRatedOrdersLocally().includes(order.id)) {
+          setTimeout(() => { openRatingModal(order); }, 1000);
         }
       }
       _notifiedStatuses[orderId] = order.status;
@@ -1252,6 +1265,125 @@ function closePromoModal() {
   if (modal) modal.classList.add('hidden');
 }
 
+// ==========================================================================
+// AVALIAÇÕES E FEEDBACKS DOS CLIENTES
+// ==========================================================================
+let currentRatingStars = 5;
+
+function setRatingStars(stars) {
+  currentRatingStars = stars;
+  const buttons = document.querySelectorAll('.star-btn');
+  buttons.forEach(btn => {
+    const s = parseInt(btn.getAttribute('data-star'));
+    if (s <= stars) {
+      btn.classList.remove('text-gray-300');
+      btn.classList.add('text-amber-400');
+    } else {
+      btn.classList.remove('text-amber-400');
+      btn.classList.add('text-gray-300');
+    }
+  });
+
+  const banner = document.getElementById('rating-prompt-banner');
+  const text = document.getElementById('rating-prompt-text');
+  const textarea = document.getElementById('rating-comment-input');
+
+  if (stars < 5) {
+    if (banner) {
+      banner.className = "p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold leading-relaxed flex items-start gap-2.5";
+    }
+    if (text) {
+      text.textContent = "O que podemos melhorar no seu pedido? Conte para nós para aprimorarmos!";
+    }
+    if (textarea) {
+      textarea.placeholder = "Diga-nos o que não saiu perfeito (ex: sabor, coberturas, tempo de entrega, embalagem)...";
+    }
+  } else {
+    if (banner) {
+      banner.className = "p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold leading-relaxed flex items-start gap-2.5";
+    }
+    if (text) {
+      text.textContent = "🎉 Que ótimo! Conte-nos o que você mais gostou no seu pedido!";
+    }
+    if (textarea) {
+      textarea.placeholder = "Escreva aqui o que você mais gostou no atendimento, sabor ou rapidez...";
+    }
+  }
+}
+
+async function checkPendingOrderRating() {
+  const myOrderIds = window.Store.getMyOrders();
+  if (!myOrderIds || myOrderIds.length === 0) return null;
+
+  const localRated = window.Store.getRatedOrdersLocally();
+  const unratedIds = myOrderIds.filter(id => !localRated.includes(id));
+  if (unratedIds.length === 0) return null;
+
+  const db = window.Store.getDB ? window.Store.getDB() : null;
+  if (!db) return null;
+
+  try {
+    for (const orderId of unratedIds.slice(0, 5)) {
+      const snap = await db.ref('orders/' + orderId).once('value');
+      const order = snap.val();
+      if (order && order.status === 'concluido' && !order.rated) {
+        return order;
+      }
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+function openRatingModal(order) {
+  if (!order) return;
+  const modal = document.getElementById('rating-modal');
+  if (!modal) return;
+
+  const targetId = document.getElementById('rating-target-order-id');
+  const targetNum = document.getElementById('rating-target-order-number');
+  const title = document.getElementById('rating-order-title');
+
+  if (targetId) targetId.value = order.id || '';
+  if (targetNum) targetNum.value = order.orderNumber || '#';
+  if (title) title.textContent = `Avalie seu Pedido ${order.orderNumber || '#'}`;
+  
+  const textarea = document.getElementById('rating-comment-input');
+  if (textarea) textarea.value = '';
+
+  setRatingStars(5);
+  modal.classList.remove('hidden');
+}
+
+async function submitRatingModal() {
+  const orderId = document.getElementById('rating-target-order-id')?.value;
+  const orderNumber = document.getElementById('rating-target-order-number')?.value;
+  const comment = (document.getElementById('rating-comment-input')?.value || '').trim();
+  
+  if (!orderId) {
+    document.getElementById('rating-modal')?.classList.add('hidden');
+    return;
+  }
+
+  const customerData = window.Store.getCustomerData() || {};
+
+  try {
+    await window.Store.saveRating({
+      orderId: orderId,
+      orderNumber: orderNumber,
+      customerName: customerData.name || 'Cliente',
+      customerPhone: customerData.phone || '',
+      stars: currentRatingStars,
+      comment: comment
+    });
+
+    alert("✨ Muito obrigado pela sua avaliação! Sua opinião é super importante para a Rotta do Açaí!");
+    document.getElementById('rating-modal')?.classList.add('hidden');
+  } catch (err) {
+    alert("Erro ao enviar avaliação: " + err.message);
+  }
+}
+
 // Funções Globais
 window.filterCategory = filterCategory;
 window.handleProductClick = handleProductClick;
@@ -1278,3 +1410,6 @@ window.deleteFavorite = deleteFavorite;
 window.openMyOrdersModal = openMyOrdersModal;
 window.closeMyOrdersModal = closeMyOrdersModal;
 window.closePromoModal = closePromoModal;
+window.setRatingStars = setRatingStars;
+window.openRatingModal = openRatingModal;
+window.submitRatingModal = submitRatingModal;

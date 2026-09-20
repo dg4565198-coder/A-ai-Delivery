@@ -23,7 +23,8 @@ const STORAGE_KEYS = {
   CALDAS: 'rotta_caldas_v4',
   CUSTOMER: 'rotta_customer_data',
   MY_ORDERS: 'rotta_my_orders_v1',
-  FAVORITES: 'rotta_favorites_v1'
+  FAVORITES: 'rotta_favorites_v1',
+  RATED_ORDERS: 'rotta_rated_orders_v1'
 };
 
 const DEFAULT_CONFIG = {
@@ -573,5 +574,70 @@ window.Store = {
     caldas.push(calda);
     this.saveCaldas(caldas);
     return caldas;
+  },
+
+  // --- AVALIAÇÕES (RATINGS) ---
+  getRatedOrdersLocally() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.RATED_ORDERS);
+      return data ? JSON.parse(data) : [];
+    } catch { return []; }
+  },
+
+  markOrderAsRatedLocally(orderId) {
+    try {
+      const list = this.getRatedOrdersLocally();
+      if (!list.includes(orderId)) {
+        list.push(orderId);
+        localStorage.setItem(STORAGE_KEYS.RATED_ORDERS, JSON.stringify(list));
+      }
+    } catch {}
+  },
+
+  saveRating(ratingData) {
+    const db = getDB();
+    if (!db) return Promise.reject(new Error('Firebase não inicializado'));
+
+    const ratingRef = db.ref('ratings').push();
+    const payload = {
+      id: ratingRef.key,
+      orderId: ratingData.orderId,
+      orderNumber: ratingData.orderNumber || '#',
+      customerName: ratingData.customerName || 'Cliente',
+      customerPhone: ratingData.customerPhone || '',
+      stars: ratingData.stars || 5,
+      comment: ratingData.comment || '',
+      createdAt: Date.now()
+    };
+
+    this.markOrderAsRatedLocally(ratingData.orderId);
+
+    // Salvar no nó ratings e atualizar nó orders
+    const updates = {};
+    updates['ratings/' + payload.id] = payload;
+    updates['orders/' + ratingData.orderId + '/rated'] = true;
+    updates['orders/' + ratingData.orderId + '/rating'] = {
+      stars: payload.stars,
+      comment: payload.comment,
+      createdAt: payload.createdAt
+    };
+
+    return db.ref().update(updates);
+  },
+
+  deleteRating(ratingId) {
+    const db = getDB();
+    if (!db) return Promise.reject(new Error('Firebase não inicializado'));
+    return db.ref('ratings/' + ratingId).remove();
+  },
+
+  listenToRatings(callback) {
+    const db = getDB();
+    if (!db) return;
+
+    db.ref('ratings').on('value', snapshot => {
+      const val = snapshot.exists() ? snapshot.val() : {};
+      if (callback) callback(val);
+    });
   }
 };
