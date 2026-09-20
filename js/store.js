@@ -122,10 +122,29 @@ window.Store = {
       if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(DEFAULT_FREE_TOPPINGS));
       if (!localStorage.getItem(STORAGE_KEYS.FRUITS)) localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(DEFAULT_FRUITS));
       if (!localStorage.getItem(STORAGE_KEYS.CALDAS)) localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(DEFAULT_CALDAS));
+
+      // Purgar os dois complementos de leite condensado indesejados
+      try {
+        const topStr = localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS);
+        if (topStr) {
+          let list = JSON.parse(topStr);
+          if (Array.isArray(list)) {
+            list = list.filter(t => {
+              const nameLower = (t.name || '').toLowerCase();
+              return !nameLower.includes('leite condesado') && !nameLower.includes('sem leite condes');
+            });
+            localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(list));
+            _stockCache.toppings = list;
+          }
+        }
+      } catch (e) {}
     } catch (e) {
       console.warn('LocalStorage inacessível:', e);
     }
-    getDB();
+    const db = getDB();
+    if (db && _stockCache.toppings) {
+      db.ref('stock/toppings').set(_stockCache.toppings);
+    }
   },
 
   getDB() {
@@ -241,24 +260,34 @@ window.Store = {
   },
 
   getFreeToppings() {
+    let list = DEFAULT_FREE_TOPPINGS;
     if (_stockCache.toppings !== null && _stockCache.toppings !== undefined) {
-      return _stockCache.toppings.map(item => ({ ...item, available: item.available !== false }));
-    }
-    try {
-      const f = localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS);
-      if (f !== null) {
-        const parsed = JSON.parse(f);
-        if (Array.isArray(parsed)) {
-          _stockCache.toppings = parsed;
-          return parsed.map(item => ({ ...item, available: item.available !== false }));
+      list = _stockCache.toppings;
+    } else {
+      try {
+        const f = localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS);
+        if (f !== null) {
+          const parsed = JSON.parse(f);
+          if (Array.isArray(parsed)) {
+            _stockCache.toppings = parsed;
+            list = parsed;
+          }
         }
-      }
-    } catch {}
-    return DEFAULT_FREE_TOPPINGS.map(item => ({ ...item, available: item.available !== false }));
+      } catch {}
+    }
+    const cleaned = list.filter(t => {
+      const nameLower = (t.name || '').toLowerCase();
+      return !nameLower.includes('leite condesado') && !nameLower.includes('sem leite condes');
+    });
+    return cleaned.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveFreeToppings(toppings) {
-    _stockCache.toppings = toppings || [];
+    const cleaned = (toppings || []).filter(t => {
+      const nameLower = (t.name || '').toLowerCase();
+      return !nameLower.includes('leite condesado') && !nameLower.includes('sem leite condes');
+    });
+    _stockCache.toppings = cleaned;
     try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(_stockCache.toppings)); } catch {}
     const db = getDB();
     if (db) db.ref('stock/toppings').set(_stockCache.toppings);
@@ -332,7 +361,11 @@ window.Store = {
           try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(_stockCache.products)); } catch {}
         }
         if (data.toppings !== undefined) {
-          _stockCache.toppings = Array.isArray(data.toppings) ? data.toppings : (data.toppings ? Object.values(data.toppings) : []);
+          let list = Array.isArray(data.toppings) ? data.toppings : (data.toppings ? Object.values(data.toppings) : []);
+          _stockCache.toppings = list.filter(t => {
+            const nameLower = (t.name || '').toLowerCase();
+            return !nameLower.includes('leite condesado') && !nameLower.includes('sem leite condes');
+          });
           try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(_stockCache.toppings)); } catch {}
         }
         if (data.fruits !== undefined) {
