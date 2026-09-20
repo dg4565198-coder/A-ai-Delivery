@@ -1097,8 +1097,40 @@ async function sendPushNotification(title, body) {
   }
 }
 
+function syncOrderTrackingToServiceWorker() {
+  const myOrderIds = window.Store.getMyOrders();
+  if (!myOrderIds || myOrderIds.length === 0) return;
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(reg => {
+      if (reg.active) {
+        reg.active.postMessage({
+          type: 'TRACK_ORDERS',
+          orderIds: myOrderIds
+        });
+      }
+    }).catch(() => {});
+
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'TRACK_ORDERS',
+        orderIds: myOrderIds
+      });
+    }
+  }
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'OPEN_MY_ORDERS') {
+      openMyOrdersModal();
+    }
+  });
+}
+
 function setupOrderNotificationListeners() {
   requestNotificationPermission();
+  syncOrderTrackingToServiceWorker();
 
   const myOrderIds = window.Store.getMyOrders();
   if (!myOrderIds || myOrderIds.length === 0) return;
