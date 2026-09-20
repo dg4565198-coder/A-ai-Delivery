@@ -51,6 +51,17 @@ function setupSplashScreen() {
   setTimeout(dismiss, 1500);
 }
 
+function getDeviceOS() {
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+    return 'ios';
+  }
+  if (/android/i.test(ua)) {
+    return 'android';
+  }
+  return 'desktop';
+}
+
 function isInstagramOrInAppBrowser() {
   const ua = navigator.userAgent || navigator.vendor || window.opera;
   return /Instagram|FB_IAB|FBAV|FBAN|Musical_ly|TikTok/i.test(ua);
@@ -59,11 +70,27 @@ function isInstagramOrInAppBrowser() {
 function setupPWAInstaller() {
   const btn = document.getElementById('pwa-install-btn');
   const banner = document.getElementById('inapp-browser-banner');
+  const bannerText = document.getElementById('inapp-banner-text');
+  const os = getDeviceOS();
 
   if (isInstagramOrInAppBrowser()) {
-    if (banner) banner.classList.remove('hidden');
+    if (banner) {
+      if (bannerText) {
+        if (os === 'ios') {
+          bannerText.innerHTML = 'Você está no <strong>Instagram (iPhone)</strong>. Para baixar o App, toque nos <strong>3 pontinhos (...)</strong> no topo e escolha <strong>"Abrir no Safari"</strong>!';
+        } else {
+          bannerText.innerHTML = 'Você está no <strong>Instagram (Android)</strong>. Para baixar o App, toque nos <strong>3 pontinhos (⋮)</strong> no topo e escolha <strong>"Abrir no Chrome"</strong>!';
+        }
+      }
+      banner.classList.remove('hidden');
+    }
     if (btn) btn.classList.remove('hidden');
     return;
+  }
+
+  // No iPhone (Safari), exibir sempre o botão para orientar o cliente como instalar no iOS
+  if (os === 'ios') {
+    if (btn) btn.classList.remove('hidden');
   }
 
   window.addEventListener('beforeinstallprompt', (e) => {
@@ -74,8 +101,14 @@ function setupPWAInstaller() {
 }
 
 function installPWA() {
+  const os = getDeviceOS();
+
   if (isInstagramOrInAppBrowser()) {
-    alert("📸 VOCÊ ESTÁ NO INSTAGRAM!\n\nConforme mostra seu menu (nos 3 pontinhos no topo):\n\n1. Toque nos 3 pontinhos (⋮) no canto superior direito.\n2. Selecione a opção 'Abrir no Chrome' (ou 'Abrir no Safari').\n3. Pronto! O aplicativo poderá ser instalado normalmente na tela do seu celular!");
+    if (os === 'ios') {
+      alert("📸 VOCÊ ESTÁ NO INSTAGRAM (iPhone)!\n\n1. Toque nos 3 pontinhos (...) no canto superior do Instagram.\n2. Selecione a opção 'Abrir no Safari'.\n3. No Safari, toque no botão Compartilhar 📤 (barra inferior) e selecione 'Adicionar à Tela de Início' ➕!");
+    } else {
+      alert("📸 VOCÊ ESTÁ NO INSTAGRAM (Android)!\n\n1. Toque nos 3 pontinhos (⋮) no canto superior direito do Instagram.\n2. Selecione a opção 'Abrir no Chrome'.\n3. No Chrome, o aplicativo poderá ser instalado diretamente!");
+    }
     return;
   }
 
@@ -88,8 +121,10 @@ function installPWA() {
       }
       state.deferredPWAInstall = null;
     });
+  } else if (os === 'ios') {
+    alert("🍏 COMO INSTALAR NO IPHONE (iOS):\n\n1. No navegador Safari, toque no botão Compartilhar 📤 (o quadradinho com a seta para cima na barra inferior).\n\n2. Role a lista de opções para baixo e toque em 'Adicionar à Tela de Início' ➕.\n\n3. Clique em 'Adicionar' no canto superior direito.\n\nPronto! O aplicativo da Rotta do Açaí será instalado na tela do seu iPhone!");
   } else {
-    alert("📲 Para instalar o App da Rotta do Açaí no celular:\n\n• No Android/Chrome: Toque no menu (3 pontinhos) do navegador e escolha 'Instalar aplicativo' ou 'Adicionar à tela inicial'.\n\n• No iPhone/Safari: Toque no botão Compartilhar 📤 e escolha 'Adicionar à Tela de Início'.");
+    alert("📱 COMO INSTALAR NO ANDROID:\n\n1. Toque nos 3 pontinhos (⋮) no canto superior direito do navegador Chrome.\n\n2. Escolha 'Instalar aplicativo' ou 'Adicionar à tela inicial'.\n\n3. Confirme a instalação!");
   }
 }
 
