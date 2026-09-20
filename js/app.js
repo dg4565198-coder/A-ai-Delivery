@@ -883,6 +883,10 @@ function setupSyncListener() {
     renderStoreHeader();
     updateCheckoutCalculations();
   });
+
+  window.Store.listenToStock(() => {
+    renderProducts();
+  });
 }
 
 // ==========================================================================
