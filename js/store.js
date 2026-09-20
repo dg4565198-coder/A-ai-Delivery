@@ -66,12 +66,12 @@ const DEFAULT_FRUITS = [
 
 const DEFAULT_FREE_TOPPINGS = [
   { id: 'top-leite-po', name: 'Leite em Pó (Ninho)', available: true, icon: '🥛', image: '' },
-  { id: 'top-granola', name: 'Granola Tradicional', available: true, icon: '🌾', image: '' },
+  { id: 'top-granola', name: 'Granola Tradicional Crocante', available: true, icon: '🌾', image: '' },
+  { id: 'top-pacoca', name: 'Farinha de Paçoca Doce', available: true, icon: '🥜', image: '' },
+  { id: 'top-chocoball', name: 'Chocoball Crocante', available: true, icon: '🍫', image: '' },
+  { id: 'top-gotas', name: 'Gotas de Chocolate Nobre', available: true, icon: '🍫', image: '' },
   { id: 'top-aveia', name: 'Aveia em Flocos', available: true, icon: '🥣', image: '' },
-  { id: 'top-pacoca', name: 'Farinha de Paçoca', available: true, icon: '🥜', image: '' },
   { id: 'top-amendoim', name: 'Amendoim Triturado', available: true, icon: '🥜', image: '' },
-  { id: 'top-chocoball', name: 'Chocoball', available: true, icon: '🍫', image: '' },
-  { id: 'top-gotas', name: 'Gotas de Chocolate', available: true, icon: '🍫', image: '' },
   { id: 'top-confetes', name: 'Confetes de Chocolate', available: true, icon: '🍬', image: '' }
 ];
 
@@ -400,19 +400,8 @@ window.Store = {
             return t;
           });
 
-          let updatedToppings = false;
-          DEFAULT_FREE_TOPPINGS.forEach(defTop => {
-            if (!list.some(t => t.id === defTop.id || (t.name || '').toLowerCase() === defTop.name.toLowerCase())) {
-              list.push(defTop);
-              updatedToppings = true;
-            }
-          });
-
           _stockCache.toppings = list;
           try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(_stockCache.toppings)); } catch {}
-          if (updatedToppings) {
-            db.ref('stock/toppings').set(_stockCache.toppings).catch(e => {});
-          }
         }
         if (data.fruits !== undefined) {
           let list = Array.isArray(data.fruits) ? data.fruits : (data.fruits ? Object.values(data.fruits) : []);
@@ -425,19 +414,8 @@ window.Store = {
             return f;
           });
 
-          let updatedFruits = false;
-          DEFAULT_FRUITS.forEach(defFruit => {
-            if (!list.some(f => f.id === defFruit.id || (f.name || '').toLowerCase() === defFruit.name.toLowerCase())) {
-              list.push(defFruit);
-              updatedFruits = true;
-            }
-          });
-
           _stockCache.fruits = list;
           try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(_stockCache.fruits)); } catch {}
-          if (updatedFruits) {
-            db.ref('stock/fruits').set(_stockCache.fruits).catch(e => {});
-          }
         }
         if (data.caldas !== undefined) {
           const remoteCaldas = Array.isArray(data.caldas) ? data.caldas : (data.caldas ? Object.values(data.caldas) : []);
