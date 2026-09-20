@@ -1107,8 +1107,8 @@ function setupOrderNotificationListeners() {
           try { window.Store.playNotificationSound(); } catch {}
         }
 
-        if (order.status === 'concluido' && !order.rated && !window.Store.getRatedOrdersLocally().includes(order.id)) {
-          setTimeout(() => { openRatingModal(order); }, 1000);
+        if (order.status === 'concluido' && !order.rated && !window.Store.getRatedOrdersLocally().includes(orderId)) {
+          setTimeout(() => { openRatingModal({ id: orderId, ...order }); }, 1000);
         }
       }
       _notifiedStatuses[orderId] = order.status;
@@ -1325,9 +1325,9 @@ async function checkPendingOrderRating() {
   try {
     for (const orderId of unratedIds.slice(0, 5)) {
       const snap = await db.ref('orders/' + orderId).once('value');
-      const order = snap.val();
-      if (order && order.status === 'concluido' && !order.rated) {
-        return order;
+      const orderData = snap.val();
+      if (orderData && orderData.status === 'concluido' && !orderData.rated) {
+        return { id: orderId, ...orderData };
       }
     }
   } catch (e) {}
@@ -1340,13 +1340,16 @@ function openRatingModal(order) {
   const modal = document.getElementById('rating-modal');
   if (!modal) return;
 
+  const resolvedId = (typeof order === 'string') ? order : (order.id || order.key || '');
+  const resolvedNumber = (typeof order === 'object' && order.orderNumber) ? order.orderNumber : '#';
+
   const targetId = document.getElementById('rating-target-order-id');
   const targetNum = document.getElementById('rating-target-order-number');
   const title = document.getElementById('rating-order-title');
 
-  if (targetId) targetId.value = order.id || '';
-  if (targetNum) targetNum.value = order.orderNumber || '#';
-  if (title) title.textContent = `Avalie seu Pedido ${order.orderNumber || '#'}`;
+  if (targetId) targetId.value = resolvedId;
+  if (targetNum) targetNum.value = resolvedNumber;
+  if (title) title.textContent = `Avalie seu Pedido ${resolvedNumber}`;
   
   const textarea = document.getElementById('rating-comment-input');
   if (textarea) textarea.value = '';
@@ -1356,21 +1359,27 @@ function openRatingModal(order) {
 }
 
 async function submitRatingModal() {
-  const orderId = document.getElementById('rating-target-order-id')?.value;
-  const orderNumber = document.getElementById('rating-target-order-number')?.value;
+  let orderId = document.getElementById('rating-target-order-id')?.value;
+  let orderNumber = document.getElementById('rating-target-order-number')?.value;
   const comment = (document.getElementById('rating-comment-input')?.value || '').trim();
   
   if (!orderId) {
-    document.getElementById('rating-modal')?.classList.add('hidden');
-    return;
+    const myOrderIds = window.Store.getMyOrders();
+    const localRated = window.Store.getRatedOrdersLocally();
+    const unrated = myOrderIds.filter(id => !localRated.includes(id));
+    if (unrated.length > 0) {
+      orderId = unrated[0];
+    } else if (myOrderIds.length > 0) {
+      orderId = myOrderIds[0];
+    }
   }
 
   const customerData = window.Store.getCustomerData() || {};
 
   try {
     await window.Store.saveRating({
-      orderId: orderId,
-      orderNumber: orderNumber,
+      orderId: orderId || ('anon_' + Date.now()),
+      orderNumber: orderNumber || '#',
       customerName: customerData.name || 'Cliente',
       customerPhone: customerData.phone || '',
       stars: currentRatingStars,

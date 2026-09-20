@@ -695,10 +695,12 @@ window.Store = {
     const db = getDB();
     if (!db) return Promise.reject(new Error('Firebase não inicializado'));
 
+    const targetOrderId = ratingData.orderId || ('order_' + Date.now());
+
     const ratingRef = db.ref('ratings').push();
     const payload = {
       id: ratingRef.key,
-      orderId: ratingData.orderId,
+      orderId: targetOrderId,
       orderNumber: ratingData.orderNumber || '#',
       customerName: ratingData.customerName || 'Cliente',
       customerPhone: ratingData.customerPhone || '',
@@ -707,17 +709,19 @@ window.Store = {
       createdAt: Date.now()
     };
 
-    this.markOrderAsRatedLocally(ratingData.orderId);
+    this.markOrderAsRatedLocally(targetOrderId);
 
     // Salvar no nó ratings e atualizar nó orders
     const updates = {};
     updates['ratings/' + payload.id] = payload;
-    updates['orders/' + ratingData.orderId + '/rated'] = true;
-    updates['orders/' + ratingData.orderId + '/rating'] = {
-      stars: payload.stars,
-      comment: payload.comment,
-      createdAt: payload.createdAt
-    };
+    if (ratingData.orderId) {
+      updates['orders/' + ratingData.orderId + '/rated'] = true;
+      updates['orders/' + ratingData.orderId + '/rating'] = {
+        stars: payload.stars,
+        comment: payload.comment,
+        createdAt: payload.createdAt
+      };
+    }
 
     return db.ref().update(updates);
   },
