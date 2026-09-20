@@ -35,6 +35,25 @@ if (document.readyState === 'loading') {
   startApp();
 }
 
+function setupSyncListener() {
+  window.Store.listenToConfig(config => {
+    try { renderStoreHeader(); } catch (e) {}
+  });
+
+  window.Store.listenToStock(() => {
+    try { renderProducts(); } catch (e) {}
+  });
+
+  // Listeners em TEMPO REAL para atualizações do Programa de Fidelidade (Níveis e Pontos)
+  window.Store.listenToFidelityConfig(() => {
+    try { renderFidelityModal(); } catch (e) {}
+  });
+
+  window.Store.listenToCustomers(() => {
+    try { renderFidelityModal(); } catch (e) {}
+  });
+}
+
 function setupSplashScreen() {
   const splash = document.getElementById('splash-screen');
   if (!splash) return;
@@ -1659,6 +1678,25 @@ function getActiveCustomerData() {
       if (parsed && parsed.phone) return parsed;
     }
   } catch {}
+
+  // Fallback inteligente: Busca o cliente a partir dos pedidos salvos no celular do cliente
+  try {
+    const myOrderIds = window.Store.getMyOrders();
+    if (myOrderIds && myOrderIds.length > 0) {
+      for (const orderId of myOrderIds) {
+        const order = window.Store.getOrderById(orderId);
+        if (order && order.customer && order.customer.phone) {
+          const fallbackData = {
+            name: order.customer.name || 'Cliente',
+            phone: order.customer.phone
+          };
+          try { localStorage.setItem('rotta_customer_data', JSON.stringify(fallbackData)); } catch {}
+          return fallbackData;
+        }
+      }
+    }
+  } catch (e) {}
+
   return null;
 }
 
