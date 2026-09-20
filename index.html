@@ -790,19 +790,21 @@
           </div>
         </div>
 
-        <!-- Cards dos Níveis da Trilha -->
+        <!-- Cards dos Níveis da Trilha (Design de Trilha Visual / Gamificada) -->
         <div class="space-y-3 pt-2">
-          <h4 class="text-xs font-black uppercase tracking-wider text-gold-400">🏆 Níveis de Recompensas</h4>
-          <div id="fidelity-levels-container" class="space-y-3">
-            <!-- Renderizado dinamicamente pelo app.js -->
+          <h4 class="text-xs font-black uppercase tracking-wider text-gold-400 flex items-center gap-1.5">
+            <span>🗺️</span> Trilha de Prêmios do Açaí
+          </h4>
+          <div id="fidelity-levels-container" class="relative pl-6 space-y-6 before:absolute before:left-5 before:top-4 before:bottom-4 before:w-1 before:bg-gradient-to-b before:from-gold-400 before:via-purple-600 before:to-purple-950 before:rounded-full">
+            <!-- Renderizado dinamicamente pelo app.js como nó da trilha -->
           </div>
         </div>
 
         <!-- Regras / Informações -->
         <div class="bg-acai-950/60 p-3 rounded-xl border border-purple-900 text-[11px] text-purple-300/80 space-y-1 leading-relaxed">
-          <p class="font-bold text-purple-200">ℹ️ Como funciona:</p>
-          <p>• Cada copo de açaí comprado soma +1 copo na sua conta assim que o pedido for concluído pela loja.</p>
-          <p>• Ao atingir a quantidade de copos do nível, o prêmio fica liberado para resgate!</p>
+          <p class="font-bold text-purple-200">ℹ️ Como funciona a Trilha:</p>
+          <p>• Cada copo de açaí comprado soma +1 copo na sua conta assim que o pedido for entregue.</p>
+          <p>• À medida que você avança na trilha, as conquistas e açaís grátis são liberados!</p>
         </div>
       </div>
 
@@ -815,7 +817,7 @@
   <nav id="bottom-navigation-bar" class="fixed bottom-0 left-0 right-0 z-40 bg-acai-950/95 backdrop-blur-md border-t border-acai-800 text-purple-200 px-4 py-2 shadow-2xl">
     <div class="max-w-md mx-auto flex items-center justify-around">
       <button onclick="switchAppTab('menu')" id="nav-btn-menu" class="nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition">
-        <span class="text-xl">🏠</span>
+        <span class="text-xl">📋</span>
         <span class="text-[10px] tracking-tight">Cardápio</span>
       </button>
 

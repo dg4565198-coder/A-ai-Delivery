@@ -1734,38 +1734,70 @@ function renderFidelityModal() {
     const icons = ['🥉', '🥈', '🥇', '🏆', '👑'];
     levelsContainer.innerHTML = levels.map((lvl, index) => {
       const isUnlocked = currentCups >= lvl.cupsRequired;
-      const icon = icons[index % icons.length];
+      const prevLvlCups = index > 0 ? levels[index - 1].cupsRequired : 0;
+      const cupsForThisLevel = lvl.cupsRequired - prevLvlCups;
+      const userProgressThisLevel = Math.max(0, Math.min(cupsForThisLevel, currentCups - prevLvlCups));
+      const levelPercent = Math.min(100, Math.round((userProgressThisLevel / cupsForThisLevel) * 100));
+
+      const icon = isUnlocked ? (icons[index % icons.length]) : '🔒';
       const remainingForThis = Math.max(0, lvl.cupsRequired - currentCups);
 
       return `
-        <div class="p-3.5 rounded-2xl border transition-all ${
-          isUnlocked 
-            ? 'bg-gradient-to-r from-emerald-950/80 to-acai-900 border-emerald-500/80 shadow-lg' 
-            : 'bg-acai-900/60 border-purple-800/40 opacity-90'
-        }">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <span class="text-2xl">${icon}</span>
-              <div>
-                <div class="flex items-center space-x-2">
-                  <h5 class="font-extrabold text-sm text-white">Nível ${lvl.level}: ${lvl.rewardTitle}</h5>
-                  ${isUnlocked 
-                    ? '<span class="bg-emerald-500 text-acai-950 text-[10px] font-black px-2 py-0.5 rounded-full">DESBLOQUEADO! 🎉</span>' 
-                    : `<span class="bg-purple-800 text-purple-200 text-[10px] font-bold px-2 py-0.5 rounded-full">${lvl.cupsRequired} copos</span>`
-                  }
-                </div>
-                <p class="text-xs text-purple-200 mt-0.5">${lvl.rewardDescription || 'Prêmio especial de fidelidade'}</p>
+        <div class="relative flex items-start space-x-3 group">
+          <!-- Nó Circuito / Marco Visual da Trilha -->
+          <div class="absolute -left-6 top-1.5 z-10 w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-sm border-2 shadow-md transition-all ${
+            isUnlocked 
+              ? 'bg-gradient-to-br from-gold-400 via-gold-500 to-amber-600 text-acai-950 border-gold-300 ring-4 ring-gold-500/20 shadow-gold-500/40' 
+              : (currentCups > prevLvlCups ? 'bg-purple-900 text-gold-300 border-gold-500/60 ring-2 ring-purple-500/30' : 'bg-acai-950 text-gray-400 border-purple-800')
+          }">
+            ${icon}
+          </div>
+
+          <!-- Card do Nível da Trilha -->
+          <div class="flex-1 p-4 rounded-2xl border transition-all ${
+            isUnlocked 
+              ? 'bg-gradient-to-r from-purple-900/90 via-acai-900 to-purple-950 border-gold-500/60 shadow-lg shadow-purple-950/50' 
+              : 'bg-acai-900/70 border-purple-800/40 opacity-95'
+          }">
+            <div class="flex items-center justify-between border-b border-purple-800/40 pb-2 mb-2">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-black text-gold-400 uppercase tracking-wider">Nível ${lvl.level}</span>
+                <span class="text-[10px] bg-purple-950 text-purple-200 px-2.5 py-0.5 rounded-full font-bold border border-purple-700/50">${lvl.cupsRequired} copos acumulados</span>
               </div>
+              ${isUnlocked 
+                ? '<span class="bg-emerald-500/90 text-acai-950 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow">DESBLOQUEADO! 🎉</span>' 
+                : `<span class="text-[10px] text-amber-400 font-extrabold">Faltam ${remainingForThis} copo(s)</span>`
+              }
             </div>
-            <div>
+
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h5 class="font-black text-sm text-white flex items-center gap-1.5">
+                  <span>🎁</span> ${lvl.rewardTitle}
+                </h5>
+                <p class="text-xs text-purple-200/90 mt-0.5 leading-snug">${lvl.rewardDescription || 'Prêmio especial de fidelidade'}</p>
+              </div>
+
               ${isUnlocked ? `
-                <button onclick="claimFidelityReward('${lvl.rewardCode}', '${lvl.rewardTitle}')" class="bg-gold-500 hover:bg-gold-400 text-acai-950 font-black text-xs px-3 py-1.5 rounded-xl shadow transition transform active:scale-95">
-                  🎁 Resgatar
+                <button onclick="claimFidelityReward('${lvl.rewardCode}', '${lvl.rewardTitle}')" class="shrink-0 bg-gradient-to-r from-gold-400 to-gold-500 hover:from-gold-300 hover:to-gold-400 text-acai-950 font-black text-xs px-3.5 py-2 rounded-xl shadow-lg transition transform active:scale-95 flex items-center space-x-1">
+                  <span>🎁</span>
+                  <span>Resgatar</span>
                 </button>
-              ` : `
-                <span class="text-[11px] text-amber-400 font-bold block text-right">Faltam ${remainingForThis} copo(s)</span>
-              `}
+              ` : ''}
             </div>
+
+            <!-- Mini Barra de Progresso Local do Nível -->
+            ${!isUnlocked ? `
+              <div class="mt-3 pt-2 border-t border-purple-900/60">
+                <div class="flex justify-between text-[10px] font-bold text-purple-300 mb-1">
+                  <span>Progresso para o Nível ${lvl.level}</span>
+                  <span>${userProgressThisLevel} / ${cupsForThisLevel} copos (${levelPercent}%)</span>
+                </div>
+                <div class="w-full bg-acai-950 rounded-full h-2 overflow-hidden border border-purple-800/40">
+                  <div class="bg-gold-400 h-full rounded-full transition-all duration-300" style="width: ${levelPercent}%"></div>
+                </div>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
