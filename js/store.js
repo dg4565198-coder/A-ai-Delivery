@@ -209,22 +209,27 @@ window.Store = {
   },
 
   getProducts() {
-    let list = DEFAULT_PRODUCTS;
-    if (_stockCache.products && _stockCache.products.length > 0) list = _stockCache.products;
-    else {
-      try {
-        const p = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS));
-        if (Array.isArray(p) && p.length > 0) list = p;
-      } catch {}
+    if (_stockCache.products !== null && _stockCache.products !== undefined) {
+      return _stockCache.products.map(item => ({ ...item, available: item.available !== false }));
     }
-    return list.map(item => ({ ...item, available: item.available !== false }));
+    try {
+      const p = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+      if (p !== null) {
+        const parsed = JSON.parse(p);
+        if (Array.isArray(parsed)) {
+          _stockCache.products = parsed;
+          return parsed.map(item => ({ ...item, available: item.available !== false }));
+        }
+      }
+    } catch {}
+    return DEFAULT_PRODUCTS.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveProducts(products) {
-    _stockCache.products = products;
-    try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products)); } catch {}
+    _stockCache.products = products || [];
+    try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(_stockCache.products)); } catch {}
     const db = getDB();
-    if (db) db.ref('stock/products').set(products);
+    if (db) db.ref('stock/products').set(_stockCache.products);
   },
 
   getBases() {
@@ -236,60 +241,75 @@ window.Store = {
   },
 
   getFreeToppings() {
-    let list = DEFAULT_FREE_TOPPINGS;
-    if (_stockCache.toppings && _stockCache.toppings.length > 0) list = _stockCache.toppings;
-    else {
-      try {
-        const f = JSON.parse(localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS));
-        if (Array.isArray(f) && f.length > 0) list = f;
-      } catch {}
+    if (_stockCache.toppings !== null && _stockCache.toppings !== undefined) {
+      return _stockCache.toppings.map(item => ({ ...item, available: item.available !== false }));
     }
-    return list.map(item => ({ ...item, available: item.available !== false }));
+    try {
+      const f = localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS);
+      if (f !== null) {
+        const parsed = JSON.parse(f);
+        if (Array.isArray(parsed)) {
+          _stockCache.toppings = parsed;
+          return parsed.map(item => ({ ...item, available: item.available !== false }));
+        }
+      }
+    } catch {}
+    return DEFAULT_FREE_TOPPINGS.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveFreeToppings(toppings) {
-    _stockCache.toppings = toppings;
-    try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(toppings)); } catch {}
+    _stockCache.toppings = toppings || [];
+    try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(_stockCache.toppings)); } catch {}
     const db = getDB();
-    if (db) db.ref('stock/toppings').set(toppings);
+    if (db) db.ref('stock/toppings').set(_stockCache.toppings);
   },
 
   getFruits() {
-    let list = DEFAULT_FRUITS;
-    if (_stockCache.fruits && _stockCache.fruits.length > 0) list = _stockCache.fruits;
-    else {
-      try {
-        const a = JSON.parse(localStorage.getItem(STORAGE_KEYS.FRUITS));
-        if (Array.isArray(a) && a.length > 0) list = a;
-      } catch {}
+    if (_stockCache.fruits !== null && _stockCache.fruits !== undefined) {
+      return _stockCache.fruits.map(item => ({ ...item, available: item.available !== false }));
     }
-    return list.map(item => ({ ...item, available: item.available !== false }));
+    try {
+      const a = localStorage.getItem(STORAGE_KEYS.FRUITS);
+      if (a !== null) {
+        const parsed = JSON.parse(a);
+        if (Array.isArray(parsed)) {
+          _stockCache.fruits = parsed;
+          return parsed.map(item => ({ ...item, available: item.available !== false }));
+        }
+      }
+    } catch {}
+    return DEFAULT_FRUITS.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveFruits(fruits) {
-    _stockCache.fruits = fruits;
-    try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(fruits)); } catch {}
+    _stockCache.fruits = fruits || [];
+    try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(_stockCache.fruits)); } catch {}
     const db = getDB();
-    if (db) db.ref('stock/fruits').set(fruits);
+    if (db) db.ref('stock/fruits').set(_stockCache.fruits);
   },
 
   getCaldas() {
-    let list = DEFAULT_CALDAS;
-    if (_stockCache.caldas && _stockCache.caldas.length > 0) list = _stockCache.caldas;
-    else {
-      try {
-        const c = JSON.parse(localStorage.getItem(STORAGE_KEYS.CALDAS));
-        if (Array.isArray(c) && c.length > 0) list = c;
-      } catch {}
+    if (_stockCache.caldas !== null && _stockCache.caldas !== undefined) {
+      return _stockCache.caldas.map(item => ({ ...item, available: item.available !== false }));
     }
-    return list.map(item => ({ ...item, available: item.available !== false }));
+    try {
+      const c = localStorage.getItem(STORAGE_KEYS.CALDAS);
+      if (c !== null) {
+        const parsed = JSON.parse(c);
+        if (Array.isArray(parsed)) {
+          _stockCache.caldas = parsed;
+          return parsed.map(item => ({ ...item, available: item.available !== false }));
+        }
+      }
+    } catch {}
+    return DEFAULT_CALDAS.map(item => ({ ...item, available: item.available !== false }));
   },
 
   saveCaldas(caldas) {
-    _stockCache.caldas = caldas;
-    try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(caldas)); } catch {}
+    _stockCache.caldas = caldas || [];
+    try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(_stockCache.caldas)); } catch {}
     const db = getDB();
-    if (db) db.ref('stock/caldas').set(caldas);
+    if (db) db.ref('stock/caldas').set(_stockCache.caldas);
   },
 
   getPaidAddons() {
@@ -307,10 +327,22 @@ window.Store = {
     db.ref('stock').on('value', snapshot => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        if (data.products) { _stockCache.products = data.products; try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(data.products)); } catch {} }
-        if (data.toppings) { _stockCache.toppings = data.toppings; try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(data.toppings)); } catch {} }
-        if (data.fruits) { _stockCache.fruits = data.fruits; try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(data.fruits)); } catch {} }
-        if (data.caldas) { _stockCache.caldas = data.caldas; try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(data.caldas)); } catch {} }
+        if (data.products !== undefined) {
+          _stockCache.products = Array.isArray(data.products) ? data.products : (data.products ? Object.values(data.products) : []);
+          try { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(_stockCache.products)); } catch {}
+        }
+        if (data.toppings !== undefined) {
+          _stockCache.toppings = Array.isArray(data.toppings) ? data.toppings : (data.toppings ? Object.values(data.toppings) : []);
+          try { localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(_stockCache.toppings)); } catch {}
+        }
+        if (data.fruits !== undefined) {
+          _stockCache.fruits = Array.isArray(data.fruits) ? data.fruits : (data.fruits ? Object.values(data.fruits) : []);
+          try { localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(_stockCache.fruits)); } catch {}
+        }
+        if (data.caldas !== undefined) {
+          _stockCache.caldas = Array.isArray(data.caldas) ? data.caldas : (data.caldas ? Object.values(data.caldas) : []);
+          try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(_stockCache.caldas)); } catch {}
+        }
         if (callback) callback();
       }
     });

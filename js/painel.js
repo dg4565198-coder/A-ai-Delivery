@@ -771,9 +771,6 @@ async function handleSaveItemEdit(e) {
       alert("A imagem selecionada é muito pesada mesmo após otimização (máx. 200 KB). Por favor escolha uma foto com menor resolução.");
       return;
     }
-  } else if (!base64Image) {
-    alert("A foto do item é obrigatória ao editar! Por favor selecione uma imagem.");
-    return;
   }
 
   if (type === 'product') {
