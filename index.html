@@ -156,12 +156,6 @@
       <button onclick="filterCategory('copos')" class="cat-btn px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-cat="copos">
         🍧 Copos Tradicionais
       </button>
-      <button onclick="filterCategory('especiais')" class="cat-btn px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-cat="especiais">
-        ⛵ Barcas & Especiais
-      </button>
-      <button onclick="filterCategory('bebidas')" class="cat-btn px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-cat="bebidas">
-        🥤 Bebidas & Refrescos
-      </button>
     </div>
   </nav>
 
@@ -439,26 +433,9 @@
           </div>
 
           <div id="delivery-fields" class="space-y-2.5 pt-1">
-            <div class="grid grid-cols-3 gap-2">
-              <div class="col-span-2">
-                <label class="text-xs text-gray-600 font-semibold block mb-1">Rua / Avenida / Comunidade *</label>
-                <input id="order-street" type="text" placeholder="Ex: Sítio São José" class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:border-acai-600 focus:outline-none">
-              </div>
-              <div>
-                <label class="text-xs text-gray-600 font-semibold block mb-1">Número *</label>
-                <input id="order-number" type="text" placeholder="Ex: S/N" class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:border-acai-600 focus:outline-none">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="text-xs text-gray-600 font-semibold block mb-1">Bairro / Zona *</label>
-                <input id="order-neighborhood" type="text" placeholder="Ex: Zona Rural" class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:border-acai-600 focus:outline-none">
-              </div>
-              <div>
-                <label class="text-xs text-gray-600 font-semibold block mb-1">Ponto de Referência</label>
-                <input id="order-ref" type="text" placeholder="Ex: Próximo à capela" class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:border-acai-600 focus:outline-none">
-              </div>
+            <div>
+              <label class="text-xs text-gray-600 font-semibold block mb-1">Aonde você deseja receber seu pedido *</label>
+              <input id="order-address" type="text" placeholder="Ex: Minha casa, na esquina da padaria" class="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 focus:border-acai-600 focus:outline-none">
             </div>
           </div>
         </div>

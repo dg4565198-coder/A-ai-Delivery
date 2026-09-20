@@ -147,9 +147,7 @@ function filterCategory(category) {
 
   const titles = {
     todos: '🍧 Cardápio Completo',
-    copos: '🍧 Copos Tradicionais de Açaí',
-    especiais: '⛵ Barcas & Especiais da Casa',
-    bebidas: '🥤 Bebidas & Refrescos'
+    copos: '🍧 Copos Tradicionais de Açaí'
   };
 
   const titleElem = document.getElementById('current-category-title');
@@ -648,17 +646,14 @@ function loadSavedCustomerData() {
 
   const nameInput = document.getElementById('order-customer-name');
   const phoneInput = document.getElementById('order-customer-phone');
-  const streetInput = document.getElementById('order-street');
-  const numberInput = document.getElementById('order-number');
-  const neighborhoodInput = document.getElementById('order-neighborhood');
-  const refInput = document.getElementById('order-ref');
+  const addressInput = document.getElementById('order-address');
 
   if (nameInput && customer.name) nameInput.value = customer.name;
   if (phoneInput && customer.phone) phoneInput.value = customer.phone;
-  if (streetInput && customer.street) streetInput.value = customer.street;
-  if (numberInput && customer.number) numberInput.value = customer.number;
-  if (neighborhoodInput && customer.neighborhood) neighborhoodInput.value = customer.neighborhood;
-  if (refInput && customer.ref) refInput.value = customer.ref;
+  if (addressInput) {
+    const savedAddr = customer.street || customer.address || (typeof customer.address === 'string' ? customer.address : '');
+    if (savedAddr) addressInput.value = savedAddr;
+  }
 }
 
 function saveCustomerDataIfRequested(name, phone, address) {
@@ -667,10 +662,7 @@ function saveCustomerDataIfRequested(name, phone, address) {
     const data = {
       name,
       phone,
-      street: address?.street || '',
-      number: address?.number || '',
-      neighborhood: address?.neighborhood || '',
-      ref: address?.ref || ''
+      street: address?.street || address || ''
     };
     window.Store.saveCustomer(data);
   }
@@ -712,17 +704,16 @@ async function submitFinalOrder() {
 
   let address = null;
   if (state.deliveryType === 'entrega') {
-    const street = document.getElementById('order-street').value.trim();
-    const number = document.getElementById('order-number').value.trim();
-    const neighborhood = document.getElementById('order-neighborhood').value.trim();
-    const ref = document.getElementById('order-ref').value.trim();
+    const addressInput = document.getElementById('order-address');
+    const addressVal = addressInput ? addressInput.value.trim() : '';
 
-    if (!street || !number || !neighborhood) {
-      alert('Para entrega em casa, preencha o endereço completo (Rua/Comunidade, Número e Bairro/Zona).');
+    if (!addressVal) {
+      alert('Por favor, informe onde deseja receber seu pedido (Ex: Minha casa, na esquina da padaria).');
+      if (addressInput) addressInput.focus();
       return;
     }
 
-    address = { street, number, neighborhood, ref };
+    address = { street: addressVal };
   }
 
   saveCustomerDataIfRequested(name, phone, address);
@@ -848,7 +839,7 @@ function showSuccessOrderModal(order) {
     `👤 *Cliente:* ${order.customer.name}\n` +
     `📱 *Telefone:* ${order.customer.phone}\n` +
     `🛵 *Tipo:* ${order.deliveryType === 'entrega' ? 'Entrega em Casa' : 'Retirada no Balcão'}\n` +
-    (order.address ? `📍 *Endereço:* ${order.address.street}, ${order.address.number} - ${order.address.neighborhood}\n` : '') +
+    (order.address ? `📍 *Endereço:* ${typeof order.address === 'string' ? order.address : (order.address.street + (order.address.number ? ', ' + order.address.number : '') + (order.address.neighborhood ? ' - ' + order.address.neighborhood : '') + (order.address.ref ? ' (' + order.address.ref + ')' : ''))}\n` : '') +
     `💳 *Pagamento:* ${paymentText}\n\n` +
     `📋 *ITENS DO PEDIDO:*\n${itemsText}\n\n` +
     `💰 *TOTAL DO PEDIDO:* ${window.Store.formatCurrency(order.total)}\n\n` +
