@@ -24,7 +24,8 @@ const STORAGE_KEYS = {
   CUSTOMER: 'rotta_customer_data',
   MY_ORDERS: 'rotta_my_orders_v1',
   FAVORITES: 'rotta_favorites_v1',
-  RATED_ORDERS: 'rotta_rated_orders_v1'
+  RATED_ORDERS: 'rotta_rated_orders_v1',
+  ALL_RATINGS: 'rotta_all_ratings_v1'
 };
 
 const DEFAULT_CONFIG = {
@@ -560,6 +561,10 @@ window.Store = {
     } catch { return null; }
   },
 
+  getCustomerData() {
+    return this.getSavedCustomer();
+  },
+
   saveCustomer(data) {
     try {
       localStorage.setItem(STORAGE_KEYS.CUSTOMER, JSON.stringify(data));
@@ -702,13 +707,41 @@ window.Store = {
     } catch {}
   },
 
+  getRatingsLocally() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.ALL_RATINGS);
+      return data ? JSON.parse(data) : [];
+    } catch { return []; }
+  },
+
+  saveRatingLocally(ratingObj) {
+    try {
+      const current = this.getRatingsLocally();
+      const idx = current.findIndex(r => r.id === ratingObj.id || (r.orderId && r.orderId === ratingObj.orderId));
+      if (idx >= 0) {
+        current[idx] = { ...current[idx], ...ratingObj };
+      } else {
+        current.unshift(ratingObj);
+      }
+      localStorage.setItem(STORAGE_KEYS.ALL_RATINGS, JSON.stringify(current));
+    } catch (e) {
+      console.warn('Erro ao salvar avaliação localmente:', e);
+    }
+  },
+
+  removeRatingLocally(ratingId) {
+    try {
+      let current = this.getRatingsLocally();
+      current = current.filter(r => r.id !== ratingId && r.orderId !== ratingId);
+      localStorage.setItem(STORAGE_KEYS.ALL_RATINGS, JSON.stringify(current));
+    } catch (e) {}
+  },
+
   saveRating(ratingData) {
     const db = getDB();
-    if (!db) return Promise.reject(new Error('Firebase não inicializado'));
 
     const targetOrderId = ratingData.orderId || ('order_' + Date.now());
-    const ratingRef = db.ref('ratings').push();
-    const ratingId = ratingRef.key;
+    const ratingId = (db ? db.ref('ratings').push().key : null) || ('rating_' + Date.now());
 
     const payload = {
       id: ratingId,
@@ -721,12 +754,15 @@ window.Store = {
       createdAt: Date.now()
     };
 
+    // 1. Persistir imediatamente no LocalStorage (fallback instantâneo)
+    this.saveRatingLocally(payload);
     this.markOrderAsRatedLocally(targetOrderId);
 
-    // Salvar diretamente no nó ratings
-    const p1 = db.ref('ratings/' + ratingId).set(payload);
+    if (!db) return Promise.resolve(payload);
 
-    // Atualizar também no pedido individual se existir
+    // 2. Salvar no Firebase (nó ratings + nó do pedido)
+    const p1 = db.ref('ratings/' + ratingId).set(payload).catch(e => console.warn('Firebase /ratings set:', e));
+
     let p2 = Promise.resolve();
     if (ratingData.orderId) {
       p2 = db.ref('orders/' + ratingData.orderId).update({
@@ -736,41 +772,54 @@ window.Store = {
           comment: payload.comment,
           createdAt: payload.createdAt
         }
-      });
+      }).catch(e => console.warn('Firebase /orders update:', e));
     }
 
     return Promise.all([p1, p2]);
   },
 
   deleteRating(ratingId) {
+    this.removeRatingLocally(ratingId);
     const db = getDB();
-    if (!db) return Promise.reject(new Error('Firebase não inicializado'));
-    return db.ref('ratings/' + ratingId).remove();
+    if (!db) return Promise.resolve();
+    return db.ref('ratings/' + ratingId).remove().catch(e => console.warn('Firebase remove rating:', e));
   },
 
   listenToRatings(callback) {
-    const db = getDB();
-    if (!db) {
-      if (callback) callback({});
-      return;
-    }
-
     const ratingsMap = {};
+
+    // 1. Carregar primeiro avaliações salvas localmente
+    const localRatings = this.getRatingsLocally();
+    localRatings.forEach(r => {
+      if (r && r.id) {
+        ratingsMap[r.id] = r;
+      }
+    });
 
     function trigger() {
       if (callback) callback(ratingsMap);
     }
 
-    // 1. Escuta nó /ratings
+    trigger();
+
+    const db = getDB();
+    if (!db) return;
+
+    // 2. Escutar nó /ratings no Firebase
     db.ref('ratings').on('value', snapshot => {
       if (snapshot.exists()) {
         const val = snapshot.val();
         Object.assign(ratingsMap, val);
+        // Atualizar cache local
+        try {
+          const arr = Object.values(ratingsMap);
+          localStorage.setItem(STORAGE_KEYS.ALL_RATINGS, JSON.stringify(arr));
+        } catch (e) {}
       }
       trigger();
     });
 
-    // 2. Escuta nó /orders para resgatar avaliações inseridas direto no pedido
+    // 3. Escutar nó /orders no Firebase para avaliações embutidas nos pedidos
     db.ref('orders').on('value', snapshot => {
       if (snapshot.exists()) {
         snapshot.forEach(child => {

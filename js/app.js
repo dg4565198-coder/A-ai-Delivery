@@ -1387,8 +1387,8 @@ function submitRatingModal() {
   // 3. Exibe mensagem de agradecimento
   alert("✨ Muito obrigado pela sua avaliação! Sua opinião é super importante para a Rotta do Açaí!");
 
-  // 4. Salva no Firebase em segundo plano sem travar o modal
-  const customerData = window.Store.getCustomerData() || {};
+  // 4. Salva no Firebase e LocalStorage em segundo plano sem travar o modal
+  const customerData = (window.Store.getSavedCustomer && window.Store.getSavedCustomer()) || (window.Store.getCustomerData && window.Store.getCustomerData()) || {};
   window.Store.saveRating({
     orderId: orderId,
     orderNumber: orderNumber || '#',
