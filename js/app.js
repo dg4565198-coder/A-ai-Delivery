@@ -1171,12 +1171,14 @@ function setupOrderNotificationListeners() {
 }
 
 function openMyOrdersModal() {
+  const modal = document.getElementById('my-orders-modal');
+  if (modal) modal.classList.remove('hidden');
   renderMyOrders();
-  document.getElementById('my-orders-modal').classList.remove('hidden');
 }
 
 function closeMyOrdersModal() {
-  document.getElementById('my-orders-modal').classList.add('hidden');
+  const modal = document.getElementById('my-orders-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 function renderMyOrders() {
@@ -1205,11 +1207,11 @@ function renderMyOrders() {
   }
 
   const promises = orderIds.slice(0, 10).map(id => {
-    return db.ref('orders/' + id).once('value').then(snap => snap.val());
+    return db.ref('orders/' + id).once('value').then(snap => snap.exists() ? { id: snap.key, ...snap.val() } : null);
   });
 
   Promise.all(promises).then(orders => {
-    const validOrders = orders.filter(o => o !== null).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const validOrders = orders.filter(o => o !== null).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
     if (validOrders.length === 0) {
       container.innerHTML = `
@@ -1229,7 +1231,12 @@ function renderMyOrders() {
       cancelado: '<span class="bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1">❌ Cancelado</span>'
     };
 
-    container.innerHTML = validOrders.map(order => `
+    const localRated = window.Store.getRatedOrdersLocally();
+
+    container.innerHTML = validOrders.map(order => {
+      const isUnratedConcluido = (order.status === 'concluido' && !order.rated && !localRated.includes(order.id));
+
+      return `
       <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-gray-100 pb-2">
           <div>
@@ -1259,8 +1266,15 @@ function renderMyOrders() {
           <span class="text-gray-600">Total do Pedido:</span>
           <span class="text-acai-900 text-sm">${window.Store.formatCurrency(order.total)}</span>
         </div>
+
+        ${isUnratedConcluido ? `
+          <button onclick="closeMyOrdersModal(); openRatingModal({ id: '${order.id}', orderNumber: '${order.orderNumber || '#'}' })" class="w-full mt-2 bg-gold-500 hover:bg-gold-400 text-acai-950 font-black py-2 rounded-xl text-xs shadow transition">
+            ⭐ Avaliar este Pedido
+          </button>
+        ` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }).catch(err => {
     console.error("Erro ao carregar Meus Pedidos:", err);
     container.innerHTML = `<div class="text-center py-6 text-red-500 text-xs">Erro ao carregar histórico de pedidos.</div>`;
