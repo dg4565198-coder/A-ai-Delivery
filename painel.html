@@ -125,6 +125,9 @@
       <button onclick="switchTab('caixa')" id="tab-btn-caixa" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
         <span>📊 Caixa do Dia</span>
       </button>
+      <button onclick="switchTab('fidelidade')" id="tab-btn-fidelidade" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+        <span>👥 Clientes & Fidelidade</span>
+      </button>
       <button onclick="switchTab('config')" id="tab-btn-config" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
         <span>⚙️ Configurações</span>
       </button>
@@ -695,6 +698,99 @@
           <!-- Inserido dinamicamente pelo js/painel.js -->
         </div>
       </div>
+    </div>
+
+    <!-- ABA: PROGRAMA DE FIDELIDADE & GESTÃO DE CLIENTES -->
+    <div id="tab-content-fidelidade" class="hidden space-y-6">
+      
+      <!-- Cabeçalho & Estatísticas de Fidelidade -->
+      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
+          <div>
+            <h2 class="text-base font-extrabold text-gray-900 flex items-center gap-2">
+              <span>👥</span> Gestão de Clientes & Programa de Fidelidade
+            </h2>
+            <p class="text-xs text-gray-500 mt-0.5">Acompanhe a pontuação de cada cliente e configure os níveis e prêmios da sua loja.</p>
+          </div>
+          <button onclick="renderFidelityAdminTab()" class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold px-3 py-2 rounded-xl transition flex items-center gap-1">
+            <span>🔄 Atualizar Lista</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 text-center">
+            <span class="text-xs text-purple-700 font-bold block">Total de Clientes Cadastrados</span>
+            <span id="fidelity-admin-total-customers" class="text-2xl font-black text-purple-900 block mt-0.5">0</span>
+          </div>
+          <div class="bg-gold-50 p-4 rounded-xl border border-gold-200 text-center">
+            <span class="text-xs text-amber-800 font-bold block">Total Copos Distribuídos</span>
+            <span id="fidelity-admin-total-cups" class="text-2xl font-black text-amber-900 block mt-0.5">0 🍧</span>
+          </div>
+          <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center">
+            <span class="text-xs text-emerald-700 font-bold block">Prêmios Nível 1+ Liberados</span>
+            <span id="fidelity-admin-rewards-unlocked" class="text-2xl font-black text-emerald-900 block mt-0.5">0 🎁</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 1: CONFIGURADOR DA TRILHA (EDIÇÃO DE NÍVEIS E PRÊMIOS) -->
+      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div>
+            <h3 class="font-extrabold text-sm text-acai-900 flex items-center gap-2">
+              <span>⚙️</span> Configurador da Trilha (Níveis & Prêmios)
+            </h3>
+            <p class="text-xs text-gray-500">Altere as quantidades de copos e prêmios quando quiser.</p>
+          </div>
+          <button onclick="saveFidelityConfigFromAdmin()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition">
+            💾 Salvar Configurações
+          </button>
+        </div>
+
+        <div id="fidelity-levels-editor-container" class="space-y-3">
+          <!-- Renderizado dinamicamente via js/painel.js -->
+        </div>
+
+        <div class="pt-2 flex justify-between items-center text-xs">
+          <button onclick="addFidelityLevelInAdmin()" class="text-acai-700 hover:text-acai-900 font-bold flex items-center gap-1">
+            <span>➕</span> Adicionar Novo Nível
+          </button>
+          <button onclick="resetFidelityConfigToDefault()" class="text-gray-400 hover:text-gray-600 font-semibold">
+            Restaurar Padrão (10, 25, 35 copos)
+          </button>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 2: LISTA DE CLIENTES E PONTUAÇÃO -->
+      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-3 border-b border-gray-100 pb-3">
+          <h3 class="font-extrabold text-sm text-gray-900 flex items-center gap-2">
+            <span>📋</span> Lista de Clientes & Copos Acumulados
+          </h3>
+          <div class="relative w-full sm:w-64">
+            <input id="search-customer-input" onkeyup="filterCustomersListAdmin()" type="text" placeholder="Buscar por Nome ou WhatsApp..." class="w-full text-xs pl-8 pr-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:outline-none">
+            <span class="absolute left-2.5 top-2 text-gray-400 text-xs">🔍</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-purple-50 text-acai-900 font-extrabold uppercase text-[10px] tracking-wider border-b border-purple-100">
+              <tr>
+                <th class="p-3">Cliente / Contato</th>
+                <th class="p-3">Copos Acumulados</th>
+                <th class="p-3">Status na Trilha</th>
+                <th class="p-3">Último Pedido</th>
+                <th class="p-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="admin-customers-tbody" class="divide-y divide-gray-100">
+              <!-- Renderizado dinamicamente via js/painel.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </main>
 

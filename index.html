@@ -732,6 +732,106 @@
     </div>
   </div>
 
+  <!-- =====================================================================
+       11. MODAL PROGRAMA DE FIDELIDADE (TRILHA DO AÇAÍ)
+       ===================================================================== -->
+  <div id="fidelity-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-end md:items-center justify-center p-0 md:p-4">
+    <div class="bg-gradient-to-b from-acai-950 via-purple-950 to-acai-900 text-white w-full md:max-w-lg rounded-t-3xl md:rounded-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border-t-2 md:border-2 border-gold-500/60">
+      
+      <!-- Topo Modal -->
+      <div class="p-4 bg-acai-900/90 border-b border-purple-800/50 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="text-2xl">🎁</span>
+          <div>
+            <h3 class="font-black text-base text-white leading-tight">Trilha do Açaí • Fidelidade</h3>
+            <span class="text-[11px] text-gold-300 font-semibold">Acumule copos e ganhe açaís grátis!</span>
+          </div>
+        </div>
+        <button onclick="closeFidelityModal()" class="w-8 h-8 rounded-full bg-acai-800 hover:bg-acai-700 text-gray-300 hover:text-white flex items-center justify-center text-lg font-bold">
+          &times;
+        </button>
+      </div>
+
+      <!-- Conteúdo da Trilha -->
+      <div class="overflow-y-auto p-4 space-y-5 flex-1 text-sm no-scrollbar">
+        <!-- Identificação do Cliente -->
+        <div class="bg-purple-900/40 border border-purple-700/50 rounded-2xl p-3.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-purple-200 font-bold uppercase tracking-wider">Seu Perfil de Fidelidade:</span>
+            <button onclick="promptEditFidelityPhone()" class="text-[11px] text-gold-300 hover:underline font-semibold">✏️ Alterar Telefone</button>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <div>
+              <h4 id="fidelity-user-name" class="font-extrabold text-base text-white">Cliente</h4>
+              <p id="fidelity-user-phone" class="text-xs text-purple-300">Telefone: Não cadastrado</p>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] text-purple-300 block uppercase font-bold">Copos Acumulados</span>
+              <span id="fidelity-user-cups" class="text-2xl font-black text-gold-400">0 🍧</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banner Motivacional Dinâmico -->
+        <div id="fidelity-motivation-banner" class="bg-gradient-to-r from-amber-500/20 via-gold-500/30 to-amber-500/20 border border-gold-500/60 p-3.5 rounded-2xl text-center space-y-1">
+          <span class="text-lg block">🚀</span>
+          <h4 id="fidelity-motivation-title" class="font-extrabold text-gold-300 text-sm">Sua jornada começou!</h4>
+          <p id="fidelity-motivation-text" class="text-xs text-purple-100 font-medium">Faça seus pedidos de açaí e acompanhe seu progresso até os prêmios!</p>
+        </div>
+
+        <!-- Barra de Progresso Trilha Visual -->
+        <div class="space-y-2 pt-1">
+          <div class="flex items-center justify-between text-xs font-bold text-purple-200">
+            <span>Progresso da Trilha</span>
+            <span id="fidelity-progress-percent" class="text-gold-300 font-extrabold">0%</span>
+          </div>
+          <div class="w-full bg-acai-900 rounded-full h-4 p-0.5 border border-purple-700/50 relative overflow-hidden shadow-inner">
+            <div id="fidelity-progress-bar" class="bg-gradient-to-r from-purple-500 via-gold-400 to-gold-500 h-full rounded-full transition-all duration-500 w-0"></div>
+          </div>
+        </div>
+
+        <!-- Cards dos Níveis da Trilha -->
+        <div class="space-y-3 pt-2">
+          <h4 class="text-xs font-black uppercase tracking-wider text-gold-400">🏆 Níveis de Recompensas</h4>
+          <div id="fidelity-levels-container" class="space-y-3">
+            <!-- Renderizado dinamicamente pelo app.js -->
+          </div>
+        </div>
+
+        <!-- Regras / Informações -->
+        <div class="bg-acai-950/60 p-3 rounded-xl border border-purple-900 text-[11px] text-purple-300/80 space-y-1 leading-relaxed">
+          <p class="font-bold text-purple-200">ℹ️ Como funciona:</p>
+          <p>• Cada copo de açaí comprado soma +1 copo na sua conta assim que o pedido for concluído pela loja.</p>
+          <p>• Ao atingir a quantidade de copos do nível, o prêmio fica liberado para resgate!</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       12. BARRA DE NAVEGAÇÃO INFERIOR FIXA (MOBILE & DESKTOP)
+       ===================================================================== -->
+  <nav id="bottom-navigation-bar" class="fixed bottom-0 left-0 right-0 z-40 bg-acai-950/95 backdrop-blur-md border-t border-acai-800 text-purple-200 px-4 py-2 shadow-2xl">
+    <div class="max-w-md mx-auto flex items-center justify-around">
+      <button onclick="switchAppTab('menu')" id="nav-btn-menu" class="nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition">
+        <span class="text-xl">🏠</span>
+        <span class="text-[10px] tracking-tight">Cardápio</span>
+      </button>
+
+      <button onclick="switchAppTab('fidelidade')" id="nav-btn-fidelidade" class="nav-tab-btn flex flex-col items-center space-y-1 hover:text-gold-300 font-bold transition relative">
+        <span class="text-xl animate-bounce">🎁</span>
+        <span class="text-[10px] tracking-tight">Fidelidade</span>
+        <span id="nav-fidelity-badge" class="absolute -top-1 right-2 bg-gold-500 text-acai-950 text-[9px] font-black px-1.5 py-0.2 rounded-full hidden">!</span>
+      </button>
+
+      <button onclick="switchAppTab('pedidos')" id="nav-btn-pedidos" class="nav-tab-btn flex flex-col items-center space-y-1 hover:text-gold-300 font-bold transition">
+        <span class="text-xl">🛍️</span>
+        <span class="text-[10px] tracking-tight">Meus Pedidos</span>
+      </button>
+    </div>
+  </nav>
+
   <!-- Firebase SDK (Realtime Database) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>

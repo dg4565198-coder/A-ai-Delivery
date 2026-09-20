@@ -25,7 +25,18 @@ const STORAGE_KEYS = {
   MY_ORDERS: 'rotta_my_orders_v1',
   FAVORITES: 'rotta_favorites_v1',
   RATED_ORDERS: 'rotta_rated_orders_v1',
-  ALL_RATINGS: 'rotta_all_ratings_v1'
+  ALL_RATINGS: 'rotta_all_ratings_v1',
+  FIDELITY_CONFIG: 'rotta_fidelity_config_v1',
+  CUSTOMERS: 'rotta_customers_v1'
+};
+
+const DEFAULT_FIDELITY_CONFIG = {
+  enabled: true,
+  levels: [
+    { level: 1, cupsRequired: 10, rewardTitle: "Açaí 300ml Grátis", rewardCode: "REWARD_300ML", rewardDescription: "1 Açaí de 300ml completo por nossa conta!" },
+    { level: 2, cupsRequired: 25, rewardTitle: "Açaí 500ml Grátis", rewardCode: "REWARD_500ML", rewardDescription: "1 Açaí de 500ml delicioso totalmente grátis!" },
+    { level: 3, cupsRequired: 35, rewardTitle: "Açaí 700ml Grátis", rewardCode: "REWARD_700ML", rewardDescription: "1 Açaí de 700ml gigante de presente para você!" }
+  ]
 };
 
 const DEFAULT_CONFIG = {
@@ -541,10 +552,36 @@ window.Store = {
 
   updateOrderStatus(orderId, newStatus) {
     const db = getDB();
-    return db.ref('orders/' + orderId).update({
+    const updateObj = {
       status: newStatus,
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    if (newStatus === 'concluido') {
+      const order = this.getOrderById(orderId);
+      if (order && !order.fidelityCredited && order.customer && order.customer.phone) {
+        let cupsCount = 0;
+        if (Array.isArray(order.items)) {
+          order.items.forEach(item => {
+            const nameLower = (item.name || '').toLowerCase();
+            const cat = (item.category || '').toLowerCase();
+            if (cat === 'copos' || nameLower.includes('copo') || nameLower.includes('pote') || nameLower.includes('açaí') || nameLower.includes('acai')) {
+              cupsCount += (parseInt(item.quantity, 10) || 1);
+            }
+          });
+        }
+        if (cupsCount > 0) {
+          this.addCupsToCustomer(order.customer.phone, order.customer.name, cupsCount);
+          updateObj.fidelityCredited = true;
+          updateObj.cupsCredited = cupsCount;
+        }
+      }
+    }
+
+    if (db) {
+      return db.ref('orders/' + orderId).update(updateObj);
+    }
+    return Promise.resolve();
   },
 
   getOrderById(orderId) {
@@ -962,6 +999,147 @@ window.Store = {
         });
       }
       trigger();
+    });
+  },
+
+  // --- PROGRAMA DE FIDELIDADE & GESTÃO DE CLIENTES ---
+  cleanPhoneKey(phone) {
+    if (!phone) return '';
+    return String(phone).replace(/\D/g, '');
+  },
+
+  getFidelityConfig() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.FIDELITY_CONFIG);
+      if (data) {
+        return { ...DEFAULT_FIDELITY_CONFIG, ...JSON.parse(data) };
+      }
+    } catch {}
+    return DEFAULT_FIDELITY_CONFIG;
+  },
+
+  saveFidelityConfig(cfg) {
+    const finalCfg = { ...DEFAULT_FIDELITY_CONFIG, ...cfg };
+    try {
+      localStorage.setItem(STORAGE_KEYS.FIDELITY_CONFIG, JSON.stringify(finalCfg));
+    } catch {}
+    const db = getDB();
+    if (db) {
+      return db.ref('fidelity_config').set(finalCfg).catch(e => console.warn('Firebase fidelity_config set:', e));
+    }
+    return Promise.resolve();
+  },
+
+  listenToFidelityConfig(callback) {
+    const localCfg = this.getFidelityConfig();
+    if (callback) callback(localCfg);
+
+    const db = getDB();
+    if (!db) return;
+
+    db.ref('fidelity_config').on('value', snapshot => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        const merged = { ...DEFAULT_FIDELITY_CONFIG, ...val };
+        try { localStorage.setItem(STORAGE_KEYS.FIDELITY_CONFIG, JSON.stringify(merged)); } catch {}
+        if (callback) callback(merged);
+      }
+    });
+  },
+
+  getCustomersLocally() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
+      return data ? JSON.parse(data) : {};
+    } catch { return {}; }
+  },
+
+  saveCustomerLocally(phone, customerData) {
+    const key = this.cleanPhoneKey(phone);
+    if (!key) return;
+    try {
+      const current = this.getCustomersLocally();
+      current[key] = {
+        ...current[key],
+        ...customerData,
+        phoneKey: key,
+        updatedAt: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(current));
+    } catch (e) {
+      console.warn('Erro ao salvar cliente localmente:', e);
+    }
+  },
+
+  saveCustomerFidelity(phone, customerData) {
+    const key = this.cleanPhoneKey(phone);
+    if (!key) return Promise.resolve();
+
+    const currentLocal = this.getCustomersLocally();
+    const existing = currentLocal[key] || {};
+    const payload = {
+      phoneKey: key,
+      phone: customerData.phone || existing.phone || phone,
+      name: customerData.name || existing.name || 'Cliente',
+      totalCups: (customerData.totalCups !== undefined) ? customerData.totalCups : (existing.totalCups || 0),
+      claimedRewards: customerData.claimedRewards || existing.claimedRewards || [],
+      lastOrderAt: customerData.lastOrderAt || existing.lastOrderAt || Date.now(),
+      updatedAt: Date.now()
+    };
+
+    this.saveCustomerLocally(key, payload);
+
+    const db = getDB();
+    if (!db) return Promise.resolve(payload);
+
+    return db.ref('customers/' + key).update(payload).catch(e => console.warn('Firebase /customers set:', e));
+  },
+
+  addCupsToCustomer(phone, name, cupsCount) {
+    const key = this.cleanPhoneKey(phone);
+    if (!key) return;
+
+    const customers = this.getCustomersLocally();
+    const existing = customers[key] || {};
+    const currentCups = parseInt(existing.totalCups, 10) || 0;
+    const newTotal = currentCups + (parseInt(cupsCount, 10) || 0);
+
+    return this.saveCustomerFidelity(key, {
+      name: name || existing.name || 'Cliente',
+      totalCups: newTotal,
+      lastOrderAt: Date.now()
+    });
+  },
+
+  updateCustomerPoints(phone, newTotalCups) {
+    const key = this.cleanPhoneKey(phone);
+    if (!key) return;
+
+    const customers = this.getCustomersLocally();
+    const existing = customers[key] || {};
+
+    return this.saveCustomerFidelity(key, {
+      name: existing.name || 'Cliente',
+      totalCups: Math.max(0, parseInt(newTotalCups, 10) || 0)
+    });
+  },
+
+  listenToCustomers(callback) {
+    const customersMap = this.getCustomersLocally();
+    if (callback) callback(customersMap);
+
+    const db = getDB();
+    if (!db) return;
+
+    db.ref('customers').on('value', snapshot => {
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        Object.assign(customersMap, val);
+        try {
+          localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customersMap));
+        } catch (e) {}
+      }
+      if (callback) callback(customersMap);
     });
   }
 };

@@ -123,6 +123,14 @@ function setupFirebaseListener() {
   window.Store.listenToStock(() => {
     renderStockManagement();
   });
+
+  window.Store.listenToFidelityConfig(() => {
+    renderFidelityLevelsEditor();
+  });
+
+  window.Store.listenToCustomers(() => {
+    renderCustomersTableAdmin();
+  });
 }
 
 function showInAppToast(title, body) {
@@ -245,7 +253,7 @@ function testAudioAlert() {
 // 4. NAVEGAÇÃO POR ABAS
 // ==========================================================================
 function switchTab(tabId) {
-  const tabs = ['kanban', 'estoque', 'horarios', 'promocoes', 'caixa', 'config', 'avaliacoes'];
+  const tabs = ['kanban', 'estoque', 'horarios', 'promocoes', 'caixa', 'config', 'avaliacoes', 'fidelidade'];
   tabs.forEach(t => {
     const content = document.getElementById('tab-content-' + t);
     const btn = document.getElementById('tab-btn-' + t);
@@ -264,6 +272,7 @@ function switchTab(tabId) {
   if (tabId === 'horarios') loadHoursTab();
   if (tabId === 'promocoes') renderPromotionsHistory();
   if (tabId === 'avaliacoes') renderRatingsTab();
+  if (tabId === 'fidelidade') renderFidelityAdminTab();
 }
 
 // ==========================================================================
@@ -1569,3 +1578,244 @@ async function handleDeleteRating(ratingId) {
 window.renderRatingsTab = renderRatingsTab;
 window.filterRatings = filterRatings;
 window.handleDeleteRating = handleDeleteRating;
+
+// ==========================================================================
+// ABA CLIENTES & PROGRAMA DE FIDELIDADE
+// ==========================================================================
+let _fidelityAdminLevels = [];
+
+function renderFidelityAdminTab() {
+  const cfg = window.Store.getFidelityConfig();
+  _fidelityAdminLevels = JSON.parse(JSON.stringify(cfg.levels || []));
+
+  renderFidelityLevelsEditor();
+  renderCustomersTableAdmin();
+}
+
+function renderFidelityLevelsEditor() {
+  const container = document.getElementById('fidelity-levels-editor-container');
+  if (!container) return;
+
+  if (_fidelityAdminLevels.length === 0) {
+    const cfg = window.Store.getFidelityConfig();
+    _fidelityAdminLevels = JSON.parse(JSON.stringify(cfg.levels || []));
+  }
+
+  container.innerHTML = _fidelityAdminLevels.map((lvl, idx) => `
+    <div class="p-3.5 bg-gray-50 rounded-2xl border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+      <div class="flex items-center space-x-2 shrink-0">
+        <span class="font-extrabold text-acai-900 bg-purple-100 text-purple-800 px-2.5 py-1 rounded-xl">
+          Nível ${idx + 1}
+        </span>
+        <div class="flex items-center space-x-1">
+          <label class="font-bold text-gray-700">Copos:</label>
+          <input type="number" min="1" max="500" value="${lvl.cupsRequired}" onchange="updateFidelityLevelField(${idx}, 'cupsRequired', this.value)" class="w-16 px-2 py-1 border border-gray-300 rounded-lg text-center font-bold text-acai-900 focus:outline-none focus:ring-1 focus:ring-purple-600">
+        </div>
+      </div>
+      <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label class="font-bold text-gray-600 block text-[10px] uppercase">Título do Prêmio:</label>
+          <input type="text" value="${lvl.rewardTitle || ''}" onchange="updateFidelityLevelField(${idx}, 'rewardTitle', this.value)" placeholder="Ex: Açaí 300ml Grátis" class="w-full px-2.5 py-1 border border-gray-300 rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-purple-600">
+        </div>
+        <div>
+          <label class="font-bold text-gray-600 block text-[10px] uppercase">Descrição do Prêmio:</label>
+          <input type="text" value="${lvl.rewardDescription || ''}" onchange="updateFidelityLevelField(${idx}, 'rewardDescription', this.value)" placeholder="Ex: 1 Açaí 300ml por nossa conta!" class="w-full px-2.5 py-1 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-1 focus:ring-purple-600">
+        </div>
+      </div>
+      <button onclick="removeFidelityLevelInAdmin(${idx})" title="Remover Nível" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded hover:bg-red-50 text-base self-end md:self-center">
+        🗑️
+      </button>
+    </div>
+  `).join('');
+}
+
+function updateFidelityLevelField(index, field, value) {
+  if (_fidelityAdminLevels[index]) {
+    if (field === 'cupsRequired') {
+      _fidelityAdminLevels[index][field] = Math.max(1, parseInt(value, 10) || 1);
+    } else {
+      _fidelityAdminLevels[index][field] = value;
+    }
+  }
+}
+
+function addFidelityLevelInAdmin() {
+  const nextNum = _fidelityAdminLevels.length + 1;
+  const lastCups = _fidelityAdminLevels.length > 0 ? _fidelityAdminLevels[_fidelityAdminLevels.length - 1].cupsRequired : 10;
+  
+  _fidelityAdminLevels.push({
+    level: nextNum,
+    cupsRequired: lastCups + 10,
+    rewardTitle: `Prêmio Nível ${nextNum}`,
+    rewardCode: `REWARD_LVL_${nextNum}`,
+    rewardDescription: `Prêmio especial para quem acumular ${lastCups + 10} copos!`
+  });
+
+  renderFidelityLevelsEditor();
+}
+
+function removeFidelityLevelInAdmin(index) {
+  if (_fidelityAdminLevels.length <= 1) {
+    alert("O programa de fidelidade precisa ter pelo menos 1 nível.");
+    return;
+  }
+  _fidelityAdminLevels.splice(index, 1);
+  _fidelityAdminLevels.forEach((lvl, i) => lvl.level = i + 1);
+  renderFidelityLevelsEditor();
+}
+
+function saveFidelityConfigFromAdmin() {
+  _fidelityAdminLevels.sort((a, b) => a.cupsRequired - b.cupsRequired);
+  _fidelityAdminLevels.forEach((lvl, i) => lvl.level = i + 1);
+
+  const cfg = {
+    enabled: true,
+    levels: _fidelityAdminLevels
+  };
+
+  window.Store.saveFidelityConfig(cfg).then(() => {
+    alert("✅ Configurações da Trilha salvas com sucesso!");
+  }).catch(err => {
+    alert("Erro ao salvar configurações da trilha: " + err.message);
+  });
+}
+
+function resetFidelityConfigToDefault() {
+  if (confirm("Deseja restaurar os níveis padrão (10, 25 e 35 copos)?")) {
+    window.Store.saveFidelityConfig({
+      enabled: true,
+      levels: [
+        { level: 1, cupsRequired: 10, rewardTitle: "Açaí 300ml Grátis", rewardCode: "REWARD_300ML", rewardDescription: "1 Açaí de 300ml completo por nossa conta!" },
+        { level: 2, cupsRequired: 25, rewardTitle: "Açaí 500ml Grátis", rewardCode: "REWARD_500ML", rewardDescription: "1 Açaí de 500ml delicioso totalmente grátis!" },
+        { level: 3, cupsRequired: 35, rewardTitle: "Açaí 700ml Grátis", rewardCode: "REWARD_700ML", rewardDescription: "1 Açaí de 700ml gigante de presente para você!" }
+      ]
+    }).then(() => {
+      renderFidelityAdminTab();
+      alert("✅ Trilha restaurada para os padrões!");
+    });
+  }
+}
+
+function renderCustomersTableAdmin() {
+  const tbody = document.getElementById('admin-customers-tbody');
+  if (!tbody) return;
+
+  const customersMap = window.Store.getCustomersLocally();
+  let customersList = Object.values(customersMap);
+
+  const searchVal = (document.getElementById('search-customer-input')?.value || '').toLowerCase().trim();
+  if (searchVal) {
+    customersList = customersList.filter(c => 
+      (c.name || '').toLowerCase().includes(searchVal) ||
+      (c.phone || '').replace(/\D/g, '').includes(searchVal)
+    );
+  }
+
+  const totalCustomers = Object.keys(customersMap).length;
+  let totalCups = 0;
+  let unlockedRewardsCount = 0;
+
+  const fidelityCfg = window.Store.getFidelityConfig();
+  const minCupsForLvl1 = (fidelityCfg.levels && fidelityCfg.levels.length > 0) ? fidelityCfg.levels[0].cupsRequired : 10;
+
+  Object.values(customersMap).forEach(c => {
+    const cups = parseInt(c.totalCups, 10) || 0;
+    totalCups += cups;
+    if (cups >= minCupsForLvl1) unlockedRewardsCount++;
+  });
+
+  if (document.getElementById('fidelity-admin-total-customers')) document.getElementById('fidelity-admin-total-customers').textContent = totalCustomers;
+  if (document.getElementById('fidelity-admin-total-cups')) document.getElementById('fidelity-admin-total-cups').textContent = `${totalCups} 🍧`;
+  if (document.getElementById('fidelity-admin-rewards-unlocked')) document.getElementById('fidelity-admin-rewards-unlocked').textContent = `${unlockedRewardsCount} 🎁`;
+
+  if (customersList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="p-8 text-center text-gray-400">
+          <span class="text-3xl block mb-1">👥</span>
+          <p class="font-bold text-gray-600">Nenhum cliente encontrado.</p>
+          <p class="text-[11px] text-gray-400 mt-0.5">Assim que os clientes fizerem pedidos, o perfil e os copos aparecerão aqui automaticamente!</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  customersList.sort((a, b) => (b.totalCups || 0) - (a.totalCups || 0));
+
+  tbody.innerHTML = customersList.map(c => {
+    const cups = parseInt(c.totalCups, 10) || 0;
+    const cleanPhone = window.Store.cleanPhoneKey(c.phone || c.phoneKey);
+    const lastDate = c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('pt-BR') : 'Recente';
+
+    let levelBadge = `<span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-bold text-[10px]">Iniciante (${cups} copos)</span>`;
+    if (cups >= 35) {
+      levelBadge = `<span class="bg-gold-500 text-acai-950 px-2.5 py-1 rounded-full font-black text-[10px] shadow-sm">🥇 Nível 3 (VIP)</span>`;
+    } else if (cups >= 25) {
+      levelBadge = `<span class="bg-purple-100 text-purple-900 px-2.5 py-1 rounded-full font-extrabold text-[10px]">🥈 Nível 2</span>`;
+    } else if (cups >= 10) {
+      levelBadge = `<span class="bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full font-bold text-[10px]">🥉 Nível 1</span>`;
+    }
+
+    const whatsUrl = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=Oi%20${encodeURIComponent(c.name || 'Cliente')}%21%20Tudo%20bem%3F%20Passando%20para%20lembrar%20que%20voc%C3%AA%20tem%20${cups}%20copo%28s%29%20acumulado%28s%29%20no%20nosso%20Programa%20de%20Fidelidade%20da%20Rotta%20do%20A%C3%A7a%C3%AD%21%20%F0%9F%8D%87`;
+
+    return `
+      <tr class="hover:bg-purple-50/50 transition">
+        <td class="p-3">
+          <div class="font-extrabold text-gray-900 text-xs">${c.name || 'Cliente'}</div>
+          <div class="text-[11px] text-gray-500">${c.phone || cleanPhone}</div>
+        </td>
+        <td class="p-3">
+          <span class="font-black text-sm text-acai-900">${cups}</span>
+          <span class="text-[10px] text-amber-700 font-bold ml-1">copos 🍧</span>
+        </td>
+        <td class="p-3">
+          ${levelBadge}
+        </td>
+        <td class="p-3 text-[11px] text-gray-500 font-medium">
+          ${lastDate}
+        </td>
+        <td class="p-3 text-right space-x-1">
+          <button onclick="editCustomerCups('${cleanPhone}', '${c.name || 'Cliente'}', ${cups})" class="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold rounded-lg text-xs transition" title="Editar Copos">
+            ✏️ Editar Pontos
+          </button>
+          <a href="${whatsUrl}" target="_blank" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition inline-block">
+            💬 WhatsApp
+          </a>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterCustomersListAdmin() {
+  renderCustomersTableAdmin();
+}
+
+function editCustomerCups(phone, name, currentCups) {
+  const input = prompt(`Ajustar copos de açaí de "${name}":`, currentCups);
+  if (input === null) return;
+
+  const newTotal = parseInt(input, 10);
+  if (isNaN(newTotal) || newTotal < 0) {
+    alert("Por favor, informe um número válido de copos (0 ou mais).");
+    return;
+  }
+
+  window.Store.updateCustomerPoints(phone, newTotal).then(() => {
+    renderCustomersTableAdmin();
+    alert(`✅ Pontuação de ${name} atualizada para ${newTotal} copos!`);
+  }).catch(err => {
+    alert("Erro ao atualizar pontos: " + err.message);
+  });
+}
+
+window.renderFidelityAdminTab = renderFidelityAdminTab;
+window.saveFidelityConfigFromAdmin = saveFidelityConfigFromAdmin;
+window.addFidelityLevelInAdmin = addFidelityLevelInAdmin;
+window.removeFidelityLevelInAdmin = removeFidelityLevelInAdmin;
+window.resetFidelityConfigToDefault = resetFidelityConfigToDefault;
+window.updateFidelityLevelField = updateFidelityLevelField;
+window.filterCustomersListAdmin = filterCustomersListAdmin;
+window.editCustomerCups = editCustomerCups;
+

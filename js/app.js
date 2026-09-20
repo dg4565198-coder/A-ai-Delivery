@@ -1607,9 +1607,202 @@ function openWeeklyHoursModal() {
   if (modal) modal.classList.remove('hidden');
 }
 
-function closeWeeklyHoursModal() {
-  const modal = document.getElementById('weekly-hours-modal');
+// ==========================================================================
+// PROGRAMA DE FIDELIDADE & NAVEGAÇÃO INFERIOR
+// ==========================================================================
+function switchAppTab(tab) {
+  const btnMenu = document.getElementById('nav-btn-menu');
+  const btnFidelidade = document.getElementById('nav-btn-fidelidade');
+  const btnPedidos = document.getElementById('nav-btn-pedidos');
+
+  if (btnMenu) btnMenu.className = "nav-tab-btn flex flex-col items-center space-y-1 text-purple-300 hover:text-gold-300 font-bold transition";
+  if (btnFidelidade) btnFidelidade.className = "nav-tab-btn flex flex-col items-center space-y-1 text-purple-300 hover:text-gold-300 font-bold transition relative";
+  if (btnPedidos) btnPedidos.className = "nav-tab-btn flex flex-col items-center space-y-1 text-purple-300 hover:text-gold-300 font-bold transition";
+
+  if (tab === 'menu') {
+    if (btnMenu) btnMenu.className = "nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition";
+    closeFidelityModal();
+    closeMyOrdersModal();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (tab === 'fidelidade') {
+    if (btnFidelidade) btnFidelidade.className = "nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition relative";
+    openFidelityModal();
+  } else if (tab === 'pedidos') {
+    if (btnPedidos) btnPedidos.className = "nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition";
+    openMyOrdersModal();
+  }
+}
+
+function openFidelityModal() {
+  const modal = document.getElementById('fidelity-modal');
+  if (modal) modal.classList.remove('hidden');
+  renderFidelityModal();
+}
+
+function closeFidelityModal() {
+  const modal = document.getElementById('fidelity-modal');
   if (modal) modal.classList.add('hidden');
+}
+
+function getActiveCustomerData() {
+  try {
+    const saved = localStorage.getItem('rotta_customer_data');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.phone) return parsed;
+    }
+  } catch {}
+  return null;
+}
+
+function renderFidelityModal() {
+  const customer = getActiveCustomerData();
+  const fidelityCfg = window.Store.getFidelityConfig();
+  const levels = fidelityCfg.levels || [];
+
+  const nameElem = document.getElementById('fidelity-user-name');
+  const phoneElem = document.getElementById('fidelity-user-phone');
+  const cupsElem = document.getElementById('fidelity-user-cups');
+
+  let currentCups = 0;
+  let customerPhoneClean = '';
+  let customerName = 'Cliente';
+
+  if (customer && customer.phone) {
+    customerPhoneClean = window.Store.cleanPhoneKey(customer.phone);
+    customerName = customer.name || 'Cliente';
+
+    const customersMap = window.Store.getCustomersLocally();
+    const customerRecord = customersMap[customerPhoneClean] || {};
+
+    currentCups = parseInt(customerRecord.totalCups, 10) || 0;
+
+    if (nameElem) nameElem.textContent = customerName;
+    if (phoneElem) phoneElem.textContent = `Tel: ${customer.phone}`;
+  } else {
+    if (nameElem) nameElem.textContent = 'Cliente (Não Identificado)';
+    if (phoneElem) phoneElem.textContent = 'Toque em "Alterar Telefone" para consultar seus pontos';
+  }
+
+  if (cupsElem) cupsElem.textContent = `${currentCups} 🍧`;
+
+  let maxTargetCups = 35;
+  if (levels.length > 0) {
+    maxTargetCups = Math.max(...levels.map(l => l.cupsRequired));
+  }
+
+  let nextLevel = levels.find(l => l.cupsRequired > currentCups);
+  if (!nextLevel && levels.length > 0) {
+    nextLevel = levels[levels.length - 1];
+  }
+
+  const progressPercent = Math.min(100, Math.round((currentCups / (nextLevel ? nextLevel.cupsRequired : maxTargetCups)) * 100));
+
+  const percentElem = document.getElementById('fidelity-progress-percent');
+  const barElem = document.getElementById('fidelity-progress-bar');
+
+  if (percentElem) percentElem.textContent = `${progressPercent}%`;
+  if (barElem) barElem.style.width = `${progressPercent}%`;
+
+  const motivationTitle = document.getElementById('fidelity-motivation-title');
+  const motivationText = document.getElementById('fidelity-motivation-text');
+
+  if (motivationTitle && motivationText) {
+    if (currentCups === 0) {
+      motivationTitle.textContent = "Sua jornada do Açaí começou! 🚀";
+      motivationText.textContent = "Faça seu 1º pedido para acumular seus primeiros copos de açaí!";
+    } else if (nextLevel) {
+      const remaining = nextLevel.cupsRequired - currentCups;
+      if (remaining <= 2) {
+        motivationTitle.textContent = "Você está QUASE LÁ! 🔥";
+        motivationText.textContent = `Faltam apenas ${remaining} copo(s) de açaí para desbloquear o prêmio: ${nextLevel.rewardTitle}!`;
+      } else if (currentCups >= Math.round(nextLevel.cupsRequired / 2)) {
+        motivationTitle.textContent = "Passou da metade do caminho! 💪";
+        motivationText.textContent = `Você já tem ${currentCups} copos. Falta pouco para conquistar seu ${nextLevel.rewardTitle}!`;
+      } else {
+        motivationTitle.textContent = "Continue acumulando! 🎯";
+        motivationText.textContent = `Você possui ${currentCups} copos. Faltam ${remaining} copos para o próximo prêmio!`;
+      }
+    } else {
+      motivationTitle.textContent = "Você é um cliente VIP Top Açaí! 🏆";
+      motivationText.textContent = "Parabéns! Você alcançou o nível máximo de fidelidade!";
+    }
+  }
+
+  const levelsContainer = document.getElementById('fidelity-levels-container');
+  if (levelsContainer) {
+    const icons = ['🥉', '🥈', '🥇', '🏆', '👑'];
+    levelsContainer.innerHTML = levels.map((lvl, index) => {
+      const isUnlocked = currentCups >= lvl.cupsRequired;
+      const icon = icons[index % icons.length];
+      const remainingForThis = Math.max(0, lvl.cupsRequired - currentCups);
+
+      return `
+        <div class="p-3.5 rounded-2xl border transition-all ${
+          isUnlocked 
+            ? 'bg-gradient-to-r from-emerald-950/80 to-acai-900 border-emerald-500/80 shadow-lg' 
+            : 'bg-acai-900/60 border-purple-800/40 opacity-90'
+        }">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <span class="text-2xl">${icon}</span>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <h5 class="font-extrabold text-sm text-white">Nível ${lvl.level}: ${lvl.rewardTitle}</h5>
+                  ${isUnlocked 
+                    ? '<span class="bg-emerald-500 text-acai-950 text-[10px] font-black px-2 py-0.5 rounded-full">DESBLOQUEADO! 🎉</span>' 
+                    : `<span class="bg-purple-800 text-purple-200 text-[10px] font-bold px-2 py-0.5 rounded-full">${lvl.cupsRequired} copos</span>`
+                  }
+                </div>
+                <p class="text-xs text-purple-200 mt-0.5">${lvl.rewardDescription || 'Prêmio especial de fidelidade'}</p>
+              </div>
+            </div>
+            <div>
+              ${isUnlocked ? `
+                <button onclick="claimFidelityReward('${lvl.rewardCode}', '${lvl.rewardTitle}')" class="bg-gold-500 hover:bg-gold-400 text-acai-950 font-black text-xs px-3 py-1.5 rounded-xl shadow transition transform active:scale-95">
+                  🎁 Resgatar
+                </button>
+              ` : `
+                <span class="text-[11px] text-amber-400 font-bold block text-right">Faltam ${remainingForThis} copo(s)</span>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function promptEditFidelityPhone() {
+  const currentData = getActiveCustomerData() || {};
+  const newName = prompt("Digite seu nome completo:", currentData.name || "");
+  if (newName === null) return;
+
+  const newPhone = prompt("Digite seu número de WhatsApp (com DDD):", currentData.phone || "");
+  if (newPhone === null) return;
+
+  if (!newPhone.trim()) {
+    alert("Por favor, digite um número de WhatsApp válido.");
+    return;
+  }
+
+  const payload = {
+    name: newName.trim() || 'Cliente',
+    phone: newPhone.trim()
+  };
+
+  try {
+    localStorage.setItem('rotta_customer_data', JSON.stringify(payload));
+    window.Store.saveCustomerFidelity(payload.phone, payload);
+    renderFidelityModal();
+    alert("✅ Perfil de Fidelidade atualizado com sucesso!");
+  } catch (e) {
+    alert("Erro ao salvar dados.");
+  }
+}
+
+function claimFidelityReward(code, title) {
+  alert(`🎉 Parabéns! Para resgatar o seu "${title}", informe o cupom [${code}] na observação do seu pedido ou fale com a loja no WhatsApp!`);
 }
 
 // Funções Globais
@@ -1643,3 +1836,9 @@ window.closePromoModal = closePromoModal;
 window.setRatingStars = setRatingStars;
 window.openRatingModal = openRatingModal;
 window.submitRatingModal = submitRatingModal;
+window.switchAppTab = switchAppTab;
+window.openFidelityModal = openFidelityModal;
+window.closeFidelityModal = closeFidelityModal;
+window.promptEditFidelityPhone = promptEditFidelityPhone;
+window.claimFidelityReward = claimFidelityReward;
+
