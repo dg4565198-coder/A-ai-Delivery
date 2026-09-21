@@ -6,6 +6,7 @@ let currentViewingOrder = null;
 let _firstLoad = true;
 
 const AUTH_SESSION_KEY = 'rotta_panel_session';
+const AUTH_DATE_KEY = 'rotta_panel_login_date';
 const CREDS_KEY = 'rotta_panel_creds';
 
 function getPanelCredentials() {
@@ -16,6 +17,22 @@ function getPanelCredentials() {
   return { user: 'admin', pass: 'rotta123' };
 }
 
+function isLoginValidForToday() {
+  if (sessionStorage.getItem(AUTH_SESSION_KEY) === 'true') return true;
+  const lastLoginDate = localStorage.getItem(AUTH_DATE_KEY);
+  if (!lastLoginDate) return false;
+  const todayStr = new Date().toISOString().split('T')[0];
+  return lastLoginDate === todayStr;
+}
+
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+      console.log('Permissão de notificações no painel:', permission);
+    }).catch(err => console.warn('Erro ao solicitar notificações:', err));
+  }
+}
+
 function handlePanelLogin(e) {
   if (e) e.preventDefault();
   const userInput = document.getElementById('login-username').value.trim();
@@ -24,10 +41,14 @@ function handlePanelLogin(e) {
   const creds = getPanelCredentials();
 
   if (userInput === creds.user && passInput === creds.pass) {
+    const todayStr = new Date().toISOString().split('T')[0];
     sessionStorage.setItem(AUTH_SESSION_KEY, 'true');
+    localStorage.setItem(AUTH_DATE_KEY, todayStr);
+
     const modal = document.getElementById('login-modal');
     if (modal) modal.classList.add('hidden');
     if (errorMsg) errorMsg.classList.add('hidden');
+    requestNotificationPermission();
     runPainelApp();
   } else {
     if (errorMsg) errorMsg.classList.remove('hidden');
@@ -37,12 +58,13 @@ function handlePanelLogin(e) {
 function handlePanelLogout() {
   if (confirm('Deseja realmente sair do Painel da Loja?')) {
     sessionStorage.removeItem(AUTH_SESSION_KEY);
+    localStorage.removeItem(AUTH_DATE_KEY);
     window.location.reload();
   }
 }
 
 function startPainel() {
-  const isLogged = sessionStorage.getItem(AUTH_SESSION_KEY) === 'true';
+  const isLogged = isLoginValidForToday();
   const modal = document.getElementById('login-modal');
 
   if (!isLogged) {
@@ -51,6 +73,7 @@ function startPainel() {
   }
 
   if (modal) modal.classList.add('hidden');
+  requestNotificationPermission();
   runPainelApp();
 }
 

@@ -1,9 +1,9 @@
 /**
- * ROTTA DO AÇAÍ - SERVICE WORKER (v43)
+ * ROTTA DO AÇAÍ - SERVICE WORKER (v44)
  * Background Order Tracking & Push Notification Engine
  */
 
-const CACHE_NAME = 'rotta-acai-v43';
+const CACHE_NAME = 'rotta-acai-v44';
 const urlsToCache = [
   './',
   './index.html',
@@ -66,6 +66,7 @@ self.addEventListener('fetch', event => {
 // BACKGROUND ORDER TRACKING & SYSTEM PUSH NOTIFICATIONS ENGINE
 // =========================================================================
 let _trackedOrdersMap = {}; // { orderId: lastKnownStatus }
+let _knownLojistaOrders = null;
 
 self.addEventListener('message', event => {
   if (!event.data) return;
@@ -73,7 +74,7 @@ self.addEventListener('message', event => {
   if (event.data.type === 'TRACK_ORDERS' && Array.isArray(event.data.orderIds)) {
     event.data.orderIds.forEach(id => {
       if (_trackedOrdersMap[id] === undefined) {
-        _trackedOrdersMap[id] = null; // null indicates uninitialized initial state
+        _trackedOrdersMap[id] = null;
       }
     });
     checkTrackedOrdersStatus();
@@ -102,7 +103,6 @@ function checkTrackedOrdersStatus() {
       .then(order => {
         if (!order || !order.status) return;
 
-        // Se o pedido já foi avaliado, encerrar rastreamento e fechar notificações
         if (order.rated) {
           delete _trackedOrdersMap[orderId];
           self.registration.getNotifications().then(notifications => {
@@ -116,7 +116,6 @@ function checkTrackedOrdersStatus() {
         const lastStatus = _trackedOrdersMap[orderId];
         const newStatus = order.status;
 
-        // Dispara notificação APENAS se havia um status prévio conhecido E o status mudou
         if (lastStatus !== null && lastStatus !== undefined && lastStatus !== newStatus) {
           const messages = {
             preparo: `🥣 Seu Pedido ${order.orderNumber || ''} está sendo preparado com muito carinho!`,
@@ -144,10 +143,8 @@ function checkTrackedOrdersStatus() {
             delete _trackedOrdersMap[orderId];
           }
         } else {
-          // Primeira checagem (inicialização) ou sem alteração
           _trackedOrdersMap[orderId] = newStatus;
           if (newStatus === 'concluido' || newStatus === 'cancelado') {
-            // Já estava concluído/cancelado ao iniciar -> remove para não rastrear nem notificar repetido
             delete _trackedOrdersMap[orderId];
           }
         }
@@ -156,8 +153,50 @@ function checkTrackedOrdersStatus() {
   });
 }
 
-// Service Worker background polling loop
+// Monitoramento de Novos Pedidos para o Painel da Lojista (Mesmo com App Fechado)
+function checkNewOrdersForLojista() {
+  fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/orders.json')
+    .then(res => res.json())
+    .then(data => {
+      if (!data) return;
+      const ordersList = Array.isArray(data) ? data : Object.values(data);
+
+      if (_knownLojistaOrders === null) {
+        _knownLojistaOrders = new Set(ordersList.map(o => String(o.orderNumber || o.id)));
+        return;
+      }
+
+      ordersList.forEach(order => {
+        const orderId = String(order.orderNumber || order.id);
+        if (!orderId) return;
+
+        if (!_knownLojistaOrders.has(orderId)) {
+          _knownLojistaOrders.add(orderId);
+
+          if (order.status === 'preparo' || !order.status) {
+            const customerName = order.customer ? order.customer.name : 'Cliente';
+            const totalVal = order.total ? `R$ ${order.total.toFixed(2).replace('.', ',')}` : '';
+
+            self.registration.showNotification('🔔 NOVO PEDIDO CHEGOU! 🍇', {
+              body: `Pedido ${order.orderNumber || ''} • ${customerName} (${totalVal})\nToque para abrir a cozinha e preparar!`,
+              icon: 'assets/logo.jpg',
+              badge: 'assets/logo.jpg',
+              vibrate: [500, 200, 500, 200, 500, 200, 1000],
+              tag: 'new-order-' + orderId,
+              renotify: true,
+              requireInteraction: true,
+              data: { url: './painel.html', orderId: orderId }
+            });
+          }
+        }
+      });
+    })
+    .catch(() => {});
+}
+
+// Background loops
 setInterval(checkTrackedOrdersStatus, 10000);
+setInterval(checkNewOrdersForLojista, 7000);
 
 // Handle push notifications
 self.addEventListener('push', event => {
@@ -170,7 +209,7 @@ self.addEventListener('push', event => {
     icon: 'assets/logo.jpg',
     badge: 'assets/logo.jpg',
     vibrate: [200, 100, 200, 100, 200],
-    data: { url: data.url || './' },
+    data: { url: data.url || './painel.html' },
     renotify: true,
     tag: 'rotta-push-' + Date.now()
   };
@@ -179,12 +218,16 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.url || './';
+  const urlToOpen = event.notification.data?.url || './painel.html';
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
         if (client.url && 'focus' in client) {
+          if (urlToOpen.includes('painel.html') && client.url.includes('painel.html')) {
+            client.postMessage({ type: 'REFRESH_PANEL' });
+            return client.focus();
+          }
           client.postMessage({ type: 'OPEN_MY_ORDERS' });
           return client.focus();
         }
