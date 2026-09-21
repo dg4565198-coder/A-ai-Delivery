@@ -25,11 +25,62 @@ function isLoginValidForToday() {
   return lastLoginDate === todayStr;
 }
 
+function updateNotificationBanner() {
+  const banner = document.getElementById('notification-permission-banner');
+  if (!banner) return;
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
 function requestNotificationPermission() {
-  if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-    Notification.requestPermission().then(permission => {
-      console.log('Permissão de notificações no painel:', permission);
-    }).catch(err => console.warn('Erro ao solicitar notificações:', err));
+  if ('Notification' in window) {
+    if (Notification.permission === 'default' || Notification.permission === 'denied') {
+      Notification.requestPermission().then(permission => {
+        console.log('Permissão de notificações no painel:', permission);
+        updateNotificationBanner();
+      }).catch(err => console.warn('Erro ao solicitar notificações:', err));
+    } else {
+      updateNotificationBanner();
+    }
+  }
+}
+
+let _wakeLock = null;
+
+async function toggleWakeLock() {
+  const btn = document.getElementById('btn-wake-lock');
+  const statusText = document.getElementById('wake-lock-status-text');
+
+  if (_wakeLock !== null) {
+    try {
+      await _wakeLock.release();
+      _wakeLock = null;
+      if (btn) btn.className = "px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/60 text-[11px] sm:text-xs font-bold transition flex items-center space-x-1.5 shadow shrink-0";
+      if (statusText) statusText.textContent = "💡 Tela Ligada (OFF)";
+      console.log('Wake Lock liberado.');
+    } catch (e) {}
+  } else {
+    try {
+      if ('wakeLock' in navigator) {
+        _wakeLock = await navigator.wakeLock.request('screen');
+        if (btn) btn.className = "px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-acai-950 font-black text-xs shadow-md transition flex items-center space-x-1.5 animate-pulse shrink-0";
+        if (statusText) statusText.textContent = "💡 Tela Ligada (ON)";
+        console.log('Wake Lock ativado com sucesso.');
+        
+        _wakeLock.addEventListener('release', () => {
+          _wakeLock = null;
+          if (btn) btn.className = "px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/60 text-[11px] sm:text-xs font-bold transition flex items-center space-x-1.5 shadow shrink-0";
+          if (statusText) statusText.textContent = "💡 Tela Ligada (OFF)";
+        });
+      } else {
+        alert('Seu navegador não suporta manter a tela ligada automaticamente. Recomendamos ajustar o tempo de limite de tela nas configurações do celular para 10 ou 30 minutos enquanto a loja estiver aberta.');
+      }
+    } catch (err) {
+      console.warn('Erro ao ativar Wake Lock:', err);
+    }
   }
 }
 
@@ -192,18 +243,22 @@ async function sendPushNotification(title, body) {
   showInAppToast(title, body);
 
   if ('Notification' in window && Notification.permission === 'granted') {
+    const notificationOptions = {
+      body: body,
+      icon: 'assets/logo.jpg',
+      badge: 'assets/logo.jpg',
+      vibrate: [500, 200, 500, 200, 500, 200, 1000],
+      tag: 'rotta-panel-' + Date.now(),
+      renotify: true,
+      requireInteraction: true,
+      data: { url: './painel.html' }
+    };
+
     if ('serviceWorker' in navigator) {
       try {
         const reg = await navigator.serviceWorker.ready;
         if (reg && reg.showNotification) {
-          await reg.showNotification(title, {
-            body: body,
-            icon: 'assets/logo.jpg',
-            badge: 'assets/logo.jpg',
-            vibrate: [200, 100, 200, 100, 200],
-            tag: 'rotta-panel-' + Date.now(),
-            renotify: true
-          });
+          await reg.showNotification(title, notificationOptions);
           return;
         }
       } catch (err) {
@@ -212,11 +267,7 @@ async function sendPushNotification(title, body) {
     }
 
     try {
-      new Notification(title, {
-        body: body,
-        icon: 'assets/logo.jpg',
-        badge: 'assets/logo.jpg'
-      });
+      new Notification(title, notificationOptions);
     } catch (e) {
       console.warn('Desktop Panel Notification fallback error:', e);
     }
@@ -2136,6 +2187,8 @@ function triggerInstallApp() {
   }
 }
 
+window.toggleWakeLock = toggleWakeLock;
+window.requestNotificationPermission = requestNotificationPermission;
 window.openInstallAppModal = openInstallAppModal;
 window.closeInstallAppModal = closeInstallAppModal;
 window.triggerInstallApp = triggerInstallApp;

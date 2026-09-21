@@ -99,6 +99,11 @@
           <span id="store-status-text">Loja Aberta</span>
         </button>
 
+        <!-- Manter Tela Ligada (Modo Cozinha) -->
+        <button id="btn-wake-lock" onclick="toggleWakeLock()" title="Manter Tela do Celular Ligada na Cozinha" class="px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/60 text-[11px] sm:text-xs font-bold transition flex items-center space-x-1.5 shadow shrink-0">
+          <span id="wake-lock-status-text">💡 Tela Ligada (OFF)</span>
+        </button>
+
         <!-- Botões de Ação Desktop -->
         <div class="hidden md:flex items-center space-x-2">
           <button onclick="openInstallAppModal()" title="Baixar / Instalar App de Gestão no Celular" class="px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-600 text-gold-300 border border-purple-500 text-xs font-bold shadow flex items-center space-x-1.5 transition">
@@ -156,6 +161,20 @@
        CONTEÚDO PRINCIPAL (ABAS)
        ===================================================================== -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 md:p-6 overflow-x-hidden">
+
+    <!-- BANNER ALERTA DE PERMISSÃO DE NOTIFICAÇÃO NO CELULAR -->
+    <div id="notification-permission-banner" class="hidden bg-amber-500 text-acai-950 p-3 rounded-2xl shadow-md border-2 border-amber-300 flex items-center justify-between gap-3 mb-4 animate-bounce">
+      <div class="flex items-center space-x-2.5">
+        <span class="text-2xl shrink-0">🔔</span>
+        <div>
+          <h4 class="font-black text-xs uppercase tracking-wide">Ative os Alertas de Pedidos no Celular!</h4>
+          <p class="text-[11px] font-bold text-acai-900 leading-tight">Para receber notificações e som quando novos pedidos chegarem com o app em segundo plano.</p>
+        </div>
+      </div>
+      <button onclick="requestNotificationPermission()" class="bg-acai-950 hover:bg-black text-gold-400 font-black text-xs px-3.5 py-2 rounded-xl shadow shrink-0">
+        👉 ATIVAR AGORA
+      </button>
+    </div>
 
     <!-- ABA 1: KANBAN DE PEDIDOS AO VIVO -->
     <div id="tab-content-kanban" class="space-y-4">
