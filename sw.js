@@ -1,9 +1,9 @@
 /**
- * ROTTA DO AÇAÍ - SERVICE WORKER (v39)
+ * ROTTA DO AÇAÍ - SERVICE WORKER (v40)
  * Background Order Tracking & Push Notification Engine
  */
 
-const CACHE_NAME = 'rotta-acai-v39';
+const CACHE_NAME = 'rotta-acai-v40';
 const urlsToCache = [
   './',
   './index.html',
@@ -13,7 +13,8 @@ const urlsToCache = [
   './js/store.js',
   './js/app.js',
   './js/painel.js',
-  './manifest.json'
+  './manifest.json',
+  './manifest-painel.json'
 ];
 
 self.addEventListener('install', event => {

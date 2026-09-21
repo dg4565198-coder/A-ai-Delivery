@@ -1819,3 +1819,51 @@ window.updateFidelityLevelField = updateFidelityLevelField;
 window.filterCustomersListAdmin = filterCustomersListAdmin;
 window.editCustomerCups = editCustomerCups;
 
+// =============================================================================
+// INSTALAÇÃO DO PWA / APP DO PAINEL DE GESTÃO
+// =============================================================================
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const nativeContainer = document.getElementById('pwa-native-install-container');
+  if (nativeContainer) nativeContainer.classList.remove('hidden');
+});
+
+function openInstallAppModal() {
+  const modal = document.getElementById('install-app-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (deferredInstallPrompt) {
+      const nativeContainer = document.getElementById('pwa-native-install-container');
+      if (nativeContainer) nativeContainer.classList.remove('hidden');
+    }
+  }
+}
+
+function closeInstallAppModal() {
+  const modal = document.getElementById('install-app-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function triggerInstallApp() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('Usuário aceitou instalar o App de Gestão PWA');
+      }
+      deferredInstallPrompt = null;
+      closeInstallAppModal();
+    });
+  } else {
+    alert('Para instalar o app de gestão:\n\n• Android (Chrome): Toque nos 3 pontos ⠇ no topo do navegador e escolha "Instalar aplicativo" ou "Adicionar à tela inicial".\n\n• iPhone (Safari): Toque no botão de Compartilhar 📤 e escolha "Adicionar à Tela de Início".');
+  }
+}
+
+window.openInstallAppModal = openInstallAppModal;
+window.closeInstallAppModal = closeInstallAppModal;
+window.triggerInstallApp = triggerInstallApp;
+
+
