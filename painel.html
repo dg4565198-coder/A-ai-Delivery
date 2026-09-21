@@ -1048,6 +1048,45 @@
   <script src="js/store.js"></script>
   <script src="js/painel.js"></script>
   <script>
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const nativeContainer = document.getElementById('pwa-native-install-container');
+      if (nativeContainer) nativeContainer.classList.remove('hidden');
+    });
+
+    function openInstallAppModal() {
+      const modal = document.getElementById('install-app-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        if (deferredInstallPrompt) {
+          const nativeContainer = document.getElementById('pwa-native-install-container');
+          if (nativeContainer) nativeContainer.classList.remove('hidden');
+        }
+      }
+    }
+
+    function closeInstallAppModal() {
+      const modal = document.getElementById('install-app-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function triggerInstallApp() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('App instalado com sucesso!');
+          }
+          deferredInstallPrompt = null;
+          closeInstallAppModal();
+        });
+      } else {
+        alert('Para adicionar o app à sua tela inicial:\n\n• Android (Chrome): Toque nos 3 pontinhos ⠇ no topo do navegador e selecione "Instalar aplicativo" ou "Adicionar à tela inicial".\n\n• iPhone (Safari): Toque no ícone de Compartilhar 📤 e selecione "Adicionar à Tela de Início".');
+      }
+    }
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('sw.js').then(function(reg) {
