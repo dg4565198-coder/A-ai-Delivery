@@ -1221,5 +1221,70 @@ window.Store = {
       }
       if (callback) callback(customersMap);
     });
+  },
+
+  // ===========================================================================
+  // GESTÃO DE CAIXA FÍSICO (Abertura, Sangria, Suprimento e Meta)
+  // ===========================================================================
+  getCashRegisterData(dateStr) {
+    const key = `rotta_cash_reg_${dateStr}`;
+    let data = {
+      initialCash: 0,
+      sangrias: [],
+      suprimentos: []
+    };
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) data = JSON.parse(stored);
+    } catch (e) {}
+    return data;
+  },
+
+  saveCashRegisterData(dateStr, data) {
+    const key = `rotta_cash_reg_${dateStr}`;
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {}
+    const db = getDB();
+    if (db) {
+      db.ref(`cashRegisters/${dateStr}`).set(data).catch(e => console.warn('Firebase set cashRegister:', e));
+    }
+    return Promise.resolve(data);
+  },
+
+  addCashTransaction(dateStr, type, amount, reason) {
+    const data = this.getCashRegisterData(dateStr);
+    const item = {
+      id: 'tx_' + Date.now(),
+      amount: parseFloat(amount) || 0,
+      reason: reason || (type === 'sangria' ? 'Sangria de Caixa' : 'Entrada de Troco'),
+      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+    if (type === 'sangria') {
+      if (!data.sangrias) data.sangrias = [];
+      data.sangrias.push(item);
+    } else {
+      if (!data.suprimentos) data.suprimentos = [];
+      data.suprimentos.push(item);
+    }
+    return this.saveCashRegisterData(dateStr, data);
+  },
+
+  getDailyGoal() {
+    try {
+      const val = localStorage.getItem('rotta_daily_goal');
+      if (val !== null) return parseFloat(val) || 500;
+    } catch (e) {}
+    return 500;
+  },
+
+  setDailyGoal(goal) {
+    const val = parseFloat(goal) || 500;
+    try {
+      localStorage.setItem('rotta_daily_goal', val);
+    } catch (e) {}
+    const db = getDB();
+    if (db) db.ref('settings/dailyGoal').set(val).catch(() => {});
+    return val;
   }
 };

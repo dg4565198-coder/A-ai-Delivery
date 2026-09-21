@@ -277,24 +277,128 @@
     <!-- ABA 3: CAIXA DO DIA E MÉTRICAS -->
     <div id="tab-content-caixa" class="hidden space-y-6">
       
-      <!-- Cards Principais -->
+      <!-- Cabeçalho com Filtro de Data -->
+      <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-black text-gray-900 flex items-center gap-2">
+            <span>📊</span> Controle de Caixa & Métricas Financeiras
+          </h2>
+          <p class="text-xs text-gray-500 mt-0.5">Acompanhe faturamento, troco de gaveta, sangrias e itens mais vendidos.</p>
+        </div>
+
+        <!-- Filtro de Data e Atalhos -->
+        <div class="flex items-center space-x-2 w-full md:w-auto">
+          <div class="flex items-center space-x-1.5 bg-purple-50 p-1.5 rounded-xl border border-purple-100">
+            <span class="text-xs font-bold text-acai-900 pl-1">Data:</span>
+            <input type="date" id="caixa-date-filter" onchange="handleCaixaDateChange()" class="text-xs font-extrabold text-acai-900 bg-white border border-gray-300 rounded-lg px-2.5 py-1 focus:outline-none focus:border-acai-600">
+            <button onclick="setCaixaDateToday()" class="text-[11px] bg-acai-800 text-gold-400 font-bold px-2.5 py-1 rounded-lg hover:bg-acai-700 transition">
+              Hoje
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra da Meta Diária de Faturamento -->
+      <div class="bg-gradient-to-r from-purple-950 via-acai-900 to-acai-800 text-white p-4.5 rounded-2xl shadow-sm space-y-2 border border-purple-700">
+        <div class="flex items-center justify-between text-xs flex-wrap gap-2">
+          <div class="flex items-center space-x-2">
+            <span class="text-base">🎯</span>
+            <span class="font-extrabold uppercase tracking-wide text-purple-200">Meta de Faturamento</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span id="caixa-goal-text" class="font-black text-gold-400 text-sm">R$ 0,00 de R$ 500,00</span>
+            <button onclick="promptEditDailyGoal()" title="Alterar Meta Diária" class="text-[10px] bg-purple-800/80 hover:bg-purple-700 text-purple-200 font-bold px-2.5 py-1 rounded-lg border border-purple-600 transition">
+              ✏️ Alterar Meta
+            </button>
+          </div>
+        </div>
+        <div class="w-full bg-purple-950/80 rounded-full h-3.5 overflow-hidden border border-purple-700/80 p-0.5 shadow-inner">
+          <div id="caixa-goal-bar" class="bg-gradient-to-r from-gold-500 via-emerald-400 to-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <div class="flex justify-between text-[11px] text-purple-300 font-semibold">
+          <span id="caixa-goal-percent">0% Atingido</span>
+          <span id="caixa-goal-status">Em andamento 🚀</span>
+        </div>
+      </div>
+
+      <!-- Cards Principais de Faturamento -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-gradient-to-br from-acai-800 to-acai-900 text-white p-5 rounded-2xl shadow-lg border border-acai-700">
-          <span class="text-xs font-semibold text-purple-200 block uppercase tracking-wider">Faturamento Hoje</span>
+          <span class="text-xs font-semibold text-purple-200 block uppercase tracking-wider">Faturamento Total</span>
           <span id="metric-revenue-today" class="text-3xl font-black text-gold-400 mt-2 block">R$ 0,00</span>
-          <span class="text-[11px] text-purple-300 mt-1 block">Somatório de todos os pedidos finalizados</span>
+          <span id="metric-revenue-subtitle" class="text-[11px] text-purple-300 mt-1 block">Somatório de todos os pedidos finalizados</span>
         </div>
 
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wider">Total de Pedidos</span>
           <span id="metric-orders-count" class="text-3xl font-black text-acai-900 mt-2 block">0</span>
-          <span class="text-[11px] text-gray-400 mt-1 block">Pedidos realizados hoje</span>
+          <span class="text-[11px] text-gray-400 mt-1 block">Pedidos finalizados no período</span>
         </div>
 
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <span class="text-xs font-semibold text-gray-500 block uppercase tracking-wider">Ticket Médio</span>
           <span id="metric-average-ticket" class="text-3xl font-black text-emerald-600 mt-2 block">R$ 0,00</span>
           <span class="text-[11px] text-gray-400 mt-1 block">Média gasta por cliente</span>
+        </div>
+      </div>
+
+      <!-- Fluxo de Caixa Físico (Gaveta, Troco Inicial, Sangria e Suprimento) -->
+      <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
+          <div>
+            <h3 class="text-sm font-extrabold text-gray-900 flex items-center gap-2">
+              <span>💵</span> Fluxo de Caixa Físico (Gaveta do Balcão)
+            </h3>
+            <p class="text-xs text-gray-500 mt-0.5">Controle de troco inicial, sangrias (saídas) e suprimentos (entradas).</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="openCashTransactionModal('suprimento')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition flex items-center gap-1">
+              <span>➕</span> Suprimento (Troco)
+            </button>
+            <button onclick="openCashTransactionModal('sangria')" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow transition flex items-center gap-1">
+              <span>➖</span> Sangria (Saída)
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center">
+          <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <span class="text-[11px] text-gray-500 font-bold block">Troco Inicial</span>
+            <span id="caixa-initial-cash" class="text-sm font-black text-gray-800 block mt-1">R$ 0,00</span>
+            <button onclick="promptEditInitialCash()" class="text-[10px] text-acai-700 hover:text-acai-900 font-bold underline mt-0.5 block mx-auto">Editar Troco</button>
+          </div>
+
+          <div class="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
+            <span class="text-[11px] text-emerald-800 font-bold block">Vendas Dinheiro</span>
+            <span id="caixa-cash-sales" class="text-sm font-black text-emerald-900 block mt-1">R$ 0,00</span>
+            <span class="text-[10px] text-emerald-700 font-semibold block">do sistema</span>
+          </div>
+
+          <div class="bg-blue-50/70 p-3 rounded-xl border border-blue-100">
+            <span class="text-[11px] text-blue-800 font-bold block">(+) Suprimentos</span>
+            <span id="caixa-total-suprimentos" class="text-sm font-black text-blue-900 block mt-1">R$ 0,00</span>
+            <span class="text-[10px] text-blue-700 font-semibold block">entradas extras</span>
+          </div>
+
+          <div class="bg-rose-50/70 p-3 rounded-xl border border-rose-100">
+            <span class="text-[11px] text-rose-800 font-bold block">(-) Sangrias</span>
+            <span id="caixa-total-sangrias" class="text-sm font-black text-rose-900 block mt-1">R$ 0,00</span>
+            <span class="text-[10px] text-rose-700 font-semibold block">saídas de caixa</span>
+          </div>
+
+          <div class="col-span-2 md:col-span-1 bg-amber-50 p-3 rounded-xl border border-amber-200 shadow-sm">
+            <span class="text-[11px] text-amber-900 font-black block">SALDO NA GAVETA</span>
+            <span id="caixa-expected-drawer" class="text-base font-black text-amber-950 block mt-1">R$ 0,00</span>
+            <span class="text-[10px] text-amber-800 font-bold block">dinheiro esperado</span>
+          </div>
+        </div>
+
+        <!-- Histórico de Sangrias e Suprimentos -->
+        <div id="caixa-transactions-history" class="pt-3 border-t border-gray-100">
+          <span class="text-xs font-bold text-gray-700 block mb-2">Movimentações de Caixa do Dia:</span>
+          <div id="caixa-transactions-list" class="space-y-1.5 text-xs">
+            <p class="text-gray-400 italic text-center text-[11px] py-1">Nenhuma sangria ou suprimento lançado hoje.</p>
+          </div>
         </div>
       </div>
 
@@ -349,6 +453,39 @@
 
       </div>
 
+      <!-- Ranking dos Produtos e Insumos Mais Vendidos (Top 5) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Top Copos e Barcas -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-acai-900 flex items-center gap-1.5 border-b border-gray-100 pb-2">
+            <span>🍧</span> Copos & Barcas Mais Vendidos
+          </h3>
+          <div id="top-products-list" class="space-y-2 text-xs">
+            <p class="text-gray-400 italic text-center py-4">Nenhum pedido finalizado ainda</p>
+          </div>
+        </div>
+
+        <!-- Top Frutas Inclusas -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-amber-800 flex items-center gap-1.5 border-b border-gray-100 pb-2">
+            <span>🍓</span> Frutas Mais Pedidas
+          </h3>
+          <div id="top-fruits-list" class="space-y-2 text-xs">
+            <p class="text-gray-400 italic text-center py-4">Nenhum insumo registrado</p>
+          </div>
+        </div>
+
+        <!-- Top Complementos / Caldas -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-purple-900 flex items-center gap-1.5 border-b border-gray-100 pb-2">
+            <span>🥣</span> Complementos Mais Pedidos
+          </h3>
+          <div id="top-toppings-list" class="space-y-2 text-xs">
+            <p class="text-gray-400 italic text-center py-4">Nenhum complemento registrado</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Gráfico de Vendas de Barras com Filtros -->
       <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
@@ -382,7 +519,7 @@
           </h3>
           <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
             <span>📥</span>
-            <span>Imprimir / Exportar Relatório</span>
+            <span>Imprimir Relatório</span>
           </button>
         </div>
 
@@ -986,8 +1123,38 @@
             Salvar Alterações
           </button>
         </div>
+  <!-- MODAL DE LANÇAMENTO DE SANGRIA E SUPRIMENTO DE CAIXA -->
+  <div id="cash-transaction-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div id="cash-modal-header" class="bg-acai-900 text-white p-4 flex items-center justify-between">
+        <h4 id="cash-modal-title" class="font-bold text-sm text-white">Lançar Sangria / Suprimento</h4>
+        <button onclick="closeCashTransactionModal()" class="text-gray-300 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <form id="cash-transaction-form" onsubmit="handleSaveCashTransaction(event)" class="p-5 space-y-4 text-xs">
+        <input type="hidden" id="cash-tx-type" value="sangria">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Valor (R$) *</label>
+          <input id="cash-tx-amount" type="number" step="0.50" min="0.50" placeholder="Ex: 15.00" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700 font-bold" required>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Motivo / Descrição *</label>
+          <input id="cash-tx-reason" type="text" placeholder="Ex: Compra de Gelo ou Troco adicional" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700" required>
+        </div>
+
+        <div class="pt-3 border-t border-gray-100 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeCashTransactionModal()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button type="submit" id="cash-tx-submit-btn" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow">
+            Lançar Movimentação
+          </button>
+        </div>
       </form>
     </div>
+  </div>
+
   <!-- MODAL DE INSTALAÇÃO DO APP DE GESTÃO -->
   <div id="install-app-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-purple-200">

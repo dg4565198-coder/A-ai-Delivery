@@ -1114,41 +1114,233 @@ function renderSalesChart(orders, period) {
   });
 }
 
+function getSelectedCaixaDate() {
+  const dateInput = document.getElementById('caixa-date-filter');
+  if (dateInput && dateInput.value) {
+    return dateInput.value;
+  }
+  const today = new Date().toISOString().split('T')[0];
+  if (dateInput) dateInput.value = today;
+  return today;
+}
+
+function handleCaixaDateChange() {
+  renderFinancialMetrics();
+}
+
+function setCaixaDateToday() {
+  const today = new Date().toISOString().split('T')[0];
+  const dateInput = document.getElementById('caixa-date-filter');
+  if (dateInput) dateInput.value = today;
+  renderFinancialMetrics();
+}
+
+function promptEditDailyGoal() {
+  const currentGoal = window.Store.getDailyGoal();
+  const input = prompt('Definir Meta Diária de Faturamento (R$):', currentGoal);
+  if (input === null) return;
+  const num = parseFloat(input);
+  if (isNaN(num) || num <= 0) {
+    alert('Por favor, digite um valor numérico válido para a meta.');
+    return;
+  }
+  window.Store.setDailyGoal(num);
+  renderFinancialMetrics();
+  alert(`✅ Meta diária atualizada para ${window.Store.formatCurrency(num)}!`);
+}
+
+function promptEditInitialCash() {
+  const dateStr = getSelectedCaixaDate();
+  const data = window.Store.getCashRegisterData(dateStr);
+  const input = prompt(`Definir Troco Inicial (Abertura de Caixa em ${dateStr.split('-').reverse().join('/')}):`, data.initialCash || 0);
+  if (input === null) return;
+  const num = parseFloat(input);
+  if (isNaN(num) || num < 0) {
+    alert('Por favor, digite um valor numérico válido.');
+    return;
+  }
+  data.initialCash = num;
+  window.Store.saveCashRegisterData(dateStr, data).then(() => {
+    renderFinancialMetrics();
+  });
+}
+
+function openCashTransactionModal(type) {
+  const modal = document.getElementById('cash-transaction-modal');
+  const title = document.getElementById('cash-modal-title');
+  const typeInput = document.getElementById('cash-tx-type');
+  const submitBtn = document.getElementById('cash-tx-submit-btn');
+
+  if (typeInput) typeInput.value = type;
+
+  if (type === 'sangria') {
+    if (title) title.textContent = '🔻 Lançar Sangria (Saída de Caixa)';
+    if (submitBtn) {
+      submitBtn.textContent = '➖ Confirmar Sangria';
+      submitBtn.className = 'px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold shadow';
+    }
+  } else {
+    if (title) title.textContent = '🟢 Lançar Suprimento (Entrada de Troco)';
+    if (submitBtn) {
+      submitBtn.textContent = '➕ Confirmar Suprimento';
+      submitBtn.className = 'px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow';
+    }
+  }
+
+  const amountInput = document.getElementById('cash-tx-amount');
+  const reasonInput = document.getElementById('cash-tx-reason');
+  if (amountInput) amountInput.value = '';
+  if (reasonInput) reasonInput.value = '';
+
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeCashTransactionModal() {
+  const modal = document.getElementById('cash-transaction-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function handleSaveCashTransaction(e) {
+  e.preventDefault();
+  const type = document.getElementById('cash-tx-type').value;
+  const amount = parseFloat(document.getElementById('cash-tx-amount').value) || 0;
+  const reason = document.getElementById('cash-tx-reason').value.trim();
+  const dateStr = getSelectedCaixaDate();
+
+  if (amount <= 0) {
+    alert('Informe um valor válido maior que zero!');
+    return;
+  }
+
+  window.Store.addCashTransaction(dateStr, type, amount, reason).then(() => {
+    closeCashTransactionModal();
+    renderFinancialMetrics();
+    alert(`✅ ${type === 'sangria' ? 'Sangria' : 'Suprimento'} de ${window.Store.formatCurrency(amount)} lançado com sucesso!`);
+  });
+}
+
 function renderFinancialMetrics() {
-  const orders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
-  const totalRevenue = orders.reduce((s, o) => s + o.total, 0);
+  const selectedDate = getSelectedCaixaDate();
+  const allOrders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
+
+  const orders = allOrders.filter(o => {
+    if (!o.createdAt) return true;
+    const d = new Date(o.createdAt);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const orderDateStr = `${yyyy}-${mm}-${dd}`;
+    return orderDateStr === selectedDate;
+  });
+
+  const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
   const totalCount = orders.length;
   const avgTicket = totalCount > 0 ? totalRevenue / totalCount : 0;
 
+  const isToday = selectedDate === new Date().toISOString().split('T')[0];
+  const formattedDateLabel = isToday ? 'Hoje' : selectedDate.split('-').reverse().join('/');
+  
   if (document.getElementById('metric-revenue-today')) document.getElementById('metric-revenue-today').textContent = window.Store.formatCurrency(totalRevenue);
+  if (document.getElementById('metric-revenue-subtitle')) document.getElementById('metric-revenue-subtitle').textContent = `Total finalizado em ${formattedDateLabel}`;
   if (document.getElementById('metric-orders-count')) document.getElementById('metric-orders-count').textContent = totalCount;
   if (document.getElementById('metric-average-ticket')) document.getElementById('metric-average-ticket').textContent = window.Store.formatCurrency(avgTicket);
 
+  // 1. Meta Diária de Faturamento
+  const dailyGoal = window.Store.getDailyGoal();
+  const goalPercent = Math.min(100, Math.round((totalRevenue / dailyGoal) * 100));
+  if (document.getElementById('caixa-goal-text')) {
+    document.getElementById('caixa-goal-text').textContent = `${window.Store.formatCurrency(totalRevenue)} de ${window.Store.formatCurrency(dailyGoal)}`;
+  }
+  if (document.getElementById('caixa-goal-bar')) {
+    document.getElementById('caixa-goal-bar').style.width = `${goalPercent}%`;
+  }
+  if (document.getElementById('caixa-goal-percent')) {
+    document.getElementById('caixa-goal-percent').textContent = `${goalPercent}% Atingido`;
+  }
+  if (document.getElementById('caixa-goal-status')) {
+    if (goalPercent >= 100) {
+      document.getElementById('caixa-goal-status').textContent = '🎉 META ALCANÇADA!';
+    } else {
+      document.getElementById('caixa-goal-status').textContent = `Faltam ${window.Store.formatCurrency(Math.max(0, dailyGoal - totalRevenue))} 🚀`;
+    }
+  }
+
+  // 2. Fluxo de Caixa Físico (Troco Inicial, Sangrias, Suprimentos)
+  const cashRegData = window.Store.getCashRegisterData(selectedDate);
+  const initialCash = cashRegData.initialCash || 0;
+  
+  const cashOrders = orders.filter(o => o.paymentMethod === 'dinheiro');
+  const cashSalesTotal = cashOrders.reduce((s, o) => s + (o.total || 0), 0);
+
+  const sangriasList = cashRegData.sangrias || [];
+  const suprimentosList = cashRegData.suprimentos || [];
+  const totalSangrias = sangriasList.reduce((s, item) => s + (item.amount || 0), 0);
+  const totalSuprimentos = suprimentosList.reduce((s, item) => s + (item.amount || 0), 0);
+
+  const expectedDrawer = initialCash + cashSalesTotal + totalSuprimentos - totalSangrias;
+
+  if (document.getElementById('caixa-initial-cash')) document.getElementById('caixa-initial-cash').textContent = window.Store.formatCurrency(initialCash);
+  if (document.getElementById('caixa-cash-sales')) document.getElementById('caixa-cash-sales').textContent = window.Store.formatCurrency(cashSalesTotal);
+  if (document.getElementById('caixa-total-suprimentos')) document.getElementById('caixa-total-suprimentos').textContent = window.Store.formatCurrency(totalSuprimentos);
+  if (document.getElementById('caixa-total-sangrias')) document.getElementById('caixa-total-sangrias').textContent = window.Store.formatCurrency(totalSangrias);
+  if (document.getElementById('caixa-expected-drawer')) document.getElementById('caixa-expected-drawer').textContent = window.Store.formatCurrency(expectedDrawer);
+
+  // Renderizar Lista de Movimentações
+  const txHistoryContainer = document.getElementById('caixa-transactions-list');
+  if (txHistoryContainer) {
+    const allTxs = [
+      ...sangriasList.map(t => ({ ...t, type: 'sangria' })),
+      ...suprimentosList.map(t => ({ ...t, type: 'suprimento' }))
+    ].sort((a, b) => (b.id || 0).localeCompare(a.id || 0));
+
+    if (allTxs.length === 0) {
+      txHistoryContainer.innerHTML = `<p class="text-gray-400 italic text-center text-[11px] py-1">Nenhuma sangria ou suprimento lançado nesta data.</p>`;
+    } else {
+      txHistoryContainer.innerHTML = allTxs.map(t => `
+        <div class="flex items-center justify-between bg-gray-50 p-2 rounded-lg border border-gray-200">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs">${t.type === 'sangria' ? '🔻' : '🟢'}</span>
+            <div>
+              <span class="font-bold ${t.type === 'sangria' ? 'text-rose-700' : 'text-emerald-700'}">${t.type === 'sangria' ? 'Sangria' : 'Suprimento'}: ${t.reason}</span>
+              <span class="text-[10px] text-gray-400 block">${t.time || ''}</span>
+            </div>
+          </div>
+          <span class="font-black text-xs ${t.type === 'sangria' ? 'text-rose-700' : 'text-emerald-700'}">
+            ${t.type === 'sangria' ? '-' : '+'}${window.Store.formatCurrency(t.amount)}
+          </span>
+        </div>
+      `).join('');
+    }
+  }
+
+  // 3. Vendas por Pagamento & Recebimento
   const pix = orders.filter(o => o.paymentMethod === 'pix');
   const combined = orders.filter(o => o.paymentMethod === 'combinado');
   const cash = orders.filter(o => o.paymentMethod === 'dinheiro');
 
-  if (document.getElementById('metric-pix-total')) document.getElementById('metric-pix-total').textContent = window.Store.formatCurrency(pix.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-pix-total')) document.getElementById('metric-pix-total').textContent = window.Store.formatCurrency(pix.reduce((s, o) => s + (o.total || 0), 0));
   if (document.getElementById('metric-pix-count')) document.getElementById('metric-pix-count').textContent = pix.length + ' ped';
-  if (document.getElementById('metric-card-total')) document.getElementById('metric-card-total').textContent = window.Store.formatCurrency(combined.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-card-total')) document.getElementById('metric-card-total').textContent = window.Store.formatCurrency(combined.reduce((s, o) => s + (o.total || 0), 0));
   if (document.getElementById('metric-card-count')) document.getElementById('metric-card-count').textContent = combined.length + ' ped';
-  if (document.getElementById('metric-cash-total')) document.getElementById('metric-cash-total').textContent = window.Store.formatCurrency(cash.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-cash-total')) document.getElementById('metric-cash-total').textContent = window.Store.formatCurrency(cashSalesTotal);
   if (document.getElementById('metric-cash-count')) document.getElementById('metric-cash-count').textContent = cash.length + ' ped';
 
-  // Por tipo de entrega
   const delivery = orders.filter(o => o.deliveryType === 'entrega');
   const pickup = orders.filter(o => (o.deliveryType || 'retirada') === 'retirada');
 
-  if (document.getElementById('metric-delivery-total')) document.getElementById('metric-delivery-total').textContent = window.Store.formatCurrency(delivery.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-delivery-total')) document.getElementById('metric-delivery-total').textContent = window.Store.formatCurrency(delivery.reduce((s, o) => s + (o.total || 0), 0));
   if (document.getElementById('metric-delivery-count')) document.getElementById('metric-delivery-count').textContent = delivery.length + ' ped';
-  if (document.getElementById('metric-pickup-total')) document.getElementById('metric-pickup-total').textContent = window.Store.formatCurrency(pickup.reduce((s, o) => s + o.total, 0));
+  if (document.getElementById('metric-pickup-total')) document.getElementById('metric-pickup-total').textContent = window.Store.formatCurrency(pickup.reduce((s, o) => s + (o.total || 0), 0));
   if (document.getElementById('metric-pickup-count')) document.getElementById('metric-pickup-count').textContent = pickup.length + ' ped';
 
-  // Tabela de transações
+  // 4. Ranking dos Produtos & Insumos Mais Vendidos (Top Vendas)
+  renderTopSellers(orders);
+
+  // 5. Tabela de Transações
   const tbody = document.getElementById('sales-table-body');
   if (tbody) {
     if (orders.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-400 font-semibold text-center">Nenhum pedido registrado hoje.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-400 font-semibold text-center">Nenhum pedido finalizado em ${formattedDateLabel}.</td></tr>`;
     } else {
       tbody.innerHTML = orders.map(o => `
         <tr class="hover:bg-purple-50/50 transition">
@@ -1170,12 +1362,71 @@ function renderFinancialMetrics() {
     }
   }
 
-  // Renderizar gráfico
+  // Gráfico de Vendas
   try {
     renderSalesChart(orders, currentChartPeriod);
   } catch (err) {
     console.error("Erro ao renderizar gráfico de vendas:", err);
   }
+}
+
+function renderTopSellers(orders) {
+  const prodCounts = {};
+  const fruitCounts = {};
+  const toppingCounts = {};
+
+  orders.forEach(order => {
+    if (!Array.isArray(order.items)) return;
+    order.items.forEach(item => {
+      const q = parseInt(item.quantity, 10) || 1;
+      const pName = item.name || 'Produto';
+      prodCounts[pName] = (prodCounts[pName] || 0) + q;
+
+      if (Array.isArray(item.selectedFruits)) {
+        item.selectedFruits.forEach(f => {
+          const fName = (typeof f === 'string' ? f : f.name) || '';
+          if (fName) fruitCounts[fName] = (fruitCounts[fName] || 0) + q;
+        });
+      }
+
+      if (Array.isArray(item.selectedToppings)) {
+        item.selectedToppings.forEach(t => {
+          const tName = (typeof t === 'string' ? t : t.name) || '';
+          if (tName) toppingCounts[tName] = (toppingCounts[tName] || 0) + q;
+        });
+      }
+
+      if (item.selectedCalda) {
+        const cName = (typeof item.selectedCalda === 'string' ? item.selectedCalda : item.selectedCalda.name) || '';
+        if (cName && !cName.toLowerCase().includes('sem calda')) {
+          toppingCounts[`Calda: ${cName}`] = (toppingCounts[`Calda: ${cName}`] || 0) + q;
+        }
+      }
+    });
+  });
+
+  const renderRankingList = (containerId, dataMap, badgeColorClass) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const sorted = Object.entries(dataMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (sorted.length === 0) {
+      container.innerHTML = `<p class="text-gray-400 italic text-center py-3 text-[11px]">Sem registros suficientes no período</p>`;
+      return;
+    }
+    container.innerHTML = sorted.map(([name, count], index) => `
+      <div class="flex items-center justify-between bg-gray-50 p-2 rounded-xl border border-gray-100">
+        <div class="flex items-center space-x-2 truncate">
+          <span class="w-5 h-5 rounded-full ${badgeColorClass} text-white font-black text-[10px] flex items-center justify-center shrink-0 shadow-sm">${index + 1}</span>
+          <span class="font-bold text-gray-800 text-xs truncate">${name}</span>
+        </div>
+        <span class="font-black text-xs text-acai-900 shrink-0 bg-white px-2 py-0.5 rounded-md border border-gray-200">${count}x</span>
+      </div>
+    `).join('');
+  };
+
+  renderRankingList('top-products-list', prodCounts, 'bg-acai-800');
+  renderRankingList('top-fruits-list', fruitCounts, 'bg-amber-600');
+  renderRankingList('top-toppings-list', toppingCounts, 'bg-purple-700');
 }
 
 // ==========================================================================
@@ -1865,5 +2116,15 @@ function triggerInstallApp() {
 window.openInstallAppModal = openInstallAppModal;
 window.closeInstallAppModal = closeInstallAppModal;
 window.triggerInstallApp = triggerInstallApp;
+
+window.getSelectedCaixaDate = getSelectedCaixaDate;
+window.handleCaixaDateChange = handleCaixaDateChange;
+window.setCaixaDateToday = setCaixaDateToday;
+window.promptEditDailyGoal = promptEditDailyGoal;
+window.promptEditInitialCash = promptEditInitialCash;
+window.openCashTransactionModal = openCashTransactionModal;
+window.closeCashTransactionModal = closeCashTransactionModal;
+window.handleSaveCashTransaction = handleSaveCashTransaction;
+
 
 
