@@ -49,86 +49,96 @@
 </head>
 <body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col antialiased">
 
-  <!-- =====================================================================
-       TOPBAR DO PAINEL DA LOJISTA
-       ===================================================================== -->
-  <header class="bg-acai-900 text-white sticky top-0 z-40 border-b border-acai-700/80 shadow-md">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+  <header class="bg-acai-900 text-white sticky top-0 z-40 border-b border-acai-700/80 shadow-md max-w-full overflow-hidden">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
       
-      <!-- Identificação da Loja -->
-      <div class="flex items-center space-x-3">
-        <img src="assets/logo.jpg" alt="Rotta do Açaí" class="w-10 h-10 rounded-full border-2 border-gold-500 object-cover shadow">
-        <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="font-extrabold text-base text-white">Rotta do Açaí</h1>
-            <span class="text-[11px] bg-purple-800/80 text-gold-400 font-semibold px-2 py-0.5 rounded border border-purple-600">
-              Painel de Gestão
-            </span>
+      <!-- Identificação da Loja & Ações Rápida Mobile -->
+      <div class="flex items-center justify-between w-full md:w-auto">
+        <div class="flex items-center space-x-2.5">
+          <img src="assets/logo.jpg" alt="Rotta do Açaí" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gold-500 object-cover shadow shrink-0">
+          <div>
+            <div class="flex items-center space-x-1.5 flex-wrap">
+              <h1 class="font-extrabold text-sm sm:text-base text-white">Rotta do Açaí</h1>
+              <span class="text-[10px] sm:text-[11px] bg-purple-800/80 text-gold-400 font-semibold px-2 py-0.5 rounded border border-purple-600">
+                Painel
+              </span>
+            </div>
+            <p class="text-[11px] sm:text-xs text-purple-200">Controle de Pedidos</p>
           </div>
-          <p class="text-xs text-purple-200">Controle de Pedidos & Cozinha</p>
+        </div>
+
+        <!-- Botões de Ação Rápida Versão Mobile -->
+        <div class="flex items-center gap-1.5 md:hidden">
+          <button onclick="testAudioAlert()" title="Testar toque de novo pedido" class="p-2 rounded-xl bg-acai-800 text-gold-400 border border-acai-600 text-xs font-semibold hover:bg-acai-700 transition">
+            🔔
+          </button>
+          <a href="index.html" target="_blank" title="Ver Cardápio" class="p-2 rounded-xl bg-gold-500 text-acai-950 font-extrabold text-xs shadow hover:bg-gold-400 transition">
+            📱
+          </a>
+          <button onclick="handlePanelLogout()" title="Sair do Painel" class="p-2 rounded-xl bg-red-900/60 text-red-200 border border-red-700/60 text-xs font-semibold hover:bg-red-800 transition">
+            🚪
+          </button>
         </div>
       </div>
 
-      <!-- Controles Rápidos do Cabeçalho -->
-      <div class="flex items-center space-x-3">
+      <!-- Status do Firebase e da Loja -->
+      <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full md:w-auto">
         <!-- Status do Banco de Dados Firebase -->
-        <div id="firebase-status-badge" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-purple-950/80 text-yellow-300 border border-purple-700/60 shadow">
-          <span id="firebase-status-dot" class="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
-          <span id="firebase-status-text">Conectando ao Firebase...</span>
+        <div id="firebase-status-badge" class="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-purple-950/80 text-yellow-300 border border-purple-700/60 shadow shrink-0 truncate">
+          <span id="firebase-status-dot" class="w-2 h-2 rounded-full bg-yellow-400 animate-ping shrink-0"></span>
+          <span id="firebase-status-text" class="truncate">Conectando ao Firebase...</span>
         </div>
 
         <!-- Chave Liga/Desliga Loja Aberta -->
-        <button id="btn-toggle-store-status" onclick="toggleStoreOpenStatus()" class="flex items-center space-x-2 px-3.5 py-1.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow transition">
-          <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+        <button id="btn-toggle-store-status" onclick="toggleStoreOpenStatus()" class="flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-3 py-1.5 rounded-xl font-bold text-[11px] sm:text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow transition shrink-0">
+          <span class="w-2 h-2 rounded-full bg-white animate-pulse shrink-0"></span>
           <span id="store-status-text">Loja Aberta</span>
         </button>
 
-        <!-- Testar Alerta Sonoro -->
-        <button onclick="testAudioAlert()" title="Testar toque de novo pedido" class="px-3 py-1.5 rounded-xl bg-acai-800 hover:bg-acai-700 text-gold-400 border border-acai-600 text-xs font-semibold flex items-center space-x-1.5 transition">
-          <span>🔔</span>
-          <span class="hidden sm:inline">Testar Som</span>
-        </button>
-
-        <!-- Abrir Cardápio do Cliente -->
-        <a href="index.html" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-acai-950 font-extrabold text-xs shadow flex items-center space-x-1.5 transition">
-          <span>📱</span>
-          <span>Ver Cardápio</span>
-        </a>
-
-        <!-- Botão Sair / Logout -->
-        <button onclick="handlePanelLogout()" title="Sair do Painel" class="px-3 py-1.5 rounded-xl bg-red-900/60 hover:bg-red-800 text-red-200 border border-red-700/60 text-xs font-semibold flex items-center space-x-1 transition">
-          <span>🚪</span>
-          <span class="hidden sm:inline">Sair</span>
-        </button>
+        <!-- Botões de Ação Desktop -->
+        <div class="hidden md:flex items-center space-x-2">
+          <button onclick="testAudioAlert()" title="Testar toque de novo pedido" class="px-3 py-1.5 rounded-xl bg-acai-800 hover:bg-acai-700 text-gold-400 border border-acai-600 text-xs font-semibold flex items-center space-x-1.5 transition">
+            <span>🔔</span>
+            <span>Testar Som</span>
+          </button>
+          <a href="index.html" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-acai-950 font-extrabold text-xs shadow flex items-center space-x-1.5 transition">
+            <span>📱</span>
+            <span>Ver Cardápio</span>
+          </a>
+          <button onclick="handlePanelLogout()" title="Sair do Painel" class="px-3 py-1.5 rounded-xl bg-red-900/60 hover:bg-red-800 text-red-200 border border-red-700/60 text-xs font-semibold flex items-center space-x-1 transition">
+            <span>🚪</span>
+            <span>Sair</span>
+          </button>
+        </div>
       </div>
 
     </div>
 
-    <!-- Navegação por Abas -->
-    <div class="max-w-7xl mx-auto px-4 flex space-x-1 overflow-x-auto border-t border-acai-800 pt-1 pb-1">
-      <button onclick="switchTab('kanban')" id="tab-btn-kanban" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition bg-acai-800 text-gold-400 flex items-center space-x-2">
+    <!-- Navegação por Abas (Rolagem Horizontal sem quebrar texto) -->
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 flex space-x-1.5 overflow-x-auto border-t border-acai-800 pt-1.5 pb-1.5 no-scrollbar max-w-full">
+      <button onclick="switchTab('kanban')" id="tab-btn-kanban" class="tab-button px-3.5 py-2 text-xs font-bold rounded-xl transition bg-acai-800 text-gold-400 flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
         <span>📋 Pedidos ao Vivo</span>
         <span id="kanban-new-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.2 rounded-full hidden">0</span>
       </button>
-      <button onclick="switchTab('estoque')" id="tab-btn-estoque" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+      <button onclick="switchTab('estoque')" id="tab-btn-estoque" class="tab-button px-3.5 py-2 text-xs font-bold rounded-xl transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
         <span>🥣 Cardápio & Estoque</span>
       </button>
-      <button onclick="switchTab('horarios')" id="tab-btn-horarios" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+      <button onclick="switchTab('horarios')" id="tab-btn-horarios" class="tab-button px-3.5 py-2 text-xs font-bold rounded-xl transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
         <span>🕒 Horários</span>
       </button>
-      <button onclick="switchTab('promocoes')" id="tab-btn-promocoes" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+      <button onclick="switchTab('promocoes')" id="tab-btn-promocoes" class="tab-button px-3.5 py-2 text-xs font-bold rounded-xl transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
         <span>📢 Promoções & Push</span>
       </button>
-      <button onclick="switchTab('avaliacoes')" id="tab-btn-avaliacoes" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+      <button onclick="switchTab('avaliacoes')" id="tab-btn-avaliacoes" class="tab-button px-3.5 py-2 text-xs font-bold rounded-xl transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
         <span>⭐ Avaliações</span>
       </button>
-      <button onclick="switchTab('caixa')" id="tab-btn-caixa" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+      <button onclick="switchTab('caixa')" id="tab-btn-caixa" class="tab-button px-3.5 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
         <span>📊 Caixa do Dia</span>
       </button>
-      <button onclick="switchTab('fidelidade')" id="tab-btn-fidelidade" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+      <button onclick="switchTab('fidelidade')" id="tab-btn-fidelidade" class="tab-button px-3.5 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
         <span>👥 Clientes & Fidelidade</span>
       </button>
-      <button onclick="switchTab('config')" id="tab-btn-config" class="tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5">
+      <button onclick="switchTab('config')" id="tab-btn-config" class="tab-button px-3.5 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5 shrink-0 whitespace-nowrap">
         <span>⚙️ Configurações</span>
       </button>
     </div>
@@ -137,16 +147,16 @@
   <!-- =====================================================================
        CONTEÚDO PRINCIPAL (ABAS)
        ===================================================================== -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 md:p-6 overflow-x-hidden">
 
     <!-- ABA 1: KANBAN DE PEDIDOS AO VIVO -->
     <div id="tab-content-kanban" class="space-y-4">
-      <div class="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+      <div class="bg-white p-3 sm:p-3.5 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
         <div class="flex items-center space-x-2">
           <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
           <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Monitorando Pedidos em Tempo Real</span>
         </div>
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
           <button onclick="renderKanbanBoard()" class="text-xs text-acai-700 hover:text-acai-900 font-bold px-3 py-1.5 rounded-lg border border-purple-200 hover:bg-purple-50 transition">
             🔄 Atualizar
           </button>
