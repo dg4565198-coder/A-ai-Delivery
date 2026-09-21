@@ -1902,6 +1902,85 @@ function claimFidelityReward(code, title) {
   alert(`🎉 Parabéns! Para resgatar o seu "${title}", informe o cupom [${code}] na observação do seu pedido ou fale com a loja no WhatsApp!`);
 }
 
+function getTodayBusinessHoursText(config) {
+  if (!config) return 'Terça a Domingo • 14:00 às 22:00';
+
+  const dayKeys = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+  const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+  const now = new Date();
+  const dayIndex = now.getDay();
+  const todayKey = dayKeys[dayIndex];
+  const todayName = dayNames[dayIndex];
+
+  if (config.weeklyHours && config.weeklyHours[todayKey]) {
+    const todayData = config.weeklyHours[todayKey];
+    if (!todayData.active || todayData.hours === 'Fechado') {
+      return `Hoje (${todayName}) • Fechado`;
+    }
+    return `Hoje (${todayName}) • ${todayData.hours}`;
+  }
+
+  return config.businessHours || 'Terça a Domingo • 14:00 às 22:00';
+}
+
+function openWeeklyHoursModal() {
+  const config = window.Store.getConfig();
+  const listElem = document.getElementById('weekly-hours-modal-list');
+  if (listElem) {
+    const dayKeys = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+    const dayLabels = {
+      segunda: 'Segunda-feira',
+      terca: 'Terça-feira',
+      quarta: 'Quarta-feira',
+      quinta: 'Quinta-feira',
+      sexta: 'Sexta-feira',
+      sabado: 'Sábado',
+      domingo: 'Domingo'
+    };
+
+    const dayIndexToday = new Date().getDay();
+    const todayKeyMap = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const currentTodayKey = todayKeyMap[dayIndexToday];
+
+    const weekly = config.weeklyHours || {
+      segunda: { active: false, hours: 'Fechado' },
+      terca: { active: true, hours: '14:00 às 22:00' },
+      quarta: { active: true, hours: '14:00 às 22:00' },
+      quinta: { active: true, hours: '14:00 às 22:00' },
+      sexta: { active: true, hours: '14:00 às 22:00' },
+      sabado: { active: true, hours: '14:00 às 22:00' },
+      domingo: { active: true, hours: '14:00 às 22:00' }
+    };
+
+    listElem.innerHTML = dayKeys.map(key => {
+      const isToday = (key === currentTodayKey);
+      const dayData = weekly[key] || { active: true, hours: '14:00 às 22:00' };
+      const isOpenDay = dayData.active && dayData.hours !== 'Fechado';
+
+      return `
+        <div class="flex items-center justify-between p-2.5 rounded-xl transition ${isToday ? 'bg-purple-100 border border-acai-500/40 font-bold' : 'bg-gray-50 border border-gray-100'}">
+          <div class="flex items-center space-x-2">
+            <span>${isToday ? '⭐' : (isOpenDay ? '🟢' : '🔴')}</span>
+            <span class="${isToday ? 'text-acai-900 font-extrabold' : 'text-gray-800'}">${dayLabels[key]}${isToday ? ' (Hoje)' : ''}</span>
+          </div>
+          <span class="${isOpenDay ? 'text-emerald-700 font-bold' : 'text-rose-600 font-semibold'}">
+            ${isOpenDay ? dayData.hours : 'Fechado'}
+          </span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const modal = document.getElementById('weekly-hours-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeWeeklyHoursModal() {
+  const modal = document.getElementById('weekly-hours-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
 // Funções Globais
 window.filterCategory = filterCategory;
 window.handleProductClick = handleProductClick;

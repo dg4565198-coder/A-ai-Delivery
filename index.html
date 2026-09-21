@@ -616,7 +616,7 @@
   </div>
 
   <!-- Modal Horários da Semana (Visão do Cliente) -->
-  <div id="weekly-hours-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden flex items-center justify-center p-4">
+  <div id="weekly-hours-modal" onclick="if(event.target === this) closeWeeklyHoursModal()" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-gray-900 border border-purple-100">
       <div class="flex items-center justify-between border-b border-gray-100 pb-3">
         <div class="flex items-center space-x-2">
