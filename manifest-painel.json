@@ -1,8 +1,10 @@
 {
+  "id": "rotta-acai-painel",
   "name": "Rotta do Açaí - Painel de Gestão",
   "short_name": "Rotta Painel",
   "description": "Painel de Gestão & Controle de Pedidos da Rotta do Açaí",
   "start_url": "painel.html",
+  "scope": "./painel.html",
   "display": "standalone",
   "background_color": "#1e022b",
   "theme_color": "#4c0867",
