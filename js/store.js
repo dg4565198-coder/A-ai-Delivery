@@ -627,12 +627,16 @@ window.Store = {
     return newOrder;
   },
 
-  async updateOrderStatus(orderId, newStatus) {
+  async updateOrderStatus(orderId, newStatus, cancelReason = null) {
     const db = getDB();
     const updateObj = {
       status: newStatus,
       updatedAt: new Date().toISOString()
     };
+
+    if (newStatus === 'cancelado' && cancelReason) {
+      updateObj.cancelReason = cancelReason;
+    }
 
     if (newStatus === 'concluido') {
       let order = this.getOrderById(orderId);

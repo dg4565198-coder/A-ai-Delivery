@@ -1224,7 +1224,7 @@ function setupOrderNotificationListeners() {
             ? `🛵 Seu Pedido ${order.orderNumber} saiu para entrega! Fique atento(a)!`
             : `🏬 Seu Pedido ${order.orderNumber} está pronto para retirada no balcão!`,
           concluido: `✅ Pedido ${order.orderNumber} concluído! Por favor, avalie sua experiência!`,
-          cancelado: `❌ Pedido ${order.orderNumber} foi cancelado pela loja.`
+          cancelado: `❌ Pedido ${order.orderNumber} foi cancelado pela loja.\nMotivo: "${order.cancelReason || 'Sem motivo informado'}"`
         };
 
         if (messages[order.status]) {
@@ -1345,6 +1345,20 @@ function renderMyOrders() {
           <span class="text-gray-600">Total do Pedido:</span>
           <span class="text-acai-900 text-sm">${window.Store.formatCurrency(order.total)}</span>
         </div>
+
+        ${order.status === 'cancelado' ? `
+          <div class="bg-rose-50 p-3 rounded-xl border border-rose-200 text-xs space-y-1">
+            <div class="font-extrabold text-rose-800 flex items-center space-x-1">
+              <span>❌</span><span>Pedido Cancelado pela Loja</span>
+            </div>
+            <p class="text-rose-700 font-medium">Motivo: "${order.cancelReason || 'Sem motivo informado'}"</p>
+            <div class="pt-1">
+              <a href="https://api.whatsapp.com/send?phone=557399643417&text=${encodeURIComponent('Olá, gostaria de falar sobre o meu pedido cancelado ' + (order.orderNumber || '#'))}" target="_blank" class="inline-flex items-center space-x-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition">
+                <span>💬</span><span>Falar com a Loja no WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        ` : ''}
 
         ${isUnratedConcluido ? `
           <button onclick="closeMyOrdersModal(); openRatingModal({ id: '${order.id}', orderNumber: '${order.orderNumber || '#'}' })" class="w-full mt-2 bg-gold-500 hover:bg-gold-400 text-acai-950 font-black py-2 rounded-xl text-xs shadow transition">

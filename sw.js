@@ -3,7 +3,7 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v47';
+const CACHE_NAME = 'rotta-acai-v48';
 const urlsToCache = [
   './',
   './index.html',
@@ -130,7 +130,7 @@ function checkTrackedOrdersStatus() {
               ? `🛵 Seu Pedido ${order.orderNumber || ''} saiu para entrega! Fique atento(a)!`
               : `🏬 Seu Pedido ${order.orderNumber || ''} está pronto para retirada no balcão!`,
             concluido: `✅ Pedido ${order.orderNumber || ''} entregue! Por favor, avalie sua experiência!`,
-            cancelado: `❌ Pedido ${order.orderNumber || ''} foi cancelado pela loja.`
+            cancelado: `❌ Pedido ${order.orderNumber || ''} foi cancelado pela loja.\nMotivo: "${order.cancelReason || 'Sem motivo informado'}"`
           };
 
           if (messages[newStatus]) {
@@ -138,9 +138,10 @@ function checkTrackedOrdersStatus() {
               body: messages[newStatus],
               icon: 'assets/logo.jpg',
               badge: 'assets/logo.jpg',
-              vibrate: [200, 100, 200, 100, 200],
+              vibrate: newStatus === 'cancelado' ? [500, 200, 500, 200, 500] : [200, 100, 200, 100, 200],
               tag: 'rotta-status-' + orderId + '-' + newStatus,
-              renotify: false,
+              renotify: true,
+              requireInteraction: newStatus === 'cancelado',
               data: { url: './', orderId: orderId, status: newStatus }
             });
           }
