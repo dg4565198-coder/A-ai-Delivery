@@ -1,9 +1,9 @@
 /**
- * ROTTA DO AÇAÍ - SERVICE WORKER (v45)
- * Background Order Tracking & Push Notification Engine
+ * ROTTA DO AÇAÍ - SERVICE WORKER (v46)
+ * Background Order Tracking & Realtime Push Notification Engine (SSE + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v45';
+const CACHE_NAME = 'rotta-acai-v46';
 const urlsToCache = [
   './',
   './index.html',
@@ -67,6 +67,9 @@ self.addEventListener('fetch', event => {
 // =========================================================================
 let _trackedOrdersMap = {}; // { orderId: lastKnownStatus }
 let _knownLojistaOrders = null;
+let _isStreamInitialized = false;
+let _streamAbortController = null;
+let _sseReconnectTimeout = null;
 
 self.addEventListener('message', event => {
   if (!event.data) return;
@@ -89,6 +92,10 @@ self.addEventListener('message', event => {
         }
       });
     }).catch(() => {});
+  }
+
+  if (event.data.type === 'INIT_LOJISTA_STREAM') {
+    startFirebaseSSEStream();
   }
 });
 
@@ -153,7 +160,164 @@ function checkTrackedOrdersStatus() {
   });
 }
 
-// Monitoramento de Novos Pedidos para o Painel da Lojista (Mesmo com App Fechado)
+// Trigger mobile system notification for Lojista
+function triggerNewOrderNotification(order) {
+  if (!order) return;
+  const orderId = String(order.orderNumber || order.id || '');
+  if (!orderId) return;
+
+  if (_knownLojistaOrders === null) {
+    _knownLojistaOrders = new Set();
+  }
+
+  if (_knownLojistaOrders.has(orderId)) return;
+  _knownLojistaOrders.add(orderId);
+
+  if (order.status === 'preparo' || order.status === 'novo' || !order.status) {
+    const customerName = order.customer ? order.customer.name : 'Cliente';
+    const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : '';
+
+    self.registration.showNotification('🔔 NOVO PEDIDO CHEGOU! 🍇', {
+      body: `Pedido ${order.orderNumber || ''} • ${customerName} (${totalVal})\nToque para abrir a cozinha e preparar!`,
+      icon: 'assets/logo.jpg',
+      badge: 'assets/logo.jpg',
+      vibrate: [500, 200, 500, 200, 500, 200, 1000],
+      tag: 'new-order-' + orderId,
+      renotify: true,
+      requireInteraction: true,
+      data: { url: './painel.html', orderId: orderId }
+    });
+  }
+}
+
+// REALTIME HTTP STREAM (SSE) FROM FIREBASE REALTIME DATABASE
+function processStreamData(eventType, eventData) {
+  if (eventType === 'keep-alive' || !eventData || eventData === 'null') return;
+  
+  try {
+    const payload = JSON.parse(eventData);
+    const path = payload.path || '/';
+    const data = payload.data;
+
+    if (!data) return;
+
+    if (path === '/') {
+      let ordersList = [];
+      if (Array.isArray(data)) {
+        ordersList = data.filter(Boolean);
+      } else if (typeof data === 'object') {
+        ordersList = Object.values(data).filter(Boolean);
+      }
+
+      if (!_isStreamInitialized) {
+        if (_knownLojistaOrders === null) _knownLojistaOrders = new Set();
+        ordersList.forEach(o => {
+          if (o) {
+            const id = String(o.orderNumber || o.id || o.key || '');
+            if (id) _knownLojistaOrders.add(id);
+          }
+        });
+        _isStreamInitialized = true;
+      } else {
+        ordersList.forEach(o => {
+          if (o) triggerNewOrderNotification(o);
+        });
+      }
+    } else {
+      // Path is e.g. "/-N123" or "/0"
+      if (typeof data === 'object' && data !== null) {
+        if (data.orderNumber || data.id || data.status) {
+          if (!_isStreamInitialized) {
+            if (_knownLojistaOrders === null) _knownLojistaOrders = new Set();
+            const id = String(data.orderNumber || data.id || '');
+            if (id) _knownLojistaOrders.add(id);
+          } else {
+            triggerNewOrderNotification(data);
+          }
+        } else {
+          const subOrders = Object.values(data).filter(o => o && typeof o === 'object');
+          subOrders.forEach(o => {
+            if (!_isStreamInitialized) {
+              if (_knownLojistaOrders === null) _knownLojistaOrders = new Set();
+              const id = String(o.orderNumber || o.id || '');
+              if (id) _knownLojistaOrders.add(id);
+            } else {
+              triggerNewOrderNotification(o);
+            }
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('SW SSE Parse Error:', e);
+  }
+}
+
+async function startFirebaseSSEStream() {
+  if (_streamAbortController) {
+    try { _streamAbortController.abort(); } catch {}
+  }
+  _streamAbortController = new AbortController();
+
+  try {
+    const response = await fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/orders.json', {
+      headers: { 'Accept': 'text/event-stream' },
+      signal: _streamAbortController.signal
+    });
+
+    if (!response.ok || !response.body) {
+      scheduleSSEReconnect();
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const blocks = buffer.split('\n\n');
+      buffer = blocks.pop() || '';
+
+      for (const block of blocks) {
+        if (!block.trim()) continue;
+        let eventType = 'put';
+        let eventData = null;
+
+        const lines = block.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventType = line.replace('event:', '').trim();
+          } else if (line.startsWith('data:')) {
+            eventData = line.replace('data:', '').trim();
+          }
+        }
+
+        if (eventData) {
+          processStreamData(eventType, eventData);
+        }
+      }
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.warn('SW SSE Connection error:', err);
+    }
+  }
+
+  scheduleSSEReconnect();
+}
+
+function scheduleSSEReconnect() {
+  if (_sseReconnectTimeout) clearTimeout(_sseReconnectTimeout);
+  _sseReconnectTimeout = setTimeout(() => {
+    startFirebaseSSEStream();
+  }, 5000);
+}
+
+// Fallback interval check for Lojista orders
 function checkNewOrdersForLojista() {
   fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/orders.json')
     .then(res => res.json())
@@ -163,38 +327,19 @@ function checkNewOrdersForLojista() {
 
       if (_knownLojistaOrders === null) {
         _knownLojistaOrders = new Set(ordersList.map(o => String(o.orderNumber || o.id)));
+        _isStreamInitialized = true;
         return;
       }
 
       ordersList.forEach(order => {
-        const orderId = String(order.orderNumber || order.id);
-        if (!orderId) return;
-
-        if (!_knownLojistaOrders.has(orderId)) {
-          _knownLojistaOrders.add(orderId);
-
-          if (order.status === 'preparo' || !order.status) {
-            const customerName = order.customer ? order.customer.name : 'Cliente';
-            const totalVal = order.total ? `R$ ${order.total.toFixed(2).replace('.', ',')}` : '';
-
-            self.registration.showNotification('🔔 NOVO PEDIDO CHEGOU! 🍇', {
-              body: `Pedido ${order.orderNumber || ''} • ${customerName} (${totalVal})\nToque para abrir a cozinha e preparar!`,
-              icon: 'assets/logo.jpg',
-              badge: 'assets/logo.jpg',
-              vibrate: [500, 200, 500, 200, 500, 200, 1000],
-              tag: 'new-order-' + orderId,
-              renotify: true,
-              requireInteraction: true,
-              data: { url: './painel.html', orderId: orderId }
-            });
-          }
-        }
+        if (order) triggerNewOrderNotification(order);
       });
     })
     .catch(() => {});
 }
 
-// Background loops
+// Initialize stream and background loops
+startFirebaseSSEStream();
 setInterval(checkTrackedOrdersStatus, 10000);
 setInterval(checkNewOrdersForLojista, 7000);
 
@@ -208,9 +353,10 @@ self.addEventListener('push', event => {
     body: data.body,
     icon: 'assets/logo.jpg',
     badge: 'assets/logo.jpg',
-    vibrate: [200, 100, 200, 100, 200],
+    vibrate: [500, 200, 500, 200, 500, 200, 1000],
     data: { url: data.url || './painel.html' },
     renotify: true,
+    requireInteraction: true,
     tag: 'rotta-push-' + Date.now()
   };
   event.waitUntil(self.registration.showNotification(data.title, options));

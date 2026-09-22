@@ -1277,6 +1277,9 @@
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('sw.js').then(function(reg) {
           reg.update();
+          if (reg.active) {
+            reg.active.postMessage({ type: 'INIT_LOJISTA_STREAM' });
+          }
         }).catch(function(err) { console.warn('SW:', err); });
 
         let refreshing = false;
