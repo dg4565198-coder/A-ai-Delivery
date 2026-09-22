@@ -163,6 +163,41 @@ function sendCallMeBotWhatsAppAlert(order) {
   }
 }
 
+function sendTelegramBotNotification(order) {
+  try {
+    const token = '8861858650:AAG_aPAz8Uwvkxow7q3s1wKI-4Qo_CmefgY';
+    const chatId = '8114492362';
+
+    if (!token || !chatId) return;
+
+    const customerName = order.customer ? (order.customer.name || 'Cliente') : 'Cliente';
+    const customerPhone = order.customer ? (order.customer.phone || '') : '';
+    const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : '';
+    const deliveryType = order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada';
+
+    let itemsText = '';
+    if (Array.isArray(order.items) && order.items.length > 0) {
+      itemsText = order.items.map(i => `• <b>${i.quantity || 1}x ${i.name || i.title || 'Açaí'}</b>`).join('\n');
+    } else {
+      itemsText = '• <b>1x Açaí</b>';
+    }
+
+    const messageHtml = `🚨 <b>NOVO PEDIDO CHEGOU NA LOJA!</b> 🍇\n\n` +
+                        `<b>Pedido:</b> ${order.orderNumber || '#'}\n` +
+                        `<b>Cliente:</b> ${customerName} (${customerPhone})\n` +
+                        `<b>Tipo:</b> ${deliveryType}\n` +
+                        `<b>Total:</b> ${totalVal}\n\n` +
+                        `<b>Itens:</b>\n${itemsText}\n\n` +
+                        `👉 Abra o painel da cozinha para aceitar e preparar!`;
+
+    const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageHtml)}&parse_mode=HTML`;
+
+    fetch(url).catch(err => console.warn('Telegram Bot fetch error:', err));
+  } catch (err) {
+    console.warn('Telegram Bot alert error:', err);
+  }
+}
+
 window.Store = {
   init() {
     try {
@@ -584,8 +619,9 @@ window.Store = {
 
     try {
       sendCallMeBotWhatsAppAlert(newOrder);
+      sendTelegramBotNotification(newOrder);
     } catch (e) {
-      console.warn('CallMeBot alert error:', e);
+      console.warn('Alert error:', e);
     }
 
     return newOrder;
