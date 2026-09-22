@@ -128,6 +128,41 @@ function getDB() {
   return _db;
 }
 
+function sendCallMeBotWhatsAppAlert(order) {
+  try {
+    const phone = '557399643417';
+    const apiKey = '1466568';
+    
+    if (!phone || !apiKey) return;
+
+    const customerName = order.customer ? (order.customer.name || 'Cliente') : 'Cliente';
+    const customerPhone = order.customer ? (order.customer.phone || '') : '';
+    const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : '';
+    const deliveryType = order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada';
+    
+    let itemsText = '';
+    if (Array.isArray(order.items) && order.items.length > 0) {
+      itemsText = order.items.map(i => `• ${i.quantity || 1}x ${i.title || i.name || 'Açaí'}`).join('\n');
+    } else {
+      itemsText = '• 1x Açaí';
+    }
+
+    const text = `🚨 *NOVO PEDIDO CHEGOU NA LOJA!* 🍇\n\n` +
+                 `*Pedido:* ${order.orderNumber || '#'}\n` +
+                 `*Cliente:* ${customerName} (${customerPhone})\n` +
+                 `*Tipo:* ${deliveryType}\n` +
+                 `*Total:* ${totalVal}\n\n` +
+                 `*Itens:*\n${itemsText}\n\n` +
+                 `👉 Abra o painel da cozinha para aceitar e preparar!`;
+
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(text)}&apikey=${apiKey}`;
+
+    fetch(url, { mode: 'no-cors' }).catch(err => console.warn('CallMeBot fetch error:', err));
+  } catch (err) {
+    console.warn('CallMeBot alert error:', err);
+  }
+}
+
 window.Store = {
   init() {
     try {
@@ -546,6 +581,12 @@ window.Store = {
     const ref = db.ref('orders').push();
     newOrder.id = ref.key;
     await ref.set(newOrder);
+
+    try {
+      sendCallMeBotWhatsAppAlert(newOrder);
+    } catch (e) {
+      console.warn('CallMeBot alert error:', e);
+    }
 
     return newOrder;
   },
