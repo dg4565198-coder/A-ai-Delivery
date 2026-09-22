@@ -683,24 +683,22 @@ window.Store = {
         this.fixDuplicateOrderNumbers(newCache);
       } catch (err) {}
 
+      _ordersCache = newCache;
+      const oldKeys = _knownKeys;
+      _knownKeys = newKeys;
+      _orderCount = Object.keys(newCache).length;
+
       if (_isFirstLoad) {
-        _ordersCache = newCache;
-        _knownKeys = newKeys;
-        _orderCount = Object.keys(newCache).length;
         _isFirstLoad = false;
         if (onNewOrder) onNewOrder(null);
         return;
       }
 
       newKeys.forEach(key => {
-        if (!_knownKeys.has(key)) {
+        if (!oldKeys.has(key)) {
           if (onNewOrder) onNewOrder(newCache[key]);
         }
       });
-
-      _ordersCache = newCache;
-      _knownKeys = newKeys;
-      _orderCount = Object.keys(newCache).length;
 
       if (onOrderChanged) onOrderChanged(_ordersCache);
     }, error => {

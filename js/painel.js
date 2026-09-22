@@ -446,11 +446,16 @@ function createOrderCardElement(order, currentStatus) {
     isPreparo ? 'border-amber-400 new-order-alert bg-amber-50/20' : 'border-gray-200 hover:border-gray-300'
   }`;
 
+  const customer = order.customer || {};
+  const customerName = customer.name || 'Cliente';
+  const customerPhone = customer.phone ? String(customer.phone).replace(/\D/g, '') : '';
+  const items = Array.isArray(order.items) ? order.items : [];
+
   const headerHtml = `
     <div class="flex items-center justify-between border-b border-gray-100 pb-2">
       <div class="flex items-center space-x-2">
-        <span class="font-black text-sm text-acai-900">${order.orderNumber}</span>
-        <span class="text-[10px] text-gray-500 font-semibold bg-gray-100 px-2 py-0.5 rounded-full">${order.timeFormatted}</span>
+        <span class="font-black text-sm text-acai-900">${order.orderNumber || '#'}</span>
+        <span class="text-[10px] text-gray-500 font-semibold bg-gray-100 px-2 py-0.5 rounded-full">${order.timeFormatted || ''}</span>
       </div>
       <span class="text-[11px] font-bold px-2 py-0.5 rounded ${
         order.deliveryType === 'entrega' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
@@ -462,23 +467,23 @@ function createOrderCardElement(order, currentStatus) {
   const customerHtml = `
     <div class="space-y-0.5 text-xs">
       <div class="flex items-center justify-between">
-        <span class="font-extrabold text-gray-900 truncate">${order.customer.name}</span>
-        <a href="https://api.whatsapp.com/send?phone=55${order.customer.phone.replace(/\D/g, '')}" target="_blank" class="text-[11px] text-emerald-600 hover:underline font-bold">💬 WhatsApp</a>
+        <span class="font-extrabold text-gray-900 truncate">${customerName}</span>
+        ${customerPhone ? `<a href="https://api.whatsapp.com/send?phone=55${customerPhone}" target="_blank" class="text-[11px] text-emerald-600 hover:underline font-bold">💬 WhatsApp</a>` : ''}
       </div>
-      ${order.address ? `<p class="text-[11px] text-gray-500 line-clamp-2">📍 ${order.address.street}, ${order.address.number} - ${order.address.neighborhood}${order.address.ref ? ' (' + order.address.ref + ')' : ''}</p>` : '<p class="text-[11px] text-blue-600">Retirada no balcão</p>'}
+      ${order.address ? `<p class="text-[11px] text-gray-500 line-clamp-2">📍 ${order.address.street || ''}, ${order.address.number || ''} - ${order.address.neighborhood || ''}${order.address.ref ? ' (' + order.address.ref + ')' : ''}</p>` : '<p class="text-[11px] text-blue-600">Retirada no balcão</p>'}
     </div>`;
 
   const itemsHtml = `
     <div class="bg-gray-50 p-2 rounded-lg space-y-1.5 border border-gray-100 text-xs">
-      ${order.items.map(item => `
+      ${items.map(item => `
         <div class="border-b border-gray-200/50 pb-1 last:border-0 last:pb-0">
           <div class="flex justify-between font-bold text-gray-800 text-[11px]">
-            <span>${item.quantity}x ${item.name}</span>
-            <span>${window.Store.formatCurrency(item.unitPrice * item.quantity)}</span>
+            <span>${item.quantity || 1}x ${item.name || item.title || 'Açaí'}</span>
+            <span>${window.Store.formatCurrency((item.unitPrice || item.price || 0) * (item.quantity || 1))}</span>
           </div>
           ${item.calda ? `<div class="text-[9px] text-amber-800 font-bold">🍯 Calda: ${item.calda}</div>` : ''}
-          ${item.fruits && item.fruits.length > 0 ? `<div class="text-[9px] text-emerald-700 font-semibold">🍓 Frutas: ${item.fruits.map(f => f.name).join(', ')}</div>` : ''}
-          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="text-[9px] text-gray-600">✓ Complementos: ${item.freeToppings.map(t => t.name).join(', ')}</div>` : ''}
+          ${item.fruits && item.fruits.length > 0 ? `<div class="text-[9px] text-emerald-700 font-semibold">🍓 Frutas: ${item.fruits.map(f => typeof f === 'object' ? f.name : f).join(', ')}</div>` : ''}
+          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="text-[9px] text-gray-600">✓ Complementos: ${item.freeToppings.map(t => typeof t === 'object' ? t.name : t).join(', ')}</div>` : ''}
           ${item.notes ? `<div class="text-[9px] italic text-purple-600 bg-purple-50 p-0.5 rounded mt-0.5">Obs: "${item.notes}"</div>` : ''}
         </div>`).join('')}
     </div>`;
