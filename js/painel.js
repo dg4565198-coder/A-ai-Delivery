@@ -49,40 +49,74 @@ function requestNotificationPermission() {
 }
 
 let _wakeLock = null;
+let _wakeLockDesiredState = false;
 
-async function toggleWakeLock() {
-  const btn = document.getElementById('btn-wake-lock');
-  const statusText = document.getElementById('wake-lock-status-text');
+async function requestWakeLockSentinel() {
+  if (!_wakeLockDesiredState) return;
+  if (!('wakeLock' in navigator)) return;
 
-  if (_wakeLock !== null) {
-    try {
-      await _wakeLock.release();
+  try {
+    if (_wakeLock !== null && !_wakeLock.released) return;
+
+    _wakeLock = await navigator.wakeLock.request('screen');
+    updateWakeLockUI(true);
+
+    _wakeLock.addEventListener('release', () => {
       _wakeLock = null;
-      if (btn) btn.className = "px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/60 text-[11px] sm:text-xs font-bold transition flex items-center space-x-1.5 shadow shrink-0";
-      if (statusText) statusText.textContent = "💡 Tela Ligada (OFF)";
-      console.log('Wake Lock liberado.');
-    } catch (e) {}
-  } else {
-    try {
-      if ('wakeLock' in navigator) {
-        _wakeLock = await navigator.wakeLock.request('screen');
-        if (btn) btn.className = "px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-acai-950 font-black text-xs shadow-md transition flex items-center space-x-1.5 animate-pulse shrink-0";
-        if (statusText) statusText.textContent = "💡 Tela Ligada (ON)";
-        console.log('Wake Lock ativado com sucesso.');
-        
-        _wakeLock.addEventListener('release', () => {
-          _wakeLock = null;
-          if (btn) btn.className = "px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/60 text-[11px] sm:text-xs font-bold transition flex items-center space-x-1.5 shadow shrink-0";
-          if (statusText) statusText.textContent = "💡 Tela Ligada (OFF)";
-        });
+      if (_wakeLockDesiredState) {
+        updateWakeLockUI(true);
+        setTimeout(requestWakeLockSentinel, 1000);
       } else {
-        alert('Seu navegador não suporta manter a tela ligada automaticamente. Recomendamos ajustar o tempo de limite de tela nas configurações do celular para 10 ou 30 minutos enquanto a loja estiver aberta.');
+        updateWakeLockUI(false);
       }
-    } catch (err) {
-      console.warn('Erro ao ativar Wake Lock:', err);
+    });
+  } catch (err) {
+    console.warn('Erro ao solicitar Wake Lock:', err);
+    if (_wakeLockDesiredState) {
+      updateWakeLockUI(true);
+      setTimeout(requestWakeLockSentinel, 3000);
     }
   }
 }
+
+function updateWakeLockUI(isActive) {
+  const btn = document.getElementById('btn-wake-lock');
+  const statusText = document.getElementById('wake-lock-status-text');
+
+  if (isActive) {
+    if (btn) btn.className = "px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-acai-950 font-black text-xs shadow-md transition flex items-center space-x-1.5 animate-pulse shrink-0";
+    if (statusText) statusText.textContent = "💡 Tela Ligada (ON)";
+  } else {
+    if (btn) btn.className = "px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/60 text-[11px] sm:text-xs font-bold transition flex items-center space-x-1.5 shadow shrink-0";
+    if (statusText) statusText.textContent = "💡 Tela Ligada (OFF)";
+  }
+}
+
+async function toggleWakeLock() {
+  if (_wakeLockDesiredState) {
+    _wakeLockDesiredState = false;
+    if (_wakeLock !== null) {
+      try {
+        await _wakeLock.release();
+      } catch (e) {}
+      _wakeLock = null;
+    }
+    updateWakeLockUI(false);
+  } else {
+    _wakeLockDesiredState = true;
+    if ('wakeLock' in navigator) {
+      await requestWakeLockSentinel();
+    } else {
+      alert('Seu navegador não suporta manter a tela ligada automaticamente. Recomendamos ajustar o tempo de limite de tela nas configurações do celular para 10 ou 30 minutos enquanto a loja estiver aberta.');
+    }
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && _wakeLockDesiredState) {
+    requestWakeLockSentinel();
+  }
+});
 
 function handlePanelLogin(e) {
   if (e) e.preventDefault();
