@@ -1665,6 +1665,8 @@ function loadConfigForm() {
   document.getElementById('cfg-pix').value = config.pixKey || '4b93bf67-9a91-4ffc-951c-ddd12184e042';
   document.getElementById('cfg-time').value = config.estimatedTime || '';
   document.getElementById('cfg-address').value = config.address || '';
+  const tgElem = document.getElementById('cfg-telegram-chatid');
+  if (tgElem) tgElem.value = config.telegramChatId || '8114492362';
 
   const creds = getPanelCredentials();
   const userField = document.getElementById('cfg-username');
@@ -1682,6 +1684,8 @@ function saveStoreSettings(e) {
   config.deliveryFee = 0;
   config.estimatedTime = document.getElementById('cfg-time').value.trim();
   config.address = document.getElementById('cfg-address').value.trim();
+  const tgVal = document.getElementById('cfg-telegram-chatid')?.value.trim();
+  if (tgVal) config.telegramChatId = tgVal;
 
   document.getElementById('cfg-phone').value = config.phone;
 

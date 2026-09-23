@@ -169,8 +169,9 @@ function sendCallMeBotWhatsAppAlert(order) {
 
 function sendTelegramBotNotification(order) {
   try {
+    const config = _currentConfig || DEFAULT_CONFIG;
     const token = '8861858650:AAG_aPAz8Uwvkxow7q3s1wKI-4Qo_CmefgY';
-    const chatId = '8114492362';
+    const chatId = (config && config.telegramChatId && config.telegramChatId.trim()) ? config.telegramChatId.trim() : '8114492362';
 
     if (!token || !chatId) return;
 
