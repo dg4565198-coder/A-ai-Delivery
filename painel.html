@@ -599,13 +599,16 @@
 
           <div>
             <label class="block font-bold text-gray-700 mb-1">Telegram Chat ID (Seu ID ou ID do Grupo com sua Noiva)</label>
-            <div class="flex items-center space-x-2">
-              <input id="cfg-telegram-chatid" type="text" placeholder="Ex: 8114492362 ou -100xxxxxxxxxx" class="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700">
+            <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+              <input id="cfg-telegram-chatid" type="text" placeholder="Ex: 8114492362 ou -100xxxxxxxxxx" class="w-full md:w-auto flex-1 px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700">
               <button type="button" onclick="detectTelegramGroupId()" class="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white font-extrabold rounded-xl text-xs shadow transition shrink-0 flex items-center space-x-1">
-                <span>🔍</span><span>Detectar ID do Grupo</span>
+                <span>🔍</span><span>Detectar ID</span>
+              </button>
+              <button type="button" onclick="testTelegramGroupNotification()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow transition shrink-0 flex items-center space-x-1">
+                <span>🧪</span><span>Testar Envio</span>
               </button>
             </div>
-            <span class="text-[11px] text-gray-500 block mt-1">💡 Adicione o Bot no grupo, envie qualquer mensagem lá e clique em <b>Detectar ID do Grupo</b> para preencher automaticamente!</span>
+            <span class="text-[11px] text-gray-500 block mt-1">💡 Adicione o Bot no grupo, envie qualquer mensagem lá, clique em <b>Detectar ID</b> e depois em <b>Testar Envio</b>!</span>
           </div>
 
           <div class="pt-4 border-t border-gray-200">

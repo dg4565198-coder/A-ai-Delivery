@@ -1736,6 +1736,38 @@ async function detectTelegramGroupId() {
 }
 window.detectTelegramGroupId = detectTelegramGroupId;
 
+async function testTelegramGroupNotification() {
+  const input = document.getElementById('cfg-telegram-chatid');
+  const chatId = input ? input.value.trim() : '';
+
+  if (!chatId) {
+    alert('Por favor, informe ou detecte o Telegram Chat ID primeiro.');
+    return;
+  }
+
+  const token = '8861858650:AAG_aPAz8Uwvkxow7q3s1wKI-4Qo_CmefgY';
+  const testMsg = `🔔 <b>TESTE DE NOTIFICAÇÃO - ROTTA DO AÇAÍ</b> 🍇\n\n` +
+                  `Se você está lendo esta mensagem no Telegram, o robô está **configurado com sucesso no seu Grupo** e enviará todos os novos pedidos automaticamente! 🎉`;
+
+  const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(testMsg)}&parse_mode=HTML`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.ok) {
+      alert(`🎉 SUCESSO!\n\nA mensagem de teste foi enviada para o seu grupo do Telegram com sucesso!\n\nConfira o seu aplicativo do Telegram no celular ou computador.`);
+    } else {
+      console.warn('Telegram Error:', data);
+      const errDesc = data.description || 'Erro desconhecido no Telegram';
+      alert(`⚠️ Erro ao enviar para o Telegram (${data.error_code}):\n\n"${errDesc}"\n\nVerifique se o robô foi adicionado ao grupo e se você clicou em "Salvar Alterações".`);
+    }
+  } catch (err) {
+    alert('Erro de conexão com o Telegram: ' + err.message);
+  }
+}
+window.testTelegramGroupNotification = testTelegramGroupNotification;
+
 // ==========================================================================
 // 10. HORÁRIOS DE FUNCIONAMENTO & PROMOÇÕES PUSH
 // ==========================================================================
