@@ -629,6 +629,9 @@ window.Store = {
 
   async updateOrderStatus(orderId, newStatus, cancelReason = null) {
     const db = getDB();
+    const order = this.getOrderById(orderId);
+    const targetKey = (order && (order.id || order.key)) ? (order.id || order.key) : orderId;
+
     const updateObj = {
       status: newStatus,
       updatedAt: new Date().toISOString()
@@ -638,19 +641,26 @@ window.Store = {
       updateObj.cancelReason = cancelReason;
     }
 
+    if (order) {
+      order.status = newStatus;
+      if (newStatus === 'cancelado' && cancelReason) {
+        order.cancelReason = cancelReason;
+      }
+    }
+
     if (newStatus === 'concluido') {
-      let order = this.getOrderById(orderId);
-      if (!order && db) {
+      let targetOrder = order;
+      if (!targetOrder && db) {
         try {
-          const snap = await db.ref('orders/' + orderId).once('value');
-          if (snap.exists()) order = snap.val();
+          const snap = await db.ref('orders/' + targetKey).once('value');
+          if (snap.exists()) targetOrder = snap.val();
         } catch (e) {}
       }
 
-      if (order && !order.fidelityCredited && order.customer && order.customer.phone) {
+      if (targetOrder && !targetOrder.fidelityCredited && targetOrder.customer && targetOrder.customer.phone) {
         let cupsCount = 0;
-        if (Array.isArray(order.items)) {
-          order.items.forEach(item => {
+        if (Array.isArray(targetOrder.items)) {
+          targetOrder.items.forEach(item => {
             const nameLower = (item.name || '').toLowerCase();
             const cat = (item.category || '').toLowerCase();
             if (cat === 'copos' || nameLower.includes('copo') || nameLower.includes('pote') || nameLower.includes('açaí') || nameLower.includes('acai') || item.allowsCustomization !== false) {
@@ -658,7 +668,7 @@ window.Store = {
             }
           });
           if (cupsCount === 0) {
-            order.items.forEach(item => {
+            targetOrder.items.forEach(item => {
               cupsCount += (parseInt(item.quantity, 10) || 1);
             });
           }
@@ -667,15 +677,19 @@ window.Store = {
         }
 
         if (cupsCount > 0) {
-          await this.addCupsToCustomer(order.customer.phone, order.customer.name, cupsCount);
+          await this.addCupsToCustomer(targetOrder.customer.phone, targetOrder.customer.name, cupsCount);
           updateObj.fidelityCredited = true;
           updateObj.cupsCredited = cupsCount;
         }
       }
     }
 
-    if (db) {
-      return db.ref('orders/' + orderId).update(updateObj);
+    if (db && targetKey) {
+      try {
+        await db.ref('orders/' + targetKey).update(updateObj);
+      } catch (e) {
+        console.error('[Store] Erro ao atualizar status no Firebase:', e);
+      }
     }
     return Promise.resolve();
   },

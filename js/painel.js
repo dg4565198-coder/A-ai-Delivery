@@ -597,6 +597,7 @@ function selectQuickCancelReason(reasonText) {
 window.selectQuickCancelReason = selectQuickCancelReason;
 
 async function handleConfirmCancelOrder() {
+  console.log('[Painel] handleConfirmCancelOrder acionado');
   const targetIdInput = document.getElementById('cancel-target-order-id');
   const reasonInput = document.getElementById('cancel-reason-input');
 
@@ -613,12 +614,15 @@ async function handleConfirmCancelOrder() {
     return;
   }
 
+  // Fecha o modal IMEDIATAMENTE para dar resposta instantânea ao usuário
+  closeCancelOrderModal();
+
   try {
     await window.Store.updateOrderStatus(orderId, 'cancelado', reason);
-    closeCancelOrderModal();
+    console.log('[Painel] Pedido cancelado e cliente notificado com sucesso!');
   } catch (err) {
     console.error('Erro ao cancelar pedido:', err);
-    alert('Erro ao cancelar pedido. Tente novamente.');
+    alert('Erro ao salvar cancelamento: ' + (err.message || err));
   }
 }
 window.handleConfirmCancelOrder = handleConfirmCancelOrder;

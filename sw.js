@@ -3,7 +3,7 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v53';
+const CACHE_NAME = 'rotta-acai-v54';
 const urlsToCache = [
   './',
   './index.html',
