@@ -681,7 +681,9 @@ window.Store = {
   },
 
   getOrderById(orderId) {
-    return _ordersCache[orderId] || null;
+    if (!orderId) return null;
+    if (_ordersCache[orderId]) return _ordersCache[orderId];
+    return Object.values(_ordersCache).find(o => o && (o.id === orderId || o.orderNumber === orderId)) || null;
   },
 
   getOrdersArray() {
@@ -714,8 +716,12 @@ window.Store = {
 
       if (snapshot.exists()) {
         snapshot.forEach(child => {
-          newCache[child.key] = child.val();
-          newKeys.add(child.key);
+          const val = child.val();
+          if (val && typeof val === 'object') {
+            val.id = child.key;
+            newCache[child.key] = val;
+            newKeys.add(child.key);
+          }
         });
       }
 

@@ -517,25 +517,27 @@ function createOrderCardElement(order, currentStatus) {
       </div>
     </div>`;
 
+  const targetOrderId = order.id || order.key || '';
+
   let actionHtml = '';
   if (currentStatus === 'preparo') {
     actionHtml = `<div class="space-y-1.5 pt-1">
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="openReceiptModal('${order.id}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
-        <button onclick="advanceOrderStatus('${order.id}', 'entrega')" class="text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Pronto'}</span></button>
+        <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
+        <button onclick="advanceOrderStatus('${targetOrderId}', 'entrega')" class="text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Pronto'}</span></button>
       </div>
-      <button onclick="openCancelOrderModal('${order.id}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
+      <button onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
     </div>`;
   } else if (currentStatus === 'entrega') {
     actionHtml = `<div class="space-y-1.5 pt-1">
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="openReceiptModal('${order.id}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
-        <button onclick="advanceOrderStatus('${order.id}', 'concluido')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>✅ Concluir</span></button>
+        <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
+        <button onclick="advanceOrderStatus('${targetOrderId}', 'concluido')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>✅ Concluir</span></button>
       </div>
-      <button onclick="openCancelOrderModal('${order.id}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
+      <button onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
     </div>`;
   } else {
-    actionHtml = `<div class="pt-1"><button onclick="openReceiptModal('${order.id}')" class="w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1.5 rounded-lg transition">🖨️ Reemitir Comanda</button></div>`;
+    actionHtml = `<div class="pt-1"><button onclick="openReceiptModal('${targetOrderId}')" class="w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1.5 rounded-lg transition">🖨️ Reemitir Comanda</button></div>`;
   }
 
   card.innerHTML = headerHtml + customerHtml + itemsHtml + paymentHtml + actionHtml;
@@ -544,18 +546,20 @@ function createOrderCardElement(order, currentStatus) {
 
 function openCancelOrderModal(orderId) {
   const order = window.Store.getOrderById(orderId);
-  if (!order) return;
-
   const modal = document.getElementById('cancel-order-modal');
   const title = document.getElementById('cancel-order-modal-title');
   const targetIdInput = document.getElementById('cancel-target-order-id');
   const reasonInput = document.getElementById('cancel-reason-input');
 
-  if (targetIdInput) targetIdInput.value = orderId;
+  if (targetIdInput) targetIdInput.value = orderId || (order ? order.id : '');
   if (reasonInput) reasonInput.value = '';
-  if (title) title.textContent = `Cancelar Pedido ${order.orderNumber || ''}`;
+  if (title) title.textContent = order ? `Cancelar Pedido ${order.orderNumber || ''}` : 'Cancelar Pedido';
 
-  if (modal) modal.classList.remove('hidden');
+  if (modal) {
+    modal.classList.remove('hidden');
+  } else {
+    console.warn('Modal cancel-order-modal não encontrado no DOM');
+  }
 }
 
 function closeCancelOrderModal() {
