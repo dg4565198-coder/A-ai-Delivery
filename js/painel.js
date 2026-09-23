@@ -169,7 +169,16 @@ function runPainelApp() {
   try { renderFinancialMetrics(); } catch (e) { console.error('Metrics:', e); }
   try { loadConfigForm(); } catch (e) { console.error('Config:', e); }
   try { loadHoursTab(); } catch (e) { console.error('Hours:', e); }
+  try { loadOpenPromoCard(); } catch (e) { console.error('OpenPromo:', e); }
   try { setupFirebaseListener(); } catch (e) { console.error('Firebase:', e); }
+  try {
+    if (window.Store.checkAndApplyAutoSchedule) {
+      window.Store.checkAndApplyAutoSchedule();
+      setInterval(() => {
+        window.Store.checkAndApplyAutoSchedule();
+      }, 60000);
+    }
+  } catch (e) { console.error('AutoSchedule Loop:', e); }
 }
 
 if (document.readyState === 'loading') {
@@ -378,7 +387,7 @@ function switchTab(tabId) {
   if (tabId === 'estoque') renderStockManagement();
   if (tabId === 'caixa') renderFinancialMetrics();
   if (tabId === 'horarios') loadHoursTab();
-  if (tabId === 'promocoes') renderPromotionsHistory();
+  if (tabId === 'promocoes') { renderPromotionsHistory(); loadOpenPromoCard(); }
   if (tabId === 'avaliacoes') renderRatingsTab();
   if (tabId === 'fidelidade') renderFidelityAdminTab();
 }
@@ -1697,6 +1706,11 @@ function loadHoursTab() {
   const summaryInput = document.getElementById('cfg-hours-text');
   if (summaryInput) summaryInput.value = config.businessHours || 'Terça a Domingo • 14:00 às 22:00';
 
+  const autoToggle = document.getElementById('cfg-auto-schedule-toggle');
+  if (autoToggle) {
+    autoToggle.checked = config.autoScheduleEnabled !== false;
+  }
+
   const weekly = config.weeklyHours || {
     segunda: { active: false, hours: 'Fechado' },
     terca: { active: true, hours: '14:00 às 22:00' },
@@ -1725,6 +1739,21 @@ function loadHoursTab() {
     statusText.textContent = config.isOpen ? "🟢 Loja Aberta" : "🔴 Loja Fechada";
   }
 }
+
+function handleToggleAutoSchedule() {
+  const autoToggle = document.getElementById('cfg-auto-schedule-toggle');
+  const config = window.Store.getConfig();
+  config.autoScheduleEnabled = autoToggle ? autoToggle.checked : true;
+  window.Store.saveConfig(config);
+
+  if (config.autoScheduleEnabled) {
+    if (window.Store.checkAndApplyAutoSchedule) window.Store.checkAndApplyAutoSchedule(config);
+    alert('⏰ Abertura e fechamento automático por horário ATIVADO!');
+  } else {
+    alert('⏸️ Automação por horário DESATIVADA. O status da loja agora é 100% manual.');
+  }
+}
+window.handleToggleAutoSchedule = handleToggleAutoSchedule;
 
 function toggleDayInput(day) {
   const activeCb = document.getElementById(`wh-${day}-active`);
@@ -1755,8 +1784,92 @@ function handleSaveBusinessHours(e) {
   if (summaryText) config.businessHours = summaryText;
 
   window.Store.saveConfig(config);
+  if (config.autoScheduleEnabled !== false && window.Store.checkAndApplyAutoSchedule) {
+    window.Store.checkAndApplyAutoSchedule(config);
+  }
   alert("✅ Horários de funcionamento salvos com sucesso!");
 }
+
+// --------------------------------------------------------------------------
+// Notificação Automática de Abertura da Loja (1x ao Dia)
+// --------------------------------------------------------------------------
+function loadOpenPromoCard() {
+  const config = window.Store.getConfig();
+  const activeCb = document.getElementById('open-promo-active');
+  const activeLabel = document.getElementById('open-promo-active-label');
+  const titleInput = document.getElementById('open-promo-title');
+  const msgInput = document.getElementById('open-promo-msg');
+
+  const isEnabled = config.openNotificationEnabled !== false;
+  if (activeCb) activeCb.checked = isEnabled;
+  if (activeLabel) activeLabel.textContent = isEnabled ? 'Ativada' : 'Desativada';
+
+  if (titleInput) titleInput.value = config.openNotificationTitle || '🟣 Rotta do Açaí Aberta!';
+  if (msgInput) msgInput.value = config.openNotificationMessage || 'Já estamos funcionando! Peça seu açaí geladinho agora mesmo pelo aplicativo. 🍧';
+}
+window.loadOpenPromoCard = loadOpenPromoCard;
+
+function toggleOpenPromoActive() {
+  const activeCb = document.getElementById('open-promo-active');
+  const activeLabel = document.getElementById('open-promo-active-label');
+  const config = window.Store.getConfig();
+
+  config.openNotificationEnabled = activeCb ? activeCb.checked : false;
+  if (activeLabel) activeLabel.textContent = config.openNotificationEnabled ? 'Ativada' : 'Desativada';
+  window.Store.saveConfig(config);
+}
+window.toggleOpenPromoActive = toggleOpenPromoActive;
+
+function handleSaveOpenPromo(e) {
+  e.preventDefault();
+  const titleInput = document.getElementById('open-promo-title');
+  const msgInput = document.getElementById('open-promo-msg');
+  const activeCb = document.getElementById('open-promo-active');
+
+  const title = titleInput ? titleInput.value.trim() : '';
+  const message = msgInput ? msgInput.value.trim() : '';
+
+  if (!title || !message) {
+    alert('Por favor, informe o título e a frase da notificação de abertura.');
+    return;
+  }
+
+  const config = window.Store.getConfig();
+  config.openNotificationTitle = title;
+  config.openNotificationMessage = message;
+  config.openNotificationEnabled = true;
+
+  if (activeCb) activeCb.checked = true;
+  const activeLabel = document.getElementById('open-promo-active-label');
+  if (activeLabel) activeLabel.textContent = 'Ativada';
+
+  window.Store.saveConfig(config);
+  alert('✅ Frase de abertura de loja salva com sucesso! Ela será enviada 1x ao dia no celular dos clientes assim que a loja abrir.');
+}
+window.handleSaveOpenPromo = handleSaveOpenPromo;
+
+function handleDeleteOpenPromo() {
+  if (!confirm('Deseja realmente excluir/desativar a frase automática de abertura da loja?')) return;
+
+  const config = window.Store.getConfig();
+  config.openNotificationEnabled = false;
+  config.openNotificationTitle = '';
+  config.openNotificationMessage = '';
+
+  const titleInput = document.getElementById('open-promo-title');
+  const msgInput = document.getElementById('open-promo-msg');
+  const activeCb = document.getElementById('open-promo-active');
+  const activeLabel = document.getElementById('open-promo-active-label');
+
+  if (titleInput) titleInput.value = '';
+  if (msgInput) msgInput.value = '';
+  if (activeCb) activeCb.checked = false;
+  if (activeLabel) activeLabel.textContent = 'Desativada';
+
+  window.Store.saveConfig(config);
+  alert('🗑️ Frase de abertura excluída e notificação automática desativada com sucesso.');
+}
+window.handleDeleteOpenPromo = handleDeleteOpenPromo;
 
 async function handleSendInstantPromo(e) {
   e.preventDefault();
@@ -1900,8 +2013,13 @@ window.closeEditModal = closeEditModal;
 window.handleSaveItemEdit = handleSaveItemEdit;
 window.saveStoreSettings = saveStoreSettings;
 window.loadHoursTab = loadHoursTab;
+window.handleToggleAutoSchedule = handleToggleAutoSchedule;
 window.toggleDayInput = toggleDayInput;
 window.handleSaveBusinessHours = handleSaveBusinessHours;
+window.loadOpenPromoCard = loadOpenPromoCard;
+window.toggleOpenPromoActive = toggleOpenPromoActive;
+window.handleSaveOpenPromo = handleSaveOpenPromo;
+window.handleDeleteOpenPromo = handleDeleteOpenPromo;
 window.handleSendInstantPromo = handleSendInstantPromo;
 window.handleSchedulePromo = handleSchedulePromo;
 window.handleDeletePromotion = handleDeletePromotion;

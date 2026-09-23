@@ -49,7 +49,11 @@ const DEFAULT_CONFIG = {
   estimatedTime: '30 a 50 min',
   isOpen: true,
   address: 'Rua Principal, 123 - Centro',
-  businessHours: 'Terça a Domingo • 14:00 às 22:00',
+  autoScheduleEnabled: true,
+  openNotificationEnabled: true,
+  openNotificationTitle: '🟣 Rotta do Açaí Aberta!',
+  openNotificationMessage: 'Já estamos funcionando! Peça seu açaí geladinho agora mesmo pelo aplicativo. 🍧',
+  lastOpenNotificationDate: '',
   weeklyHours: {
     segunda: { active: false, hours: 'Fechado' },
     terca: { active: true, hours: '14:00 às 22:00' },
@@ -322,6 +326,79 @@ window.Store = {
       console.warn('Erro no listener de config do Firebase:', error);
       if (callback) callback(_currentConfig);
     });
+  },
+
+  setStoreOpen(shouldBeOpen) {
+    const config = this.getConfig();
+    const previousState = config.isOpen;
+    config.isOpen = shouldBeOpen;
+
+    if (shouldBeOpen && !previousState) {
+      this.triggerDailyOpenNotificationIfNeeded(config);
+    }
+
+    return this.saveConfig(config);
+  },
+
+  triggerDailyOpenNotificationIfNeeded(config) {
+    if (!config || config.openNotificationEnabled === false) return;
+    const title = (config.openNotificationTitle || '').trim();
+    const message = (config.openNotificationMessage || '').trim();
+    if (!title || !message) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (config.lastOpenNotificationDate === todayStr) {
+      console.log('[Store] Notificação de abertura já enviada hoje:', todayStr);
+      return;
+    }
+
+    console.log('[Store] Disparando notificação de abertura automática do dia:', todayStr);
+    config.lastOpenNotificationDate = todayStr;
+    this.sendPromotion({ title, message });
+  },
+
+  checkAndApplyAutoSchedule(configInput) {
+    const config = configInput || this.getConfig();
+    if (!config || config.autoScheduleEnabled === false || !config.weeklyHours) return config;
+
+    const now = new Date();
+    const dayNames = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const currentDayName = dayNames[now.getDay()];
+    const dayConfig = config.weeklyHours[currentDayName];
+
+    if (!dayConfig || !dayConfig.active) {
+      if (config.isOpen !== false) {
+        console.log(`[Store AutoSchedule] Dia ${currentDayName} inativo. Fechando loja.`);
+        this.setStoreOpen(false);
+      }
+      return config;
+    }
+
+    const hoursStr = dayConfig.hours || '';
+    const matches = hoursStr.match(/(\d{1,2}):(\d{2})\s*(?:às|as|a|-)\s*(\d{1,2}):(\d{2})/i);
+    if (!matches) return config;
+
+    const startHour = parseInt(matches[1], 10);
+    const startMin = parseInt(matches[2], 10);
+    const endHour = parseInt(matches[3], 10);
+    const endMin = parseInt(matches[4], 10);
+
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    let shouldBeOpen = false;
+    if (endMinutes > startMinutes) {
+      shouldBeOpen = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    } else {
+      shouldBeOpen = currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    }
+
+    if (config.isOpen !== shouldBeOpen) {
+      console.log(`[Store AutoSchedule] Horário alterou estado da loja: ${config.isOpen} -> ${shouldBeOpen}`);
+      this.setStoreOpen(shouldBeOpen);
+    }
+    return config;
   },
 
   getProducts() {

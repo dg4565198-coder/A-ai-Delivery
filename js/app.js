@@ -37,8 +37,21 @@ if (document.readyState === 'loading') {
 
 function setupSyncListener() {
   window.Store.listenToConfig(config => {
-    try { renderStoreHeader(); } catch (e) {}
+    try {
+      if (window.Store.checkAndApplyAutoSchedule) {
+        window.Store.checkAndApplyAutoSchedule(config);
+      }
+      renderStoreHeader();
+    } catch (e) {}
   });
+
+  setInterval(() => {
+    try {
+      if (window.Store.checkAndApplyAutoSchedule) {
+        window.Store.checkAndApplyAutoSchedule();
+      }
+    } catch (e) {}
+  }, 60000);
 
   window.Store.listenToStock(() => {
     try { renderProducts(); } catch (e) {}
