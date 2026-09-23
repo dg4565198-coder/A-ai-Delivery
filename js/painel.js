@@ -544,21 +544,30 @@ function createOrderCardElement(order, currentStatus) {
   return card;
 }
 
-function openCancelOrderModal(orderId) {
+async function openCancelOrderModal(orderId) {
   const order = window.Store.getOrderById(orderId);
   const modal = document.getElementById('cancel-order-modal');
   const title = document.getElementById('cancel-order-modal-title');
   const targetIdInput = document.getElementById('cancel-target-order-id');
   const reasonInput = document.getElementById('cancel-reason-input');
 
-  if (targetIdInput) targetIdInput.value = orderId || (order ? order.id : '');
-  if (reasonInput) reasonInput.value = '';
-  if (title) title.textContent = order ? `Cancelar Pedido ${order.orderNumber || ''}` : 'Cancelar Pedido';
+  const orderNum = order ? (order.orderNumber || '') : '';
+  const resolvedId = orderId || (order ? order.id : '');
 
   if (modal) {
+    if (targetIdInput) targetIdInput.value = resolvedId;
+    if (reasonInput) reasonInput.value = '';
+    if (title) title.textContent = orderNum ? `Cancelar Pedido ${orderNum}` : 'Cancelar Pedido';
     modal.classList.remove('hidden');
   } else {
-    console.warn('Modal cancel-order-modal não encontrado no DOM');
+    const reason = prompt(`Informe o motivo do cancelamento do Pedido ${orderNum}:`, "Ingrediente indisponível no estoque");
+    if (reason && reason.trim()) {
+      try {
+        await window.Store.updateOrderStatus(resolvedId, 'cancelado', reason.trim());
+      } catch (e) {
+        alert('Erro ao cancelar pedido.');
+      }
+    }
   }
 }
 
