@@ -175,17 +175,20 @@ function escapeTelegramHtml(str) {
 async function sendTelegramBotNotification(order) {
   try {
     const token = '8861858650:AAG_aPAz8Uwvkxow7q3s1wKI-4Qo_CmefgY';
-    
-    let chatId = (_currentConfig && _currentConfig.telegramChatId && _currentConfig.telegramChatId.trim()) ? _currentConfig.telegramChatId.trim() : null;
-    if (!chatId) {
-      try {
-        const db = getDB();
-        if (db) {
-          const snap = await db.ref('config/telegramChatId').once('value');
-          if (snap.exists()) chatId = String(snap.val()).trim();
-        }
-      } catch (e) {}
+    let chatId = null;
+
+    try {
+      const restRes = await fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/config/telegramChatId.json');
+      const restVal = await restRes.json();
+      if (restVal && String(restVal).trim()) {
+        chatId = String(restVal).trim();
+      }
+    } catch (e) {}
+
+    if (!chatId && _currentConfig && _currentConfig.telegramChatId && _currentConfig.telegramChatId.trim()) {
+      chatId = _currentConfig.telegramChatId.trim();
     }
+
     if (!chatId) chatId = '8114492362';
 
     const customerName = escapeTelegramHtml(order.customer ? (order.customer.name || 'Cliente') : 'Cliente');

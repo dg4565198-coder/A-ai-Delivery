@@ -1722,7 +1722,12 @@ async function detectTelegramGroupId() {
         const input = document.getElementById('cfg-telegram-chatid');
         if (input) input.value = groupId;
 
-        alert(`✅ Grupo Encontrado com Sucesso!\n\nNome: "${groupTitle}"\nID: ${groupId}\n\nO código foi preenchido automaticamente! Clique em "Salvar Alterações" no final da página.`);
+        // Grava no Firebase IMEDIATAMENTE para garantir que todos os pedidos vão pro grupo!
+        const config = window.Store.getConfig();
+        config.telegramChatId = String(groupId).trim();
+        window.Store.saveConfig(config);
+
+        alert(`✅ Grupo Encontrado e Salvo com Sucesso!\n\nNome: "${groupTitle}"\nID: ${groupId}\n\nO grupo foi configurado no sistema! Todos os novos pedidos chegarão diretamente neste grupo.`);
         return;
       }
     }
