@@ -1700,6 +1700,42 @@ function saveStoreSettings(e) {
   alert('✅ Configurações salvas com sucesso!');
 }
 
+async function detectTelegramGroupId() {
+  const token = '8861858650:AAG_aPAz8Uwvkxow7q3s1wKI-4Qo_CmefgY';
+  const btn = document.querySelector('button[onclick*="detectTelegramGroupId"]');
+  if (btn) btn.textContent = '⏳ Buscando...';
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`);
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.result) && data.result.length > 0) {
+      const groupMsg = [...data.result].reverse().find(u => {
+        const chat = (u.message && u.message.chat) || (u.my_chat_member && u.my_chat_member.chat);
+        return chat && (chat.type === 'group' || chat.type === 'supergroup');
+      });
+
+      if (groupMsg) {
+        const chat = groupMsg.message ? groupMsg.message.chat : groupMsg.my_chat_member.chat;
+        const groupId = chat.id;
+        const groupTitle = chat.title || 'Grupo da Loja';
+
+        const input = document.getElementById('cfg-telegram-chatid');
+        if (input) input.value = groupId;
+
+        alert(`✅ Grupo Encontrado com Sucesso!\n\nNome: "${groupTitle}"\nID: ${groupId}\n\nO código foi preenchido automaticamente! Clique em "Salvar Alterações" no final da página.`);
+        return;
+      }
+    }
+
+    alert('⚠️ Nenhum grupo detectado ainda no robô.\n\nPassos rápidos:\n1. Adicione o robô da loja ao seu grupo do Telegram.\n2. Envie qualquer mensagem no grupo (ex: "oi").\n3. Clique neste botão novamente!');
+  } catch (err) {
+    alert('Erro ao consultar o Telegram: ' + err.message);
+  } finally {
+    if (btn) btn.innerHTML = '<span>🔍</span><span>Detectar ID do Grupo</span>';
+  }
+}
+window.detectTelegramGroupId = detectTelegramGroupId;
+
 // ==========================================================================
 // 10. HORÁRIOS DE FUNCIONAMENTO & PROMOÇÕES PUSH
 // ==========================================================================
