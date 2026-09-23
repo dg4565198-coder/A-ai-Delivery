@@ -167,37 +167,68 @@ function sendCallMeBotWhatsAppAlert(order) {
   }
 }
 
-function sendTelegramBotNotification(order) {
+function escapeTelegramHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function sendTelegramBotNotification(order) {
   try {
-    const config = _currentConfig || DEFAULT_CONFIG;
     const token = '8861858650:AAG_aPAz8Uwvkxow7q3s1wKI-4Qo_CmefgY';
-    const chatId = (config && config.telegramChatId && config.telegramChatId.trim()) ? config.telegramChatId.trim() : '8114492362';
+    
+    let chatId = (_currentConfig && _currentConfig.telegramChatId && _currentConfig.telegramChatId.trim()) ? _currentConfig.telegramChatId.trim() : null;
+    if (!chatId) {
+      try {
+        const db = getDB();
+        if (db) {
+          const snap = await db.ref('config/telegramChatId').once('value');
+          if (snap.exists()) chatId = String(snap.val()).trim();
+        }
+      } catch (e) {}
+    }
+    if (!chatId) chatId = '8114492362';
 
-    if (!token || !chatId) return;
-
-    const customerName = order.customer ? (order.customer.name || 'Cliente') : 'Cliente';
-    const customerPhone = order.customer ? (order.customer.phone || '') : '';
+    const customerName = escapeTelegramHtml(order.customer ? (order.customer.name || 'Cliente') : 'Cliente');
+    const customerPhone = escapeTelegramHtml(order.customer ? (order.customer.phone || '') : '');
     const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : '';
     const deliveryType = order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada';
 
     let itemsText = '';
     if (Array.isArray(order.items) && order.items.length > 0) {
-      itemsText = order.items.map(i => `• <b>${i.quantity || 1}x ${i.name || i.title || 'Açaí'}</b>`).join('\n');
+      itemsText = order.items.map(i => {
+        const nameClean = escapeTelegramHtml(i.name || i.title || 'Açaí');
+        const qty = i.quantity || 1;
+        return `• <b>${qty}x ${nameClean}</b>`;
+      }).join('\n');
     } else {
       itemsText = '• <b>1x Açaí</b>';
     }
 
     const messageHtml = `🚨 <b>NOVO PEDIDO CHEGOU NA LOJA!</b> 🍇\n\n` +
-                        `<b>Pedido:</b> ${order.orderNumber || '#'}\n` +
+                        `<b>Pedido:</b> ${escapeTelegramHtml(order.orderNumber || '#')}\n` +
                         `<b>Cliente:</b> ${customerName} (${customerPhone})\n` +
                         `<b>Tipo:</b> ${deliveryType}\n` +
                         `<b>Total:</b> ${totalVal}\n\n` +
                         `<b>Itens:</b>\n${itemsText}\n\n` +
                         `👉 Abra o painel da cozinha para aceitar e preparar!`;
 
-    const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageHtml)}&parse_mode=HTML`;
+    const urlHtml = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageHtml)}&parse_mode=HTML`;
 
-    fetch(url).catch(err => console.warn('Telegram Bot fetch error:', err));
+    const res = await fetch(urlHtml);
+    const data = await res.json();
+    
+    if (!data.ok) {
+      console.warn('[Telegram Bot] Envio HTML falhou, tentando texto simples:', data);
+      const messagePlain = `🚨 NOVO PEDIDO CHEGOU NA LOJA! 🍇\n\n` +
+                           `Pedido: ${order.orderNumber || '#'}\n` +
+                           `Cliente: ${customerName} (${customerPhone})\n` +
+                           `Tipo: ${deliveryType}\n` +
+                           `Total: ${totalVal}\n\n` +
+                           `Itens:\n${itemsText.replace(/<\/?b>/g, '')}\n\n` +
+                           `👉 Abra o painel da cozinha para aceitar e preparar!`;
+      const urlPlain = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messagePlain)}`;
+      await fetch(urlPlain);
+    }
   } catch (err) {
     console.warn('Telegram Bot alert error:', err);
   }

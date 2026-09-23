@@ -3,7 +3,7 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v57';
+const CACHE_NAME = 'rotta-acai-v58';
 const urlsToCache = [
   './',
   './index.html',
@@ -161,30 +161,39 @@ function checkTrackedOrdersStatus() {
   });
 }
 
+function escapeTelegramHtmlSW(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function sendTelegramBotFromSW(order) {
   try {
     const token = '8861858650:AAG_aPAz8Uwvkxow7q3s1wKI-4Qo_CmefgY';
 
     fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/config/telegramChatId.json')
       .then(res => res.json())
-      .then(savedChatId => {
+      .then(async savedChatId => {
         const chatId = (savedChatId && String(savedChatId).trim()) ? String(savedChatId).trim() : '8114492362';
         if (!token || !chatId) return;
 
-        const customerName = order.customer ? (order.customer.name || 'Cliente') : 'Cliente';
-        const customerPhone = order.customer ? (order.customer.phone || '') : '';
+        const customerName = escapeTelegramHtmlSW(order.customer ? (order.customer.name || 'Cliente') : 'Cliente');
+        const customerPhone = escapeTelegramHtmlSW(order.customer ? (order.customer.phone || '') : '');
         const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : '';
         const deliveryType = order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada';
 
         let itemsText = '';
         if (Array.isArray(order.items) && order.items.length > 0) {
-          itemsText = order.items.map(i => `• <b>${i.quantity || 1}x ${i.name || i.title || 'Açaí'}</b>`).join('\n');
+          itemsText = order.items.map(i => {
+            const nameClean = escapeTelegramHtmlSW(i.name || i.title || 'Açaí');
+            const qty = i.quantity || 1;
+            return `• <b>${qty}x ${nameClean}</b>`;
+          }).join('\n');
         } else {
           itemsText = '• <b>1x Açaí</b>';
         }
 
         const messageHtml = `🚨 <b>NOVO PEDIDO CHEGOU NA LOJA!</b> 🍇\n\n` +
-                            `<b>Pedido:</b> ${order.orderNumber || '#'}\n` +
+                            `<b>Pedido:</b> ${escapeTelegramHtmlSW(order.orderNumber || '#')}\n` +
                             `<b>Cliente:</b> ${customerName} (${customerPhone})\n` +
                             `<b>Tipo:</b> ${deliveryType}\n` +
                             `<b>Total:</b> ${totalVal}\n\n` +
@@ -192,7 +201,22 @@ function sendTelegramBotFromSW(order) {
                             `👉 Abra o painel da cozinha para aceitar e preparar!`;
 
         const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageHtml)}&parse_mode=HTML`;
-        fetch(url).catch(() => {});
+        
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data.ok) {
+            const messagePlain = `🚨 NOVO PEDIDO CHEGOU NA LOJA! 🍇\n\n` +
+                                 `Pedido: ${order.orderNumber || '#'}\n` +
+                                 `Cliente: ${customerName} (${customerPhone})\n` +
+                                 `Tipo: ${deliveryType}\n` +
+                                 `Total: ${totalVal}\n\n` +
+                                 `Itens:\n${itemsText.replace(/<\/?b>/g, '')}\n\n` +
+                                 `👉 Abra o painel da cozinha para aceitar e preparar!`;
+            const urlPlain = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messagePlain)}`;
+            await fetch(urlPlain);
+          }
+        } catch (e) {}
       })
       .catch(() => {});
   } catch (e) {}
