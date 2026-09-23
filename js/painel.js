@@ -570,11 +570,13 @@ async function openCancelOrderModal(orderId) {
     }
   }
 }
+window.openCancelOrderModal = openCancelOrderModal;
 
 function closeCancelOrderModal() {
   const modal = document.getElementById('cancel-order-modal');
   if (modal) modal.classList.add('hidden');
 }
+window.closeCancelOrderModal = closeCancelOrderModal;
 
 function selectQuickCancelReason(reasonText) {
   const reasonInput = document.getElementById('cancel-reason-input');
@@ -583,6 +585,7 @@ function selectQuickCancelReason(reasonText) {
     reasonInput.focus();
   }
 }
+window.selectQuickCancelReason = selectQuickCancelReason;
 
 async function handleConfirmCancelOrder() {
   const targetIdInput = document.getElementById('cancel-target-order-id');
@@ -609,6 +612,7 @@ async function handleConfirmCancelOrder() {
     alert('Erro ao cancelar pedido. Tente novamente.');
   }
 }
+window.handleConfirmCancelOrder = handleConfirmCancelOrder;
 
 window.openCancelOrderModal = openCancelOrderModal;
 window.closeCancelOrderModal = closeCancelOrderModal;
