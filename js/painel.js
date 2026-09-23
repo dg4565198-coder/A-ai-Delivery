@@ -526,7 +526,7 @@ function createOrderCardElement(order, currentStatus) {
         <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
         <button onclick="advanceOrderStatus('${targetOrderId}', 'entrega')" class="text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Pronto'}</span></button>
       </div>
-      <button onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
+      <button type="button" data-action="cancel-order" data-order-id="${targetOrderId}" onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
     </div>`;
   } else if (currentStatus === 'entrega') {
     actionHtml = `<div class="space-y-1.5 pt-1">
@@ -534,7 +534,7 @@ function createOrderCardElement(order, currentStatus) {
         <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
         <button onclick="advanceOrderStatus('${targetOrderId}', 'concluido')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>✅ Concluir</span></button>
       </div>
-      <button onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
+      <button type="button" data-action="cancel-order" data-order-id="${targetOrderId}" onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
     </div>`;
   } else {
     actionHtml = `<div class="pt-1"><button onclick="openReceiptModal('${targetOrderId}')" class="w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1.5 rounded-lg transition">🖨️ Reemitir Comanda</button></div>`;
@@ -545,7 +545,8 @@ function createOrderCardElement(order, currentStatus) {
 }
 
 async function openCancelOrderModal(orderId) {
-  const order = window.Store.getOrderById(orderId);
+  console.log('[Painel] Abrindo modal de cancelamento para orderId:', orderId);
+  const order = window.Store ? window.Store.getOrderById(orderId) : null;
   const modal = document.getElementById('cancel-order-modal');
   const title = document.getElementById('cancel-order-modal-title');
   const targetIdInput = document.getElementById('cancel-target-order-id');
@@ -560,14 +561,17 @@ async function openCancelOrderModal(orderId) {
 
   if (modal) {
     modal.classList.remove('hidden');
-    modal.style.display = 'flex';
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.zIndex = '999999';
+    if (reasonInput) setTimeout(() => reasonInput.focus(), 100);
   } else {
-    const reason = prompt(`Informe o motivo do cancelamento do Pedido ${orderNum}:`, "Ingrediente indisponível no estoque");
+    const reason = prompt(`Informe o motivo do cancelamento do Pedido ${orderNum || resolvedId}:`, "Ingrediente indisponível no estoque");
     if (reason && reason.trim()) {
       try {
         await window.Store.updateOrderStatus(resolvedId, 'cancelado', reason.trim());
+        alert('Pedido cancelado com sucesso e cliente notificado!');
       } catch (e) {
-        alert('Erro ao cancelar pedido.');
+        alert('Erro ao cancelar pedido: ' + (e.message || e));
       }
     }
   }
@@ -578,7 +582,7 @@ function closeCancelOrderModal() {
   const modal = document.getElementById('cancel-order-modal');
   if (modal) {
     modal.classList.add('hidden');
-    modal.style.display = 'none';
+    modal.style.setProperty('display', 'none', 'important');
   }
 }
 window.closeCancelOrderModal = closeCancelOrderModal;
@@ -619,10 +623,18 @@ async function handleConfirmCancelOrder() {
 }
 window.handleConfirmCancelOrder = handleConfirmCancelOrder;
 
-window.openCancelOrderModal = openCancelOrderModal;
-window.closeCancelOrderModal = closeCancelOrderModal;
-window.selectQuickCancelReason = selectQuickCancelReason;
-window.handleConfirmCancelOrder = handleConfirmCancelOrder;
+// Global Event Delegation para garantir o clique em qualquer dispositivo
+document.addEventListener('click', function(e) {
+  const cancelBtn = e.target.closest('[data-action="cancel-order"]');
+  if (cancelBtn) {
+    e.preventDefault();
+    const orderId = cancelBtn.getAttribute('data-order-id');
+    console.log('[Painel Event Delegation] Clique detectado no botão de cancelar, ID:', orderId);
+    if (orderId) {
+      openCancelOrderModal(orderId);
+    }
+  }
+});
 
 function advanceOrderStatus(orderId, newStatus) {
   window.Store.updateOrderStatus(orderId, newStatus);
