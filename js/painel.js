@@ -554,11 +554,13 @@ async function openCancelOrderModal(orderId) {
   const orderNum = order ? (order.orderNumber || '') : '';
   const resolvedId = orderId || (order ? order.id : '');
 
+  if (targetIdInput) targetIdInput.value = resolvedId;
+  if (reasonInput) reasonInput.value = '';
+  if (title) title.textContent = orderNum ? `Cancelar Pedido ${orderNum}` : 'Cancelar Pedido';
+
   if (modal) {
-    if (targetIdInput) targetIdInput.value = resolvedId;
-    if (reasonInput) reasonInput.value = '';
-    if (title) title.textContent = orderNum ? `Cancelar Pedido ${orderNum}` : 'Cancelar Pedido';
     modal.classList.remove('hidden');
+    modal.style.display = 'flex';
   } else {
     const reason = prompt(`Informe o motivo do cancelamento do Pedido ${orderNum}:`, "Ingrediente indisponível no estoque");
     if (reason && reason.trim()) {
@@ -574,7 +576,10 @@ window.openCancelOrderModal = openCancelOrderModal;
 
 function closeCancelOrderModal() {
   const modal = document.getElementById('cancel-order-modal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
 }
 window.closeCancelOrderModal = closeCancelOrderModal;
 
