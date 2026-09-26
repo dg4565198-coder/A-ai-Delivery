@@ -1293,6 +1293,40 @@
     </div>
   </div>
 
+  <!-- MODAL DE VISUALIZAÇÃO AMPLIADA DO PEDIDO (FICHA DIGITAL / TELA CHEIA) -->
+  <div id="view-order-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-3 md:p-6" style="display: none;">
+    <div class="bg-white w-full max-w-xl max-h-[95vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col border-2 border-acai-800">
+      <!-- Topo Modal -->
+      <div class="bg-gradient-to-r from-acai-950 via-purple-950 to-acai-900 text-white p-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-gold-500 text-acai-950 font-black flex items-center justify-center text-lg shadow">
+            📋
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h3 class="font-black text-lg text-white" id="view-order-number-title">Pedido #0</h3>
+              <span id="view-order-status-badge" class="bg-gold-500 text-acai-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase">Preparo</span>
+            </div>
+            <p class="text-xs text-purple-200 font-medium" id="view-order-time-title">18:00 • 26/09/2026</p>
+          </div>
+        </div>
+        <button onclick="closeViewOrderModal()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl font-bold transition">
+          ✕
+        </button>
+      </div>
+
+      <!-- Conteúdo com Scroll -->
+      <div id="view-order-modal-body" class="p-4 md:p-6 overflow-y-auto space-y-4 text-gray-900 flex-1 bg-gray-50/50">
+        <!-- Renderizado dinamicamente pelo JS -->
+      </div>
+
+      <!-- Rodapé com Botões de Ação -->
+      <div id="view-order-modal-footer" class="p-3.5 bg-white border-t border-gray-200 flex items-center justify-between flex-wrap gap-2 shrink-0">
+        <!-- Renderizado dinamicamente pelo JS -->
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DE CANCELAMENTO DE PEDIDO -->
   <div id="cancel-order-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4" style="display: none;">
     <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-rose-200">
@@ -1402,8 +1436,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <script src="js/store.js?v=66"></script>
-  <script src="js/painel.js?v=66"></script>
+  <script src="js/store.js?v=67"></script>
+  <script src="js/painel.js?v=67"></script>
   <script>
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {

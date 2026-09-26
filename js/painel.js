@@ -459,6 +459,7 @@ function createOrderCardElement(order, currentStatus) {
   const customerName = customer.name || 'Cliente';
   const customerPhone = customer.phone ? String(customer.phone).replace(/\D/g, '') : '';
   const items = Array.isArray(order.items) ? order.items : [];
+  const targetOrderId = order.id || order.key || '';
 
   const headerHtml = `
     <div class="flex items-center justify-between border-b border-gray-100 pb-2">
@@ -466,11 +467,16 @@ function createOrderCardElement(order, currentStatus) {
         <span class="font-black text-sm text-acai-900">${order.orderNumber || '#'}</span>
         <span class="text-[10px] text-gray-500 font-semibold bg-gray-100 px-2 py-0.5 rounded-full">${order.timeFormatted || ''}</span>
       </div>
-      <span class="text-[11px] font-bold px-2 py-0.5 rounded ${
-        order.deliveryType === 'entrega' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-      }">
-        ${order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada'}
-      </span>
+      <div class="flex items-center space-x-1.5">
+        <button onclick="openViewOrderModal('${targetOrderId}')" class="px-2 py-0.5 bg-acai-800 hover:bg-acai-900 text-gold-400 font-black rounded-lg text-[10px] shadow transition flex items-center space-x-1 shrink-0" title="Ver pedido em tela cheia (Ficha Digital)">
+          <span>🔍</span><span>Expandir</span>
+        </button>
+        <span class="text-[11px] font-bold px-2 py-0.5 rounded ${
+          order.deliveryType === 'entrega' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+        }">
+          ${order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada'}
+        </span>
+      </div>
     </div>`;
 
   const customerHtml = `
@@ -483,7 +489,7 @@ function createOrderCardElement(order, currentStatus) {
     </div>`;
 
   const itemsHtml = `
-    <div class="bg-gray-50 p-2 rounded-lg space-y-1.5 border border-gray-100 text-xs">
+    <div onclick="openViewOrderModal('${targetOrderId}')" class="bg-gray-50 p-2 rounded-lg space-y-1.5 border border-gray-100 text-xs cursor-pointer hover:bg-purple-50/40 transition" title="Clique para expandir e ver em tela cheia">
       ${items.map(item => `
         <div class="border-b border-gray-200/50 pb-1 last:border-0 last:pb-0">
           <div class="flex justify-between font-bold text-gray-800 text-[11px]">
@@ -526,8 +532,6 @@ function createOrderCardElement(order, currentStatus) {
       </div>
     </div>`;
 
-  const targetOrderId = order.id || order.key || '';
-
   let actionHtml = '';
   if (currentStatus === 'preparo') {
     actionHtml = `<div class="space-y-1.5 pt-1">
@@ -559,6 +563,213 @@ function createOrderCardElement(order, currentStatus) {
   card.innerHTML = headerHtml + customerHtml + itemsHtml + paymentHtml + actionHtml;
   return card;
 }
+
+function openViewOrderModal(orderId) {
+  const order = window.Store ? window.Store.getOrderById(orderId) : null;
+  if (!order) return;
+
+  const modal = document.getElementById('view-order-modal');
+  const numTitle = document.getElementById('view-order-number-title');
+  const statusBadge = document.getElementById('view-order-status-badge');
+  const timeTitle = document.getElementById('view-order-time-title');
+  const modalBody = document.getElementById('view-order-modal-body');
+  const modalFooter = document.getElementById('view-order-modal-footer');
+
+  if (!modal || !modalBody) return;
+
+  const orderNum = order.orderNumber || '#';
+  const status = order.status || 'preparo';
+  const statusMap = {
+    novo: 'EM PREPARO',
+    preparo: 'EM PREPARO',
+    entrega: order.deliveryType === 'entrega' ? 'SAIU PARA ENTREGA' : 'PRONTO PARA RETIRADA',
+    concluido: 'CONCLUÍDO',
+    cancelado: 'CANCELADO'
+  };
+
+  if (numTitle) numTitle.textContent = `Pedido ${orderNum}`;
+  if (statusBadge) statusBadge.textContent = statusMap[status] || status.toUpperCase();
+  if (timeTitle) timeTitle.textContent = `${order.timeFormatted || ''} • ${order.dateFormatted || ''}`;
+
+  const customer = order.customer || {};
+  const customerName = customer.name || 'Cliente';
+  const cleanPhone = customer.phone ? window.Store.cleanPhoneKey(customer.phone) : '';
+  const waUrl = cleanPhone ? `https://api.whatsapp.com/send?phone=55${cleanPhone}` : '';
+
+  let addressHtml = '';
+  if (order.deliveryType === 'entrega' && order.address) {
+    if (typeof order.address === 'string') {
+      addressHtml = `📍 ${order.address}`;
+    } else {
+      const parts = [];
+      if (order.address.street) parts.push(order.address.street);
+      if (order.address.number) parts.push(`nº ${order.address.number}`);
+      if (order.address.neighborhood) parts.push(`Bairro ${order.address.neighborhood}`);
+      addressHtml = `📍 ${parts.join(', ')}`;
+      if (order.address.ref) {
+        addressHtml += `<br><span class="inline-block mt-1.5 text-xs text-purple-950 font-extrabold bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-lg">Ponto de Referência: ${order.address.ref}</span>`;
+      }
+    }
+  } else {
+    addressHtml = `🏬 <strong>Retirada no Balcão da Loja</strong>`;
+  }
+
+  let paymentTextHtml = '';
+  if (order.paymentMethod === 'combinado') {
+    paymentTextHtml = `
+      <span class="font-black text-purple-900 uppercase block text-xs">🔄 COMBINADO (PIX + DINHEIRO)</span>
+      <span class="text-xs text-emerald-700 font-bold block">💠 Pix: ${window.Store.formatCurrency(order.pixAmount)}</span>
+      <span class="text-xs text-purple-900 font-bold block">💵 Dinheiro: ${window.Store.formatCurrency(order.cashAmount)}</span>
+      ${order.paymentChange ? `<span class="text-xs text-rose-800 font-extrabold block bg-rose-50 p-1 rounded mt-0.5">⚠️ Troco para: ${order.paymentChange}</span>` : ''}
+    `;
+  } else if (order.paymentMethod === 'dinheiro') {
+    paymentTextHtml = `
+      <span class="font-bold text-gray-800 uppercase block text-xs">💵 DINHEIRO</span>
+      ${order.paymentChange ? `<span class="text-xs text-rose-800 font-extrabold block bg-rose-50 p-1 rounded mt-0.5">⚠️ Troco para: ${order.paymentChange}</span>` : '<span class="text-xs text-gray-500 font-semibold block">Sem troco</span>'}
+    `;
+  } else {
+    paymentTextHtml = `<span class="font-bold text-emerald-700 uppercase block text-xs">💠 PIX (Pagamento Direto)</span>`;
+  }
+
+  const items = Array.isArray(order.items) ? order.items : [];
+
+  const itemsFormattedHtml = items.map((item, idx) => `
+    <div class="bg-white p-4 rounded-2xl border-2 border-purple-100 shadow-sm space-y-2">
+      <div class="flex items-center justify-between font-black text-base text-acai-950 border-b border-gray-100 pb-2">
+        <span class="flex items-center space-x-2">
+          <span class="w-6 h-6 rounded-full bg-acai-900 text-gold-400 text-xs flex items-center justify-center shrink-0 font-bold">${idx + 1}</span>
+          <span>${item.quantity || 1}x ${item.name || item.title || 'Açaí'}</span>
+        </span>
+        <span class="text-emerald-700 font-black">${window.Store.formatCurrency((item.unitPrice || item.price || 0) * (item.quantity || 1))}</span>
+      </div>
+      
+      ${item.calda ? `
+        <div class="bg-amber-50/80 text-amber-950 p-2.5 rounded-xl text-xs font-black flex items-start gap-1.5 border border-amber-200/60">
+          <span class="text-base shrink-0">🍯</span> <span>Calda: ${item.calda}</span>
+        </div>` : ''}
+      
+      ${item.fruits && item.fruits.length > 0 ? `
+        <div class="bg-rose-50/80 text-rose-950 p-2.5 rounded-xl text-xs font-black flex items-start gap-1.5 border border-rose-200/60">
+          <span class="text-base shrink-0">🍓</span> <span>Frutas: ${item.fruits.map(f => typeof f === 'object' ? f.name : f).join(', ')}</span>
+        </div>` : ''}
+      
+      ${item.freeToppings && item.freeToppings.length > 0 ? `
+        <div class="bg-purple-50/80 text-purple-950 p-2.5 rounded-xl text-xs font-bold flex items-start gap-1.5 border border-purple-200/60">
+          <span class="text-base shrink-0">🥣</span> <span>Complementos: ${item.freeToppings.map(t => typeof t === 'object' ? t.name : t).join(', ')}</span>
+        </div>` : ''}
+      
+      ${item.notes ? `
+        <div class="bg-amber-100/70 text-amber-950 p-2.5 rounded-xl text-xs font-black italic border border-amber-300 flex items-start gap-1.5">
+          <span class="text-base shrink-0">📝</span> <span>Obs do Copo: "${item.notes}"</span>
+        </div>` : ''}
+    </div>
+  `).join('');
+
+  modalBody.innerHTML = `
+    <!-- Card do Cliente -->
+    <div class="bg-white p-4 rounded-2xl border border-purple-100 shadow-sm space-y-1">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-10 h-10 rounded-full bg-acai-800 text-gold-400 font-black flex items-center justify-center text-sm shadow">
+            ${customerName[0].toUpperCase()}
+          </div>
+          <div>
+            <span class="font-black text-base text-gray-900 block">${customerName}</span>
+            <span class="text-xs text-gray-500 font-semibold block">${customer.phone ? '📱 ' + customer.phone : ''}</span>
+          </div>
+        </div>
+        ${cleanPhone ? `
+          <a href="${waUrl}" target="_blank" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow transition flex items-center space-x-1">
+            <span>💬</span> <span>Abrir WhatsApp</span>
+          </a>` : ''}
+      </div>
+    </div>
+
+    <!-- Card de Endereço -->
+    <div class="bg-amber-50/80 p-4 rounded-2xl border border-amber-200 space-y-1">
+      <div class="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+        <span>🛵</span> <span>Destino / Entrega:</span>
+      </div>
+      <div class="text-sm font-extrabold text-gray-900 leading-relaxed pt-0.5">
+        ${addressHtml}
+      </div>
+    </div>
+
+    <!-- Lista de Itens -->
+    <div class="space-y-3">
+      <div class="font-black text-xs text-acai-900 uppercase tracking-wider flex items-center justify-between">
+        <span>📋 ITENS DO PEDIDO (${items.length}):</span>
+      </div>
+      ${itemsFormattedHtml}
+    </div>
+
+    <!-- Observação Geral se houver -->
+    ${order.notes ? `
+      <div class="bg-purple-100/70 p-3.5 rounded-2xl border border-purple-200 text-xs font-bold text-acai-950">
+        <span class="font-black uppercase text-[10px] text-purple-900 block mb-0.5">📝 Observação Geral do Pedido:</span>
+        "${order.notes}"
+      </div>` : ''}
+
+    <!-- Card de Pagamento e Total -->
+    <div class="bg-white p-4 rounded-2xl border-2 border-purple-200 flex items-center justify-between text-xs shadow-sm">
+      <div class="space-y-0.5">
+        <span class="text-[10px] text-gray-400 font-bold uppercase block">Forma de Pagamento:</span>
+        ${paymentTextHtml}
+      </div>
+      <div class="text-right">
+        <span class="text-[10px] text-gray-400 font-bold uppercase block">Valor Total:</span>
+        <span class="text-2xl font-black text-acai-900 block">${window.Store.formatCurrency(order.total)}</span>
+      </div>
+    </div>
+  `;
+
+  const targetOrderId = order.id || order.key || orderId;
+
+  let footerBtnHtml = '';
+  if (status === 'preparo' || status === 'novo') {
+    footerBtnHtml = `
+      <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'entrega');" class="flex-1 px-4 py-3 bg-purple-700 hover:bg-purple-800 text-white font-black text-xs rounded-2xl shadow transition flex items-center justify-center space-x-1.5">
+        <span>${order.deliveryType === 'entrega' ? '🛵 Despachar Pedido' : '🏬 Marcar Pronto para Retirada'}</span>
+      </button>
+    `;
+  } else if (status === 'entrega') {
+    footerBtnHtml = `
+      <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'concluido');" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-2xl shadow transition flex items-center justify-center space-x-1.5">
+        <span>✅ Concluir Pedido</span>
+      </button>
+    `;
+  } else if (status === 'concluido') {
+    footerBtnHtml = `
+      <button onclick="notifyCustomerFidelityWhatsApp('${targetOrderId}')" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-2xl shadow transition flex items-center justify-center space-x-1.5">
+        <span>💬 Notificar Fidelidade no WhatsApp</span>
+      </button>
+    `;
+  }
+
+  modalFooter.innerHTML = `
+    <button onclick="openReceiptModal('${targetOrderId}')" class="px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl transition flex items-center space-x-1">
+      <span>🖨️</span> <span>Comanda</span>
+    </button>
+    ${footerBtnHtml}
+    <button onclick="closeViewOrderModal()" class="px-4 py-2.5 bg-acai-950 hover:bg-acai-900 text-white font-extrabold text-xs rounded-xl shadow transition">
+      <span>✖️ Fechar</span>
+    </button>
+  `;
+
+  modal.classList.remove('hidden');
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.zIndex = '999999';
+}
+window.openViewOrderModal = openViewOrderModal;
+
+function closeViewOrderModal() {
+  const modal = document.getElementById('view-order-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeViewOrderModal = closeViewOrderModal;
 
 async function openCancelOrderModal(orderId) {
   console.log('[Painel] Abrindo modal de cancelamento para orderId:', orderId);
