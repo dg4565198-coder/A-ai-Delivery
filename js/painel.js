@@ -1750,9 +1750,14 @@ async function testTelegramGroupNotification() {
     return;
   }
 
+  // Grava o ID no banco do Firebase imediatamente ao clicar em Testar Envio!
+  const config = window.Store.getConfig();
+  config.telegramChatId = chatId;
+  window.Store.saveConfig(config);
+
   const token = '8861858650:AAG_aPAz8Uwvkxow7q3s1wKI-4Qo_CmefgY';
   const testMsg = `🔔 <b>TESTE DE NOTIFICAÇÃO - ROTTA DO AÇAÍ</b> 🍇\n\n` +
-                  `Se você está lendo esta mensagem no Telegram, o robô está **configurado com sucesso no seu Grupo** e enviará todos os novos pedidos automaticamente! 🎉`;
+                  `Se você está lendo esta mensagem no Telegram, o robô está **configurado com sucesso no seu Grupo (${chatId})** e enviará todos os novos pedidos automaticamente! 🎉`;
 
   const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(testMsg)}&parse_mode=HTML`;
 
@@ -1761,11 +1766,11 @@ async function testTelegramGroupNotification() {
     const data = await res.json();
 
     if (data.ok) {
-      alert(`🎉 SUCESSO!\n\nA mensagem de teste foi enviada para o seu grupo do Telegram com sucesso!\n\nConfira o seu aplicativo do Telegram no celular ou computador.`);
+      alert(`🎉 SUCESSO!\n\nA mensagem de teste foi enviada e gravada no sistema para o seu grupo (${chatId}) com sucesso!\n\nConfira o seu aplicativo do Telegram no celular ou computador.`);
     } else {
       console.warn('Telegram Error:', data);
       const errDesc = data.description || 'Erro desconhecido no Telegram';
-      alert(`⚠️ Erro ao enviar para o Telegram (${data.error_code}):\n\n"${errDesc}"\n\nVerifique se o robô foi adicionado ao grupo e se você clicou em "Salvar Alterações".`);
+      alert(`⚠️ Erro ao enviar para o Telegram (${data.error_code}):\n\n"${errDesc}"\n\nVerifique se o robô foi adicionado ao grupo como administrador.`);
     }
   } catch (err) {
     alert('Erro de conexão com o Telegram: ' + err.message);
