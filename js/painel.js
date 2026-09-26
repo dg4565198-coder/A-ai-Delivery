@@ -2892,7 +2892,7 @@ function renderCustomersTableAdmin() {
           ${lastDate}
         </td>
         <td class="p-3 text-right space-x-1">
-          <button onclick="openSendCustomerNotifModal('${c.phoneKey || cleanPhone}', '${(c.name || 'Cliente').replace(/'/g, "\\'")}', ${cups}, '${c.lastOrderAt || ''}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-acai-950 font-black rounded-lg text-xs transition inline-block shadow-sm" title="Enviar Notificação no Celular (Sistema)">
+          <button onclick="openSendCustomerNotifModal('${c.phoneKey || cleanPhone}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-acai-950 font-black rounded-lg text-xs transition inline-block shadow-sm" title="Enviar Notificação no Celular (Sistema)">
             🔔 Notificar
           </button>
           <button onclick="openEditCustomerModal('${c.phoneKey || cleanPhone}')" class="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold rounded-lg text-xs transition" title="Editar Dados do Cliente">
@@ -2914,37 +2914,60 @@ function filterCustomersListAdmin() {
   renderCustomersTableAdmin();
 }
 
-function openSendCustomerNotifModal(customerKey, name, cups, lastOrderAt) {
+function openSendCustomerNotifModal(customerKey) {
+  console.log('[Painel] openSendCustomerNotifModal chamado para key:', customerKey);
   const modal = document.getElementById('send-customer-notif-modal');
   const cardElem = document.getElementById('cust-notif-info-card');
-  const msgInput = document.getElementById('cust-notif-message-input');
 
-  if (!modal || !cardElem || !msgInput) return;
+  if (!modal) {
+    console.error('[Painel] send-customer-notif-modal não encontrado no DOM!');
+    alert('Erro ao abrir janela de notificação.');
+    return;
+  }
 
-  const cleanPhone = window.Store.cleanPhoneKey(customerKey);
-  document.getElementById('cust-notif-target-phone').value = cleanPhone;
-  document.getElementById('cust-notif-target-name').value = name || 'Cliente';
-  document.getElementById('cust-notif-target-cups').value = cups || 0;
+  const customersMap = window.Store.getCustomersLocally ? window.Store.getCustomersLocally() : {};
+  const cleanKey = window.Store.cleanPhoneKey ? window.Store.cleanPhoneKey(customerKey) : customerKey;
+  const customer = customersMap[customerKey] || customersMap[cleanKey] || { phoneKey: customerKey, phone: cleanKey };
 
-  const lastDateStr = lastOrderAt ? new Date(lastOrderAt).toLocaleDateString('pt-BR') : 'Sem registros recentes';
+  const name = customer.name || 'Cliente';
+  const cups = parseInt(customer.totalCups, 10) || 0;
+  const cleanPhone = window.Store.cleanPhoneKey(customer.phone || customerKey || cleanKey);
 
-  cardElem.innerHTML = `
-    <div class="flex items-center justify-between font-bold text-acai-900">
-      <span>👤 ${name || 'Cliente'}</span>
-      <span class="text-amber-700 font-black">🍧 ${cups || 0} copos</span>
-    </div>
-    <div class="text-[11px] text-gray-500">
-      <span>📱 Telefone: ${cleanPhone}</span> • <span>Último pedido: ${lastDateStr}</span>
-    </div>
-  `;
+  const phoneElem = document.getElementById('cust-notif-target-phone');
+  const nameElem = document.getElementById('cust-notif-target-name');
+  const cupsElem = document.getElementById('cust-notif-target-cups');
+
+  if (phoneElem) phoneElem.value = cleanPhone;
+  if (nameElem) nameElem.value = name;
+  if (cupsElem) cupsElem.value = cups;
+
+  const lastDateStr = customer.lastOrderAt ? new Date(customer.lastOrderAt).toLocaleDateString('pt-BR') : 'Sem registros recentes';
+
+  if (cardElem) {
+    cardElem.innerHTML = `
+      <div class="flex items-center justify-between font-bold text-acai-900 text-xs">
+        <span>👤 ${name}</span>
+        <span class="text-amber-700 font-black">🍧 ${cups} copo(s)</span>
+      </div>
+      <div class="text-[11px] text-gray-500 mt-1">
+        <span>📱 Telefone: ${cleanPhone}</span> • <span>Último pedido: ${lastDateStr}</span>
+      </div>
+    `;
+  }
 
   fillCustomerNotifTemplate('saudades');
+
   modal.classList.remove('hidden');
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.zIndex = '999999';
 }
 
 function closeSendCustomerNotifModal() {
   const modal = document.getElementById('send-customer-notif-modal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.setProperty('display', 'none', 'important');
+  }
 }
 
 function fillCustomerNotifTemplate(type) {
