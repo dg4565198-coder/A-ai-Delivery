@@ -1385,16 +1385,21 @@ window.Store = {
     return db.ref('customers/' + key).update(payload).catch(e => console.warn('Firebase /customers set:', e));
   },
 
-  deleteCustomer(phone) {
-    const key = this.cleanPhoneKey(phone);
-    if (!key) return Promise.resolve();
+  deleteCustomer(targetKey) {
+    if (!targetKey) return Promise.resolve();
+    const strKey = String(targetKey).trim();
+    const cleanKey = this.cleanPhoneKey(strKey);
+    const digitsOnly = strKey.replace(/\D/g, '');
+    const without55 = digitsOnly.startsWith('55') && (digitsOnly.length === 12 || digitsOnly.length === 13) ? digitsOnly.substring(2) : digitsOnly;
+
+    const keysToRemove = new Set([strKey, cleanKey, digitsOnly, without55]);
 
     try {
       const customers = this.getCustomersLocally();
-      if (customers[key]) {
-        delete customers[key];
-        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
-      }
+      keysToRemove.forEach(k => {
+        if (customers[k]) delete customers[k];
+      });
+      localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
     } catch (e) {
       console.warn('Erro ao remover cliente do localStorage:', e);
     }
@@ -1402,7 +1407,12 @@ window.Store = {
     const db = getDB();
     if (!db) return Promise.resolve();
 
-    return db.ref('customers/' + key).remove().catch(e => console.warn('Firebase /customers remove:', e));
+    const promises = [];
+    keysToRemove.forEach(k => {
+      if (k) promises.push(db.ref('customers/' + k).remove().catch(() => {}));
+    });
+
+    return Promise.all(promises);
   },
 
   addCupsToCustomer(phone, name, cupsCount) {
@@ -1503,13 +1513,14 @@ window.Store = {
     if (!db) return;
 
     db.ref('customers').on('value', snapshot => {
-      if (snapshot.exists()) {
-        const val = snapshot.val();
-        Object.assign(customersMap, val);
-        try {
-          localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customersMap));
-        } catch (e) {}
+      const freshMap = snapshot.exists() ? (snapshot.val() || {}) : {};
+      for (const k in customersMap) {
+        if (!freshMap[k]) delete customersMap[k];
       }
+      Object.assign(customersMap, freshMap);
+      try {
+        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customersMap));
+      } catch (e) {}
       if (callback) callback(customersMap);
     });
   },
