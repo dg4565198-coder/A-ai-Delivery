@@ -554,9 +554,14 @@ function createOrderCardElement(order, currentStatus) {
       <button onclick="notifyCustomerFidelityWhatsApp('${targetOrderId}')" class="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded-lg transition shadow flex items-center justify-center space-x-1">
         <span>💬</span><span>Notificar Fidelidade no WhatsApp</span>
       </button>
-      <button onclick="openReceiptModal('${targetOrderId}')" class="w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1.5 rounded-lg transition">
-        🖨️ Reemitir Comanda
-      </button>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1">
+          <span>🖨️</span><span>Comanda</span>
+        </button>
+        <button type="button" data-action="cancel-order" data-order-id="${targetOrderId}" onclick="openCancelOrderModal('${targetOrderId}')" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1">
+          <span>❌</span><span>Cancelar</span>
+        </button>
+      </div>
     </div>`;
   }
 
@@ -751,6 +756,11 @@ function openViewOrderModal(orderId) {
       <span>🖨️</span> <span>Comanda</span>
     </button>
     ${footerBtnHtml}
+    ${status !== 'cancelado' ? `
+      <button onclick="closeViewOrderModal(); openCancelOrderModal('${targetOrderId}');" class="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition flex items-center space-x-1">
+        <span>❌</span> <span>Cancelar</span>
+      </button>
+    ` : ''}
     <button onclick="closeViewOrderModal()" class="px-4 py-2.5 bg-acai-950 hover:bg-acai-900 text-white font-extrabold text-xs rounded-xl shadow transition">
       <span>✖️ Fechar</span>
     </button>
@@ -778,12 +788,14 @@ async function openCancelOrderModal(orderId) {
   const title = document.getElementById('cancel-order-modal-title');
   const targetIdInput = document.getElementById('cancel-target-order-id');
   const reasonInput = document.getElementById('cancel-reason-input');
+  const passInput = document.getElementById('cancel-password-input');
 
   const orderNum = order ? (order.orderNumber || '') : '';
   const resolvedId = orderId || (order ? order.id : '');
 
   if (targetIdInput) targetIdInput.value = resolvedId;
   if (reasonInput) reasonInput.value = '';
+  if (passInput) passInput.value = '';
   if (title) title.textContent = orderNum ? `Cancelar Pedido ${orderNum}` : 'Cancelar Pedido';
 
   if (modal) {
@@ -794,6 +806,12 @@ async function openCancelOrderModal(orderId) {
   } else {
     const reason = prompt(`Informe o motivo do cancelamento do Pedido ${orderNum || resolvedId}:`, "Ingrediente indisponível no estoque");
     if (reason && reason.trim()) {
+      const pass = prompt(`Digite a senha do app de gestão da loja para autorizar o cancelamento:`);
+      const creds = getPanelCredentials();
+      if (pass !== creds.pass) {
+        alert('🔒 Senha incorreta! Cancelamento não autorizado.');
+        return;
+      }
       try {
         await window.Store.updateOrderStatus(resolvedId, 'cancelado', reason.trim());
         alert('Pedido cancelado com sucesso e cliente notificado!');
@@ -827,9 +845,11 @@ async function handleConfirmCancelOrder() {
   console.log('[Painel] handleConfirmCancelOrder acionado');
   const targetIdInput = document.getElementById('cancel-target-order-id');
   const reasonInput = document.getElementById('cancel-reason-input');
+  const passInput = document.getElementById('cancel-password-input');
 
   const orderId = targetIdInput ? targetIdInput.value : null;
   const reason = reasonInput ? reasonInput.value.trim() : '';
+  const enteredPass = passInput ? passInput.value.trim() : '';
 
   if (!orderId) {
     alert('Erro ao identificar o pedido.');
@@ -838,15 +858,32 @@ async function handleConfirmCancelOrder() {
 
   if (!reason) {
     alert('Por favor, informe ou selecione o motivo do cancelamento.');
+    if (reasonInput) reasonInput.focus();
     return;
   }
 
-  // Fecha o modal IMEDIATAMENTE para dar resposta instantânea ao usuário
+  if (!enteredPass) {
+    alert('🔒 Por favor, digite a mesma senha usada para entrar no app de gestão da loja.');
+    if (passInput) passInput.focus();
+    return;
+  }
+
+  const creds = getPanelCredentials();
+  if (enteredPass !== creds.pass) {
+    alert('🔒 Senha incorreta! O cancelamento do pedido não foi autorizado.');
+    if (passInput) {
+      passInput.value = '';
+      passInput.focus();
+    }
+    return;
+  }
+
   closeCancelOrderModal();
 
   try {
     await window.Store.updateOrderStatus(orderId, 'cancelado', reason);
     console.log('[Painel] Pedido cancelado e cliente notificado com sucesso!');
+    alert('✅ Pedido cancelado com sucesso!');
   } catch (err) {
     console.error('Erro ao cancelar pedido:', err);
     alert('Erro ao salvar cancelamento: ' + (err.message || err));

@@ -1335,7 +1335,7 @@
           <span class="text-2xl">❌</span>
           <div>
             <h4 class="font-extrabold text-sm text-white" id="cancel-order-modal-title">Cancelar Pedido</h4>
-            <p class="text-[11px] text-rose-200">Informe o motivo para notificar o celular do cliente</p>
+            <p class="text-[11px] text-rose-200">Requer justificativa e senha de gestão da loja</p>
           </div>
         </div>
         <button onclick="closeCancelOrderModal()" class="text-gray-300 hover:text-white text-2xl font-bold px-2">&times;</button>
@@ -1346,25 +1346,40 @@
         
         <div>
           <label class="block font-bold text-gray-800 mb-1.5">Escolha um motivo rápido:</label>
-          <div class="grid grid-cols-1 gap-2">
-            <button type="button" onclick="selectQuickCancelReason('🍓 Ingrediente / item indisponível no estoque')" class="text-left p-2.5 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
-              <span>🍓</span><span>Ingrediente / item indisponível no estoque</span>
+          <div class="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-1">
+            <button type="button" onclick="selectQuickCancelReason('🍓 Ingrediente / item indisponível no estoque')" class="text-left p-2 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
+              <span>🍓</span><span>Ingrediente indisponível no estoque</span>
             </button>
-            <button type="button" onclick="selectQuickCancelReason('📍 Endereço fora da área de entrega')" class="text-left p-2.5 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
+            <button type="button" onclick="selectQuickCancelReason('🚶‍♂️ Desistência ou solicitação do cliente')" class="text-left p-2 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
+              <span>🚶‍♂️</span><span>Desistência do cliente</span>
+            </button>
+            <button type="button" onclick="selectQuickCancelReason('🏠 Cliente não encontrado no endereço de entrega')" class="text-left p-2 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
+              <span>🏠</span><span>Cliente não encontrado no endereço</span>
+            </button>
+            <button type="button" onclick="selectQuickCancelReason('💵 Problema ou divergência no pagamento / recusa')" class="text-left p-2 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
+              <span>💵</span><span>Problema no pagamento / recusa</span>
+            </button>
+            <button type="button" onclick="selectQuickCancelReason('📍 Endereço fora da área de entrega')" class="text-left p-2 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
               <span>📍</span><span>Endereço fora da área de entrega</span>
             </button>
-            <button type="button" onclick="selectQuickCancelReason('⏰ Horário de atendimento da loja encerrado')" class="text-left p-2.5 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
+            <button type="button" onclick="selectQuickCancelReason('⏰ Horário de atendimento da loja encerrado')" class="text-left p-2 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
               <span>⏰</span><span>Horário de atendimento encerrado</span>
-            </button>
-            <button type="button" onclick="selectQuickCancelReason('💵 Problema ou divergência no pagamento')" class="text-left p-2.5 rounded-xl border border-gray-200 hover:border-rose-400 hover:bg-rose-50/50 font-semibold text-gray-700 transition flex items-center space-x-2">
-              <span>💵</span><span>Problema ou divergência no pagamento</span>
             </button>
           </div>
         </div>
 
         <div>
-          <label class="block font-bold text-gray-800 mb-1">Motivo do Cancelamento (mensagem pro cliente) *</label>
-          <textarea id="cancel-reason-input" rows="3" placeholder="Ex: Infelizmente ficamos sem morango fresco no estoque hoje." class="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:border-rose-600 font-medium text-xs"></textarea>
+          <label class="block font-bold text-gray-800 mb-1">Motivo / Descrição do Cancelamento *</label>
+          <textarea id="cancel-reason-input" rows="2" placeholder="Digite o motivo do cancelamento ou selecione acima..." class="w-full p-2.5 rounded-xl border border-gray-300 focus:outline-none focus:border-rose-600 font-medium text-xs"></textarea>
+        </div>
+
+        <!-- Campo de Senha Obrigatória de Gestão da Loja -->
+        <div class="space-y-1 bg-amber-50 p-3 rounded-2xl border border-amber-200">
+          <label for="cancel-password-input" class="block font-extrabold text-amber-900 text-xs flex items-center gap-1.5">
+            <span>🔒</span><span>Senha de Entrada no App Gestão (Obrigatória):</span>
+          </label>
+          <input type="password" id="cancel-password-input" placeholder="Digite sua senha de acesso..." class="w-full p-2.5 rounded-xl border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 font-bold text-xs bg-white" />
+          <p class="text-[10px] text-amber-700 font-medium">Digite a mesma senha usada para fazer login no painel.</p>
         </div>
 
         <div class="pt-2 border-t border-gray-100 flex items-center justify-end space-x-2">
@@ -1372,7 +1387,7 @@
             Voltar
           </button>
           <button type="button" onclick="handleConfirmCancelOrder()" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black shadow flex items-center space-x-1.5">
-            <span>❌ Cancelar & Notificar Cliente</span>
+            <span>❌ Confirmar Cancelamento</span>
           </button>
         </div>
       </div>
@@ -1487,8 +1502,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <script src="js/store.js?v=68"></script>
-  <script src="js/painel.js?v=68"></script>
+  <script src="js/store.js?v=69"></script>
+  <script src="js/painel.js?v=69"></script>
   <script>
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {
