@@ -2929,12 +2929,6 @@ function openSendCustomerNotifModal(customerKey) {
   const modal = document.getElementById('send-customer-notif-modal');
   const cardElem = document.getElementById('cust-notif-info-card');
 
-  if (!modal) {
-    console.error('[Painel] send-customer-notif-modal não encontrado no DOM!');
-    alert('Erro ao abrir janela de notificação.');
-    return;
-  }
-
   const customersMap = window.Store.getCustomersLocally ? window.Store.getCustomersLocally() : {};
   const cleanKey = window.Store.cleanPhoneKey ? window.Store.cleanPhoneKey(customerKey) : customerKey;
   const customer = customersMap[customerKey] || customersMap[cleanKey] || { phoneKey: customerKey, phone: cleanKey };
@@ -2967,11 +2961,32 @@ function openSendCustomerNotifModal(customerKey) {
 
   fillCustomerNotifTemplate('saudades');
 
-  modal.classList.remove('hidden');
-  modal.style.setProperty('display', 'flex', 'important');
-  modal.style.zIndex = '999999';
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+    modal.style.setProperty('opacity', '1', 'important');
+    modal.style.zIndex = '9999999';
+  } else {
+    const msg = prompt(`Digite a notificação que deseja enviar para o celular de ${name} (${cleanPhone}):`, `Olá, ${name}! Que saudades de você na Rotta do Açaí! 🍇 Faz um tempinho que não vemos você por aqui. Que tal pedir um açaí geladinho hoje?`);
+    if (msg && msg.trim()) {
+      window.Store.sendCustomerNotification(cleanPhone, "Rotta do Açaí 🍧", msg.trim()).then(() => {
+        alert("✅ Notificação enviada para o celular do cliente com sucesso!");
+      }).catch(err => {
+        alert("Erro ao enviar: " + err);
+      });
+    }
+  }
 }
 window.openSendCustomerNotifModal = openSendCustomerNotifModal;
+
+function closeSendCustomerNotifModal() {
+  const modal = document.getElementById('send-customer-notif-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.setProperty('display', 'none', 'important');
+  }
+}
 
 function closeSendCustomerNotifModal() {
   const modal = document.getElementById('send-customer-notif-modal');
