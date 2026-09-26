@@ -731,7 +731,7 @@ window.Store = {
 
     try {
       sendCallMeBotWhatsAppAlert(newOrder);
-      sendTelegramBotNotification(newOrder);
+      await sendTelegramBotNotification(newOrder);
     } catch (e) {
       console.warn('Alert error:', e);
     }
