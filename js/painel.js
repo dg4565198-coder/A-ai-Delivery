@@ -546,7 +546,14 @@ function createOrderCardElement(order, currentStatus) {
       <button type="button" data-action="cancel-order" data-order-id="${targetOrderId}" onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
     </div>`;
   } else {
-    actionHtml = `<div class="pt-1"><button onclick="openReceiptModal('${targetOrderId}')" class="w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1.5 rounded-lg transition">🖨️ Reemitir Comanda</button></div>`;
+    actionHtml = `<div class="space-y-1.5 pt-1">
+      <button onclick="notifyCustomerFidelityWhatsApp('${targetOrderId}')" class="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded-lg transition shadow flex items-center justify-center space-x-1">
+        <span>💬</span><span>Notificar Fidelidade no WhatsApp</span>
+      </button>
+      <button onclick="openReceiptModal('${targetOrderId}')" class="w-full text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1.5 rounded-lg transition">
+        🖨️ Reemitir Comanda
+      </button>
+    </div>`;
   }
 
   card.innerHTML = headerHtml + customerHtml + itemsHtml + paymentHtml + actionHtml;
@@ -649,9 +656,50 @@ document.addEventListener('click', function(e) {
   }
 });
 
-function advanceOrderStatus(orderId, newStatus) {
-  window.Store.updateOrderStatus(orderId, newStatus);
+async function advanceOrderStatus(orderId, newStatus) {
+  await window.Store.updateOrderStatus(orderId, newStatus);
+  if (newStatus === 'concluido') {
+    notifyCustomerFidelityWhatsApp(orderId);
+  }
 }
+
+function notifyCustomerFidelityWhatsApp(orderId) {
+  const order = window.Store ? window.Store.getOrderById(orderId) : null;
+  if (!order || !order.customer || !order.customer.phone) return;
+
+  const cleanPhone = window.Store.cleanPhoneKey(order.customer.phone);
+  if (!cleanPhone) return;
+
+  const customersMap = window.Store.getCustomersLocally ? window.Store.getCustomersLocally() : {};
+  const customerObj = customersMap[cleanPhone] || {};
+  const totalCups = (customerObj.totalCups !== undefined) ? customerObj.totalCups : 1;
+  const customerName = order.customer.name || 'Cliente';
+  const orderNum = order.orderNumber || '#';
+  const appUrl = 'https://dg4565198-coder.github.io/A-ai-Delivery/';
+
+  const msgText = `🍇 *ROTTA DO AÇAÍ • FIDELIDADE* 🍧\n\n` +
+                  `Olá, *${customerName}*! Seu pedido *${orderNum}* foi concluído com sucesso! 🎉\n\n` +
+                  `🎁 *Sua pontuação foi atualizada:*\n` +
+                  `Você tem *${totalCups} copo(s)* acumulado(s) na nossa Trilha de Fidelidade!\n\n` +
+                  `Acompanhe suas conquistas e faça novos pedidos pelo nosso cardápio digital:\n` +
+                  `${appUrl}\n\n` +
+                  `Obrigado pela preferência e bom apetite! 💜`;
+
+  const waUrl = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(msgText)}`;
+
+  try {
+    const win = window.open(waUrl, '_blank');
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+      if (confirm(`🎉 Pedido ${orderNum} concluído!\n\nPontos de ${customerName} atualizados para ${totalCups} copos.\n\nDeseja abrir o WhatsApp agora para notificar o cliente?`)) {
+        window.location.href = waUrl;
+      }
+    }
+  } catch (e) {
+    window.location.href = waUrl;
+  }
+}
+
+window.notifyCustomerFidelityWhatsApp = notifyCustomerFidelityWhatsApp;
 
 function confirmClearOrders() {
   if (confirm('Deseja realmente limpar os pedidos concluídos do histórico?')) {
