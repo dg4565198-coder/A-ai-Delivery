@@ -185,59 +185,119 @@ async function sendTelegramBotNotification(order) {
       }
     } catch (e) {}
 
-    if (!chatId && _currentConfig && _currentConfig.telegramChatId && _currentConfig.telegramChatId.trim()) {
-      chatId = _currentConfig.telegramChatId.trim();
+    if (!chatId && typeof _currentConfig !== 'undefined' && _currentConfig && _currentConfig.telegramChatId) {
+      chatId = String(_currentConfig.telegramChatId).trim();
     }
 
-    if (!chatId) chatId = '8114492362';
+    if (!chatId) chatId = '-1003761318858';
 
     const customerName = escapeTelegramHtml(order.customer ? (order.customer.name || 'Cliente') : 'Cliente');
     const customerPhone = escapeTelegramHtml(order.customer ? (order.customer.phone || '') : '');
-    const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : '';
-    const deliveryType = order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada';
+    const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : 'R$ 0,00';
+    const deliveryType = order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada no Balcão';
+
+    let addressStr = '';
+    if (order.deliveryType === 'entrega' && order.address) {
+      if (typeof order.address === 'string') {
+        addressStr = escapeTelegramHtml(order.address);
+      } else {
+        const parts = [];
+        if (order.address.street) parts.push(order.address.street);
+        if (order.address.number) parts.push(`nº ${order.address.number}`);
+        if (order.address.neighborhood) parts.push(`Bairro ${order.address.neighborhood}`);
+        if (order.address.ref) parts.push(`(Ref: ${order.address.ref})`);
+        addressStr = escapeTelegramHtml(parts.join(', '));
+      }
+    }
+
+    let paymentStr = (order.paymentMethod || 'pix').toUpperCase();
+    if (order.paymentMethod === 'combinado') {
+      paymentStr = `Combinado (Pix: R$ ${Number(order.pixAmount || 0).toFixed(2).replace('.', ',')} + Dinheiro: R$ ${Number(order.cashAmount || 0).toFixed(2).replace('.', ',')})`;
+      if (order.paymentChange) paymentStr += ` [Troco: ${escapeTelegramHtml(order.paymentChange)}]`;
+    } else if (order.paymentMethod === 'dinheiro' && order.paymentChange) {
+      paymentStr += ` [Troco para: ${escapeTelegramHtml(order.paymentChange)}]`;
+    }
 
     let itemsText = '';
     if (Array.isArray(order.items) && order.items.length > 0) {
       itemsText = order.items.map(i => {
         const nameClean = escapeTelegramHtml(i.name || i.title || 'Açaí');
         const qty = i.quantity || 1;
-        return `• <b>${qty}x ${nameClean}</b>`;
+        const priceVal = i.unitPrice ? ` (R$ ${(Number(i.unitPrice) * qty).toFixed(2).replace('.', ',')})` : '';
+        let line = `• <b>${qty}x ${nameClean}</b>${priceVal}`;
+        
+        if (i.calda) {
+          line += `\n   🍯 Calda: ${escapeTelegramHtml(i.calda)}`;
+        }
+        if (Array.isArray(i.fruits) && i.fruits.length > 0) {
+          line += `\n   🍓 Frutas: ${escapeTelegramHtml(i.fruits.map(f => f.name || f).join(', '))}`;
+        }
+        if (Array.isArray(i.freeToppings) && i.freeToppings.length > 0) {
+          line += `\n   🥣 Complementos: ${escapeTelegramHtml(i.freeToppings.map(t => t.name || t).join(', '))}`;
+        }
+        if (i.notes) {
+          line += `\n   📝 Obs: ${escapeTelegramHtml(i.notes)}`;
+        }
+        return line;
       }).join('\n');
     } else {
       itemsText = '• <b>1x Açaí</b>';
     }
 
-    const messageHtml = `🚨 <b>NOVO PEDIDO CHEGOU NA LOJA!</b> 🍇\n\n` +
+    let messageHtml = `🚨 <b>NOVO PEDIDO CHEGOU NA LOJA!</b> 🍇\n\n` +
                         `<b>Pedido:</b> ${escapeTelegramHtml(order.orderNumber || '#')}\n` +
                         `<b>Cliente:</b> ${customerName} (${customerPhone})\n` +
-                        `<b>Tipo:</b> ${deliveryType}\n` +
-                        `<b>Total:</b> ${totalVal}\n\n` +
-                        `<b>Itens:</b>\n${itemsText}\n\n` +
-                        `👉 Abra o painel da cozinha para aceitar e preparar!`;
-
-    const urlHtml = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageHtml)}&parse_mode=HTML`;
-
-    const res = await fetch(urlHtml);
-    const data = await res.json();
+                        `<b>Tipo:</b> ${deliveryType}\n`;
     
-    if (!data.ok) {
-      console.warn('[Telegram Bot] Envio HTML falhou, tentando texto simples:', data);
-      const messagePlain = `🚨 NOVO PEDIDO CHEGOU NA LOJA! 🍇\n\n` +
-                           `Pedido: ${order.orderNumber || '#'}\n` +
-                           `Cliente: ${customerName} (${customerPhone})\n` +
-                           `Tipo: ${deliveryType}\n` +
-                           `Total: ${totalVal}\n\n` +
-                           `Itens:\n${itemsText.replace(/<\/?b>/g, '')}\n\n` +
-                           `👉 Abra o painel da cozinha para aceitar e preparar!`;
-      const urlPlain = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messagePlain)}`;
-      await fetch(urlPlain);
+    if (addressStr) {
+      messageHtml += `<b>Endereço:</b> ${addressStr}\n`;
     }
+
+    messageHtml += `<b>Pagamento:</b> ${escapeTelegramHtml(paymentStr)}\n\n` +
+                   `<b>Itens:</b>\n${itemsText}\n\n`;
+
+    if (order.notes) {
+      messageHtml += `<b>Observação Geral:</b> ${escapeTelegramHtml(order.notes)}\n\n`;
+    }
+
+    messageHtml += `<b>Total:</b> ${totalVal}\n\n` +
+                   `👉 Abra o painel da cozinha para aceitar e preparar!`;
+
+    const postRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: messageHtml,
+        parse_mode: 'HTML'
+      })
+    });
+
+    const data = await postRes.json();
+    if (!data.ok) {
+      console.warn('[Telegram Bot] Envio HTML via POST falhou, tentando texto simples:', data);
+      const messagePlain = messageHtml.replace(/<\/?b>/g, '');
+      const retryRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: messagePlain
+        })
+      });
+      return await retryRes.json();
+    } else {
+      console.log('[Telegram Bot] Notificação enviada com sucesso para o Telegram!', data);
+    }
+    return data;
   } catch (err) {
     console.warn('Telegram Bot alert error:', err);
+    throw err;
   }
 }
 
 window.Store = {
+  sendTelegramBotNotification,
   init() {
     try {
       const savedCfg = localStorage.getItem(STORAGE_KEYS.CONFIG);
@@ -1323,6 +1383,26 @@ window.Store = {
     if (!db) return Promise.resolve(payload);
 
     return db.ref('customers/' + key).update(payload).catch(e => console.warn('Firebase /customers set:', e));
+  },
+
+  deleteCustomer(phone) {
+    const key = this.cleanPhoneKey(phone);
+    if (!key) return Promise.resolve();
+
+    try {
+      const customers = this.getCustomersLocally();
+      if (customers[key]) {
+        delete customers[key];
+        localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+      }
+    } catch (e) {
+      console.warn('Erro ao remover cliente do localStorage:', e);
+    }
+
+    const db = getDB();
+    if (!db) return Promise.resolve();
+
+    return db.ref('customers/' + key).remove().catch(e => console.warn('Firebase /customers remove:', e));
   },
 
   addCupsToCustomer(phone, name, cupsCount) {

@@ -3,7 +3,7 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v61';
+const CACHE_NAME = 'rotta-acai-v63';
 const urlsToCache = [
   './',
   './index.html',
@@ -173,48 +173,78 @@ function sendTelegramBotFromSW(order) {
     fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/config/telegramChatId.json')
       .then(res => res.json())
       .then(async savedChatId => {
-        const chatId = (savedChatId && String(savedChatId).trim()) ? String(savedChatId).trim() : '8114492362';
+        const chatId = (savedChatId && String(savedChatId).trim()) ? String(savedChatId).trim() : '-1003761318858';
         if (!token || !chatId) return;
 
         const customerName = escapeTelegramHtmlSW(order.customer ? (order.customer.name || 'Cliente') : 'Cliente');
         const customerPhone = escapeTelegramHtmlSW(order.customer ? (order.customer.phone || '') : '');
-        const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : '';
-        const deliveryType = order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada';
+        const totalVal = order.total ? `R$ ${Number(order.total).toFixed(2).replace('.', ',')}` : 'R$ 0,00';
+        const deliveryType = order.deliveryType === 'entrega' ? '🛵 Entrega' : '🏬 Retirada no Balcão';
+
+        let addressStr = '';
+        if (order.deliveryType === 'entrega' && order.address) {
+          if (typeof order.address === 'string') {
+            addressStr = escapeTelegramHtmlSW(order.address);
+          } else {
+            const parts = [];
+            if (order.address.street) parts.push(order.address.street);
+            if (order.address.number) parts.push(`nº ${order.address.number}`);
+            if (order.address.neighborhood) parts.push(`Bairro ${order.address.neighborhood}`);
+            if (order.address.ref) parts.push(`(Ref: ${order.address.ref})`);
+            addressStr = escapeTelegramHtmlSW(parts.join(', '));
+          }
+        }
+
+        let paymentStr = (order.paymentMethod || 'pix').toUpperCase();
+        if (order.paymentMethod === 'combinado') {
+          paymentStr = `Combinado (Pix: R$ ${Number(order.pixAmount || 0).toFixed(2).replace('.', ',')} + Dinheiro: R$ ${Number(order.cashAmount || 0).toFixed(2).replace('.', ',')})`;
+          if (order.paymentChange) paymentStr += ` [Troco: ${escapeTelegramHtmlSW(order.paymentChange)}]`;
+        } else if (order.paymentMethod === 'dinheiro' && order.paymentChange) {
+          paymentStr += ` [Troco para: ${escapeTelegramHtmlSW(order.paymentChange)}]`;
+        }
 
         let itemsText = '';
         if (Array.isArray(order.items) && order.items.length > 0) {
           itemsText = order.items.map(i => {
             const nameClean = escapeTelegramHtmlSW(i.name || i.title || 'Açaí');
             const qty = i.quantity || 1;
-            return `• <b>${qty}x ${nameClean}</b>`;
+            const priceVal = i.unitPrice ? ` (R$ ${(Number(i.unitPrice) * qty).toFixed(2).replace('.', ',')})` : '';
+            let line = `• <b>${qty}x ${nameClean}</b>${priceVal}`;
+            if (i.calda) line += `\n   🍯 Calda: ${escapeTelegramHtmlSW(i.calda)}`;
+            if (Array.isArray(i.fruits) && i.fruits.length > 0) line += `\n   🍓 Frutas: ${escapeTelegramHtmlSW(i.fruits.map(f => f.name || f).join(', '))}`;
+            if (Array.isArray(i.freeToppings) && i.freeToppings.length > 0) line += `\n   🥣 Complementos: ${escapeTelegramHtmlSW(i.freeToppings.map(t => t.name || t).join(', '))}`;
+            if (i.notes) line += `\n   📝 Obs: ${escapeTelegramHtmlSW(i.notes)}`;
+            return line;
           }).join('\n');
         } else {
           itemsText = '• <b>1x Açaí</b>';
         }
 
-        const messageHtml = `🚨 <b>NOVO PEDIDO CHEGOU NA LOJA!</b> 🍇\n\n` +
+        let messageHtml = `🚨 <b>NOVO PEDIDO CHEGOU NA LOJA!</b> 🍇\n\n` +
                             `<b>Pedido:</b> ${escapeTelegramHtmlSW(order.orderNumber || '#')}\n` +
                             `<b>Cliente:</b> ${customerName} (${customerPhone})\n` +
-                            `<b>Tipo:</b> ${deliveryType}\n` +
-                            `<b>Total:</b> ${totalVal}\n\n` +
-                            `<b>Itens:</b>\n${itemsText}\n\n` +
-                            `👉 Abra o painel da cozinha para aceitar e preparar!`;
+                            `<b>Tipo:</b> ${deliveryType}\n`;
+        if (addressStr) messageHtml += `<b>Endereço:</b> ${addressStr}\n`;
+        messageHtml += `<b>Pagamento:</b> ${escapeTelegramHtmlSW(paymentStr)}\n\n` +
+                       `<b>Itens:</b>\n${itemsText}\n\n`;
+        if (order.notes) messageHtml += `<b>Observação Geral:</b> ${escapeTelegramHtmlSW(order.notes)}\n\n`;
+        messageHtml += `<b>Total:</b> ${totalVal}\n\n` +
+                       `👉 Abra o painel da cozinha para aceitar e preparar!`;
 
-        const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageHtml)}&parse_mode=HTML`;
-        
         try {
-          const res = await fetch(url);
+          const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: messageHtml, parse_mode: 'HTML' })
+          });
           const data = await res.json();
           if (!data.ok) {
-            const messagePlain = `🚨 NOVO PEDIDO CHEGOU NA LOJA! 🍇\n\n` +
-                                 `Pedido: ${order.orderNumber || '#'}\n` +
-                                 `Cliente: ${customerName} (${customerPhone})\n` +
-                                 `Tipo: ${deliveryType}\n` +
-                                 `Total: ${totalVal}\n\n` +
-                                 `Itens:\n${itemsText.replace(/<\/?b>/g, '')}\n\n` +
-                                 `👉 Abra o painel da cozinha para aceitar e preparar!`;
-            const urlPlain = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messagePlain)}`;
-            await fetch(urlPlain);
+            const messagePlain = messageHtml.replace(/<\/?b>/g, '');
+            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: chatId, text: messagePlain })
+            });
           }
         } catch (e) {}
       })

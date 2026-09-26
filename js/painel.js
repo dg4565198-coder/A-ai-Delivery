@@ -1778,6 +1778,55 @@ async function testTelegramGroupNotification() {
 }
 window.testTelegramGroupNotification = testTelegramGroupNotification;
 
+async function simularPedidoTelegram() {
+  const input = document.getElementById('cfg-telegram-chatid');
+  const chatId = input ? input.value.trim() : '';
+
+  if (!chatId) {
+    alert('Por favor, informe ou detecte o Telegram Chat ID primeiro.');
+    return;
+  }
+
+  const config = window.Store.getConfig();
+  config.telegramChatId = chatId;
+  window.Store.saveConfig(config);
+
+  const mockOrder = {
+    orderNumber: '#TESTE-' + Math.floor(1000 + Math.random() * 9000),
+    customer: { name: 'Cliente de Teste', phone: '73999999999' },
+    deliveryType: 'entrega',
+    address: { street: 'Rua das Flores', number: '123', neighborhood: 'Centro', ref: 'Próximo à Praça' },
+    paymentMethod: 'pix',
+    items: [
+      {
+        name: 'Copo 500ml Especial',
+        quantity: 1,
+        unitPrice: 22.00,
+        calda: 'Leite Condensado',
+        fruits: [{ name: 'Morango' }, { name: 'Banana' }],
+        freeToppings: [{ name: 'Leite em Pó' }, { name: 'Paçoca' }],
+        notes: 'Caprichar no morango!'
+      }
+    ],
+    notes: 'Entregar o mais rápido possível!',
+    subtotal: 22.00,
+    deliveryFee: 0,
+    total: 22.00
+  };
+
+  try {
+    const data = await window.Store.sendTelegramBotNotification(mockOrder);
+    if (data && data.ok) {
+      alert(`🎉 SUCESSO NO TESTE DE PEDIDO!\n\nUm pedido de teste completo (com frutas, calda e endereço) foi enviado para o seu grupo (${chatId})!\n\nConfira se a mensagem chegou no seu grupo do Telegram com sua noiva.`);
+    } else {
+      alert(`⚠️ Falha ao enviar pedido de teste: ` + (data ? data.description : 'Erro desconhecido'));
+    }
+  } catch (err) {
+    alert(`Erro ao testar envio de pedido: ` + err.message);
+  }
+}
+window.simularPedidoTelegram = simularPedidoTelegram;
+
 // ==========================================================================
 // 10. HORÁRIOS DE FUNCIONAMENTO & PROMOÇÕES PUSH
 // ==========================================================================
@@ -2450,6 +2499,9 @@ function renderCustomersTableAdmin() {
           <a href="${whatsUrl}" target="_blank" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition inline-block">
             💬 WhatsApp
           </a>
+          <button onclick="handleDeleteCustomer('${cleanPhone}', '${c.name || 'Cliente'}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg text-xs transition inline-block" title="Excluir Cliente">
+            🗑️ Excluir
+          </button>
         </td>
       </tr>
     `;
@@ -2478,6 +2530,19 @@ function editCustomerCups(phone, name, currentCups) {
   });
 }
 
+async function handleDeleteCustomer(phone, name) {
+  if (!phone) return;
+  if (confirm(`Deseja realmente excluir o cliente "${name}" (${phone})?\n\nEle será removido do sistema e da lista do programa de fidelidade.`)) {
+    try {
+      await window.Store.deleteCustomer(phone);
+      renderCustomersTableAdmin();
+      alert(`✅ Cliente "${name}" foi excluído com sucesso!`);
+    } catch (err) {
+      alert("Erro ao excluir cliente: " + err.message);
+    }
+  }
+}
+
 window.renderFidelityAdminTab = renderFidelityAdminTab;
 window.saveFidelityConfigFromAdmin = saveFidelityConfigFromAdmin;
 window.addFidelityLevelInAdmin = addFidelityLevelInAdmin;
@@ -2486,6 +2551,7 @@ window.resetFidelityConfigToDefault = resetFidelityConfigToDefault;
 window.updateFidelityLevelField = updateFidelityLevelField;
 window.filterCustomersListAdmin = filterCustomersListAdmin;
 window.editCustomerCups = editCustomerCups;
+window.handleDeleteCustomer = handleDeleteCustomer;
 
 // =============================================================================
 // INSTALAÇÃO DO PWA / APP DO PAINEL DE GESTÃO

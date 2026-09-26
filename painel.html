@@ -607,8 +607,11 @@
               <button type="button" onclick="testTelegramGroupNotification()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow transition shrink-0 flex items-center space-x-1">
                 <span>🧪</span><span>Testar Envio</span>
               </button>
+              <button type="button" onclick="simularPedidoTelegram()" class="px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white font-extrabold rounded-xl text-xs shadow transition shrink-0 flex items-center space-x-1">
+                <span>📦</span><span>Simular Pedido no Telegram</span>
+              </button>
             </div>
-            <span class="text-[11px] text-gray-500 block mt-1">💡 Adicione o Bot no grupo, envie qualquer mensagem lá, clique em <b>Detectar ID</b> e depois em <b>Testar Envio</b>!</span>
+            <span class="text-[11px] text-gray-500 block mt-1">💡 Adicione o Bot no grupo, clique em <b>Detectar ID</b>, <b>Testar Envio</b> ou <b>Simular Pedido no Telegram</b>!</span>
           </div>
 
           <div class="pt-4 border-t border-gray-200">
@@ -1354,8 +1357,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <script src="js/store.js?v=61"></script>
-  <script src="js/painel.js?v=61"></script>
+  <script src="js/store.js?v=63"></script>
+  <script src="js/painel.js?v=63"></script>
   <script>
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {
