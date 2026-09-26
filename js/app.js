@@ -1373,6 +1373,16 @@ function renderMyOrders() {
           </div>
         ` : ''}
 
+        ${(order.rating && order.rating.reply && order.rating.reply.text) ? `
+          <div class="bg-purple-50 p-3.5 rounded-2xl border border-purple-200 text-xs space-y-1 shadow-sm mt-2">
+            <div class="font-extrabold text-acai-900 flex items-center justify-between">
+              <span class="flex items-center gap-1">💬 <span>Resposta da Rotta do Açaí</span></span>
+              <span class="text-[10px] text-purple-400 font-normal">${order.rating.reply.createdAt ? new Date(order.rating.reply.createdAt).toLocaleDateString('pt-BR') : ''}</span>
+            </div>
+            <p class="text-gray-700 italic">"${order.rating.reply.text}"</p>
+          </div>
+        ` : ''}
+
         ${isUnratedConcluido ? `
           <button onclick="closeMyOrdersModal(); openRatingModal({ id: '${order.id}', orderNumber: '${order.orderNumber || '#'}' })" class="w-full mt-2 bg-gold-500 hover:bg-gold-400 text-acai-950 font-black py-2 rounded-xl text-xs shadow transition">
             ⭐ Avaliar este Pedido
@@ -2045,3 +2055,58 @@ window.closeFidelityModal = closeFidelityModal;
 window.promptEditFidelityPhone = promptEditFidelityPhone;
 window.claimFidelityReward = claimFidelityReward;
 
+window.setupRatingReplyListener = function() {
+  const db = window.Store && window.Store.getDB ? window.Store.getDB() : null;
+  if (!db) return;
+
+  const orderIds = window.Store.getMyOrders ? window.Store.getMyOrders() : [];
+  if (!orderIds || orderIds.length === 0) return;
+
+  if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+    try { Notification.requestPermission(); } catch(e) {}
+  }
+
+  orderIds.slice(0, 10).forEach(orderId => {
+    db.ref(`orders/${orderId}/rating/reply`).on('value', snap => {
+      if (snap.exists()) {
+        const reply = snap.val();
+        if (reply && reply.text) {
+          const notifKey = 'notified_reply_' + orderId + '_' + (reply.createdAt || 0);
+          if (!localStorage.getItem(notifKey)) {
+            localStorage.setItem(notifKey, 'true');
+
+            if ("Notification" in window && Notification.permission === "granted") {
+              if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                navigator.serviceWorker.ready.then(reg => {
+                  reg.showNotification("Rotta do Açaí 🍧", {
+                    body: `A loja respondeu sua avaliação: "${reply.text}"`,
+                    icon: "assets/logo.jpg",
+                    badge: "assets/logo.jpg",
+                    vibrate: [300, 100, 300, 100, 300],
+                    data: { url: "index.html" },
+                    tag: 'reply-notif-' + orderId
+                  });
+                }).catch(() => {});
+              } else {
+                try {
+                  new Notification("Rotta do Açaí 🍧", {
+                    body: `A loja respondeu sua avaliação: "${reply.text}"`,
+                    icon: "assets/logo.jpg"
+                  });
+                } catch(e) {}
+              }
+            }
+
+            if (typeof renderMyOrders === 'function') renderMyOrders();
+          }
+        }
+      }
+    });
+  });
+};
+
+setTimeout(() => {
+  if (typeof window.setupRatingReplyListener === 'function') {
+    window.setupRatingReplyListener();
+  }
+}, 3000);

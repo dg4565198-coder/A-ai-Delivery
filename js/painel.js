@@ -2482,6 +2482,19 @@ function updateRatingsMetricsAndList() {
 
     const cleanPhone = (r.customerPhone || '').replace(/\D/g, '');
     const waLink = cleanPhone ? `https://wa.me/55${cleanPhone}` : '#';
+    const escapedComment = (r.comment || '').replace(/[`"\\]/g, '');
+    const escapedName = (r.customerName || 'Cliente').replace(/[`"\\]/g, '');
+    const escapedReplyText = (r.reply && r.reply.text ? r.reply.text : '').replace(/[`"\\]/g, '');
+
+    const replyHtml = (r.reply && r.reply.text) ? `
+      <div class="mt-2.5 p-3 bg-purple-50/90 border border-purple-200 rounded-xl space-y-1">
+        <div class="flex items-center justify-between text-xs font-extrabold text-acai-900">
+          <span class="flex items-center gap-1.5">💬 <span>Resposta da Rotta do Açaí</span></span>
+          <span class="text-[10px] text-purple-400 font-medium">${r.reply.createdAt ? new Date(r.reply.createdAt).toLocaleString('pt-BR') : ''}</span>
+        </div>
+        <p class="text-xs text-gray-700 italic">"${r.reply.text}"</p>
+      </div>
+    ` : '';
 
     return `
       <div class="bg-gradient-to-r from-purple-50/70 to-white p-4 rounded-2xl border border-purple-100 shadow-sm space-y-2">
@@ -2502,6 +2515,10 @@ function updateRatingsMetricsAndList() {
           </div>
           <div class="flex items-center gap-2">
             ${badge}
+            <button onclick="openReplyRatingModal('${r.id}', '${r.orderId || ''}', '${escapedName}', '${cleanPhone}', \`${escapedComment}\`, \`${escapedReplyText}\`, ${stars})" title="Responder Avaliação" class="p-1.5 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg transition text-xs font-bold flex items-center gap-1">
+              <span>💬</span>
+              <span class="hidden sm:inline">${r.reply ? 'Editar Resposta' : 'Responder'}</span>
+            </button>
             <button onclick="handleDeleteRating('${r.id}')" title="Excluir Avaliação" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition text-xs font-bold flex items-center gap-1">
               <span>🗑️</span>
               <span class="hidden sm:inline">Excluir</span>
@@ -2516,6 +2533,7 @@ function updateRatingsMetricsAndList() {
           <p class="text-xs text-gray-700 leading-relaxed bg-white p-3 rounded-xl border border-purple-50 italic">
             "${r.comment ? r.comment : 'O cliente não digitou um comentário por extenso.'}"
           </p>
+          ${replyHtml}
         </div>
       </div>
     `;
@@ -2551,8 +2569,93 @@ async function handleDeleteRating(ratingId) {
   }
 }
 
+function openReplyRatingModal(ratingId, orderId, customerName, phone, comment, existingReply, stars) {
+  const modal = document.getElementById('reply-rating-modal');
+  const summaryElem = document.getElementById('reply-rating-customer-summary');
+  const inputElem = document.getElementById('reply-rating-input');
+  
+  if (!modal || !summaryElem || !inputElem) return;
+
+  document.getElementById('reply-rating-target-id').value = ratingId || '';
+  document.getElementById('reply-rating-target-order-id').value = orderId || '';
+  document.getElementById('reply-rating-target-phone').value = phone || '';
+  document.getElementById('reply-rating-target-name').value = customerName || 'Cliente';
+
+  const starsStr = '★'.repeat(stars || 5) + '☆'.repeat(5 - (stars || 5));
+  summaryElem.innerHTML = `
+    <div class="flex items-center justify-between font-bold text-acai-900">
+      <span>👤 ${customerName || 'Cliente'}</span>
+      <span class="text-amber-500 font-black">${starsStr}</span>
+    </div>
+    <p class="text-gray-600 italic">"${comment || 'Sem comentário'}"</p>
+  `;
+
+  inputElem.value = existingReply || '';
+  modal.classList.remove('hidden');
+}
+
+function closeReplyRatingModal() {
+  const modal = document.getElementById('reply-rating-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function fillQuickReply(text) {
+  const inputElem = document.getElementById('reply-rating-input');
+  if (inputElem) inputElem.value = text;
+}
+
+async function handleSaveRatingReply() {
+  const ratingId = document.getElementById('reply-rating-target-id').value;
+  const orderId = document.getElementById('reply-rating-target-order-id').value;
+  const replyText = document.getElementById('reply-rating-input').value.trim();
+
+  if (!ratingId) {
+    alert("Erro: ID da avaliação não encontrado.");
+    return;
+  }
+
+  if (!replyText) {
+    alert("Por favor, digite a mensagem de resposta.");
+    return;
+  }
+
+  try {
+    await window.Store.saveRatingReply(ratingId, orderId, replyText);
+    closeReplyRatingModal();
+    alert("✅ Resposta salva com sucesso! O cliente receberá a notificação.");
+  } catch (err) {
+    alert("Erro ao salvar resposta: " + err.message);
+  }
+}
+
+function handleReplyViaWhatsApp() {
+  const phone = document.getElementById('reply-rating-target-phone').value;
+  const name = document.getElementById('reply-rating-target-name').value;
+  const replyText = document.getElementById('reply-rating-input').value.trim();
+
+  if (!phone) {
+    alert("Cliente não possui número de WhatsApp cadastrado.");
+    return;
+  }
+
+  if (!replyText) {
+    alert("Digite uma resposta antes de enviar pelo WhatsApp.");
+    return;
+  }
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  const msg = `Olá, *${name}*! 🍧✨\n\nNós da *Rotta do Açaí* respondemos a sua avaliação:\n\n💬 "${replyText}"\n\nMuito obrigado pelo seu carinho e preferência! ❤️`;
+  const url = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
 window.renderRatingsTab = renderRatingsTab;
 window.filterRatings = filterRatings;
+window.openReplyRatingModal = openReplyRatingModal;
+window.closeReplyRatingModal = closeReplyRatingModal;
+window.fillQuickReply = fillQuickReply;
+window.handleSaveRatingReply = handleSaveRatingReply;
+window.handleReplyViaWhatsApp = handleReplyViaWhatsApp;
 window.handleDeleteRating = handleDeleteRating;
 
 // ==========================================================================

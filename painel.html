@@ -1431,13 +1431,64 @@
         </div>
       </div>
     </div>
+  <!-- MODAL DE RESPOSTA DA AVALIAÇÃO -->
+  <div id="reply-rating-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white text-gray-900 w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4 border border-purple-100 animate-in zoom-in-95 duration-200">
+      
+      <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-2xl">💬</span>
+          <div>
+            <h3 class="font-extrabold text-lg text-acai-900">Responder Avaliação</h3>
+            <p id="reply-rating-subtitle" class="text-xs text-gray-500">Enviar resposta pública e notificação para o cliente</p>
+          </div>
+        </div>
+        <button onclick="closeReplyRatingModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold p-1">✕</button>
+      </div>
+
+      <!-- Resumo do comentário do cliente -->
+      <div id="reply-rating-customer-summary" class="bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100 space-y-1 text-xs">
+        <!-- Preenchido dinamicamente -->
+      </div>
+
+      <!-- Sugestões Rápidas -->
+      <div class="space-y-1.5">
+        <label class="block text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">Modelos de Resposta Rápidos:</label>
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="fillQuickReply('Muito obrigado pelo carinho! Ficamos muito felizes que gostou. Volte sempre! ❤️🍇')" class="text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-2.5 py-1 rounded-lg border border-purple-200 transition">❤️ Agradecimento</button>
+          <button type="button" onclick="fillQuickReply('Muito obrigado pela avaliação! Trabalhamos para te servir cada vez melhor. 🌟')" class="text-[11px] bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold px-2.5 py-1 rounded-lg border border-purple-200 transition">🌟 Padrão</button>
+          <button type="button" onclick="fillQuickReply('Olá! Agradecemos o feedback e pedimos desculpas pelo ocorrido. Já alinhamos com a equipe para melhorar no seu próximo pedido! 🙏')" class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-lg border border-amber-200 transition">🙏 Pedido de Desculpas</button>
+        </div>
+      </div>
+
+      <!-- Campo de Texto da Resposta -->
+      <div class="space-y-1">
+        <label for="reply-rating-input" class="block text-xs font-bold text-gray-700">Sua Resposta:</label>
+        <textarea id="reply-rating-input" rows="4" class="w-full text-xs p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:outline-none" placeholder="Digite a resposta que a loja enviará ao cliente..."></textarea>
+      </div>
+
+      <input type="hidden" id="reply-rating-target-id" value="" />
+      <input type="hidden" id="reply-rating-target-order-id" value="" />
+      <input type="hidden" id="reply-rating-target-phone" value="" />
+      <input type="hidden" id="reply-rating-target-name" value="" />
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+        <button onclick="handleSaveRatingReply()" class="w-full bg-acai-800 hover:bg-acai-900 text-gold-400 font-black py-2.5 px-3 rounded-xl shadow transition text-xs flex items-center justify-center space-x-1">
+          <span>💾 Salvar e Notificar Sistema</span>
+        </button>
+        <button onclick="handleReplyViaWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-3 rounded-xl shadow transition text-xs flex items-center justify-center space-x-1">
+          <span>📱 Enviar no WhatsApp</span>
+        </button>
+      </div>
+
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <script src="js/store.js?v=67"></script>
-  <script src="js/painel.js?v=67"></script>
+  <script src="js/store.js?v=68"></script>
+  <script src="js/painel.js?v=68"></script>
   <script>
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {

@@ -1221,6 +1221,45 @@ window.Store = {
     return Promise.all([p1, p2]);
   },
 
+  async saveRatingReply(ratingId, orderId, replyText) {
+    if (!ratingId) return;
+
+    const replyObj = {
+      text: replyText || '',
+      createdAt: Date.now()
+    };
+
+    const db = getDB();
+    if (!db) return Promise.resolve(replyObj);
+
+    const promises = [];
+    promises.push(db.ref(`ratings/${ratingId}/reply`).set(replyObj).catch(() => {}));
+
+    let targetOrderId = orderId;
+    if (!targetOrderId && ratingId.startsWith('rating_order_')) {
+      targetOrderId = ratingId.replace('rating_order_', '');
+    }
+
+    if (targetOrderId) {
+      promises.push(db.ref(`orders/${targetOrderId}/rating/reply`).set(replyObj).catch(() => {}));
+    }
+
+    try {
+      const snap = await db.ref('ratings').once('value');
+      if (snap.exists()) {
+        const val = snap.val();
+        for (const k in val) {
+          if (k === ratingId || (targetOrderId && val[k] && val[k].orderId === targetOrderId)) {
+            promises.push(db.ref(`ratings/${k}/reply`).set(replyObj).catch(() => {}));
+          }
+        }
+      }
+    } catch (e) {}
+
+    await Promise.all(promises);
+    return replyObj;
+  },
+
   async deleteRating(ratingId) {
     if (!ratingId) return;
 
