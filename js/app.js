@@ -2109,4 +2109,78 @@ setTimeout(() => {
   if (typeof window.setupRatingReplyListener === 'function') {
     window.setupRatingReplyListener();
   }
+  if (typeof window.setupCustomerWinbackNotifListener === 'function') {
+    window.setupCustomerWinbackNotifListener();
+  }
 }, 3000);
+
+window.setupCustomerWinbackNotifListener = function() {
+  const db = window.Store && window.Store.getDB ? window.Store.getDB() : null;
+  if (!db) return;
+
+  let savedPhone = '';
+  try {
+    const rawFidelity = localStorage.getItem('rotta_customer_fidelity_phone');
+    if (rawFidelity) savedPhone = rawFidelity.replace(/\D/g, '');
+  } catch(e) {}
+
+  function attachWinbackListener(cleanPhone) {
+    if (!cleanPhone) return;
+    const cleanKey = cleanPhone.replace(/^55/, '');
+    const targetKeys = [cleanKey, '55' + cleanKey];
+    
+    targetKeys.forEach(key => {
+      db.ref('customer_notifications/' + key).on('value', snap => {
+        if (snap.exists()) {
+          const notif = snap.val();
+          if (notif && notif.body) {
+            const seenKey = 'seen_winback_' + (notif.createdAt || 0);
+            if (!localStorage.getItem(seenKey)) {
+              localStorage.setItem(seenKey, 'true');
+
+              if ("Notification" in window && Notification.permission === "granted") {
+                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                  navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(notif.title || "Rotta do Açaí 🍧", {
+                      body: notif.body,
+                      icon: "assets/logo.jpg",
+                      badge: "assets/logo.jpg",
+                      vibrate: [400, 100, 400, 100, 400],
+                      data: { url: "index.html" },
+                      tag: 'winback-' + (notif.createdAt || Date.now())
+                    });
+                  }).catch(() => {});
+                } else {
+                  try {
+                    new Notification(notif.title || "Rotta do Açaí 🍧", {
+                      body: notif.body,
+                      icon: "assets/logo.jpg"
+                    });
+                  } catch(e) {}
+                }
+              }
+
+              if (typeof showToast === 'function') {
+                showToast(`📢 Rotta do Açaí: "${notif.body}"`);
+              }
+            }
+          }
+        }
+      });
+    });
+  }
+
+  if (!savedPhone) {
+    const orders = window.Store.getMyOrders ? window.Store.getMyOrders() : [];
+    if (orders && orders.length > 0) {
+      db.ref('orders/' + orders[0]).once('value').then(snap => {
+        if (snap.exists() && snap.val() && snap.val().customer && snap.val().customer.phone) {
+          const ph = snap.val().customer.phone.replace(/\D/g, '');
+          if (ph) attachWinbackListener(ph);
+        }
+      });
+    }
+  } else {
+    attachWinbackListener(savedPhone);
+  }
+};

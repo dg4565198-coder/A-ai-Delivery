@@ -2892,6 +2892,9 @@ function renderCustomersTableAdmin() {
           ${lastDate}
         </td>
         <td class="p-3 text-right space-x-1">
+          <button onclick="openSendCustomerNotifModal('${c.phoneKey || cleanPhone}', '${(c.name || 'Cliente').replace(/'/g, "\\'")}', ${cups}, '${c.lastOrderAt || ''}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-acai-950 font-black rounded-lg text-xs transition inline-block shadow-sm" title="Enviar Notificação no Celular (Sistema)">
+            🔔 Notificar
+          </button>
           <button onclick="openEditCustomerModal('${c.phoneKey || cleanPhone}')" class="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold rounded-lg text-xs transition" title="Editar Dados do Cliente">
             ✏️ Editar
           </button>
@@ -2910,6 +2913,103 @@ function renderCustomersTableAdmin() {
 function filterCustomersListAdmin() {
   renderCustomersTableAdmin();
 }
+
+function openSendCustomerNotifModal(customerKey, name, cups, lastOrderAt) {
+  const modal = document.getElementById('send-customer-notif-modal');
+  const cardElem = document.getElementById('cust-notif-info-card');
+  const msgInput = document.getElementById('cust-notif-message-input');
+
+  if (!modal || !cardElem || !msgInput) return;
+
+  const cleanPhone = window.Store.cleanPhoneKey(customerKey);
+  document.getElementById('cust-notif-target-phone').value = cleanPhone;
+  document.getElementById('cust-notif-target-name').value = name || 'Cliente';
+  document.getElementById('cust-notif-target-cups').value = cups || 0;
+
+  const lastDateStr = lastOrderAt ? new Date(lastOrderAt).toLocaleDateString('pt-BR') : 'Sem registros recentes';
+
+  cardElem.innerHTML = `
+    <div class="flex items-center justify-between font-bold text-acai-900">
+      <span>👤 ${name || 'Cliente'}</span>
+      <span class="text-amber-700 font-black">🍧 ${cups || 0} copos</span>
+    </div>
+    <div class="text-[11px] text-gray-500">
+      <span>📱 Telefone: ${cleanPhone}</span> • <span>Último pedido: ${lastDateStr}</span>
+    </div>
+  `;
+
+  fillCustomerNotifTemplate('saudades');
+  modal.classList.remove('hidden');
+}
+
+function closeSendCustomerNotifModal() {
+  const modal = document.getElementById('send-customer-notif-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function fillCustomerNotifTemplate(type) {
+  const name = document.getElementById('cust-notif-target-name').value || 'Cliente';
+  const cups = document.getElementById('cust-notif-target-cups').value || '0';
+  const input = document.getElementById('cust-notif-message-input');
+
+  if (!input) return;
+
+  if (type === 'saudades') {
+    input.value = `Olá, ${name}! Que saudades de você na Rotta do Açaí! 🍇 Faz um tempinho que não vemos você por aqui. Que tal pedir um açaí geladinho hoje?`;
+  } else if (type === 'fidelidade') {
+    input.value = `Olá, ${name}! 🍧 Passando para lembrar que você tem ${cups} copo(s) acumulado(s) no Fidelidade da Rotta do Açaí! Falta pouco para sua recompensa!`;
+  } else if (type === 'oferta') {
+    input.value = `Olá, ${name}! 🚀 Temos açaí fresquinho e adicionais deliciosos prontos para você hoje na Rotta do Açaí. Faça seu pedido!`;
+  }
+}
+
+async function handleSendCustomerNotifSystem() {
+  const phone = document.getElementById('cust-notif-target-phone').value;
+  const message = document.getElementById('cust-notif-message-input').value.trim();
+
+  if (!phone) {
+    alert("Erro ao identificar o telefone do cliente.");
+    return;
+  }
+
+  if (!message) {
+    alert("Por favor, digite a mensagem da notificação.");
+    return;
+  }
+
+  try {
+    await window.Store.sendCustomerNotification(phone, "Rotta do Açaí 🍧", message);
+    closeSendCustomerNotifModal();
+    alert("✅ Notificação enviada para o celular do cliente com sucesso!");
+  } catch (err) {
+    alert("Erro ao enviar notificação: " + (err.message || err));
+  }
+}
+
+function handleSendCustomerNotifWhatsApp() {
+  const phone = document.getElementById('cust-notif-target-phone').value;
+  const message = document.getElementById('cust-notif-message-input').value.trim();
+
+  if (!phone) {
+    alert("Telefone do cliente não encontrado.");
+    return;
+  }
+
+  if (!message) {
+    alert("Digite a mensagem antes de enviar pelo WhatsApp.");
+    return;
+  }
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  const url = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+}
+
+window.openSendCustomerNotifModal = openSendCustomerNotifModal;
+window.closeSendCustomerNotifModal = closeSendCustomerNotifModal;
+window.fillCustomerNotifTemplate = fillCustomerNotifTemplate;
+window.handleSendCustomerNotifSystem = handleSendCustomerNotifSystem;
+window.handleSendCustomerNotifWhatsApp = handleSendCustomerNotifWhatsApp;
 
 function openEditCustomerModal(customerKey) {
   const customersMap = window.Store.getCustomersLocally ? window.Store.getCustomersLocally() : {};

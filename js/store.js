@@ -1260,6 +1260,45 @@ window.Store = {
     return replyObj;
   },
 
+  async sendCustomerNotification(phoneKey, title, message) {
+    if (!phoneKey) return;
+    const cleanKey = this.cleanPhoneKey(phoneKey);
+    const db = getDB();
+    if (!db) return Promise.resolve();
+
+    const notifObj = {
+      title: title || 'Rotta do Açaí 🍧',
+      body: message || '',
+      createdAt: Date.now(),
+      sentBy: 'gestao'
+    };
+
+    const p1 = db.ref(`customer_notifications/${cleanKey}`).set(notifObj).catch(() => {});
+    const p2 = db.ref(`customers/${cleanKey}/notification`).set(notifObj).catch(() => {});
+
+    let p3 = Promise.resolve();
+    if (!cleanKey.startsWith('55')) {
+      p3 = db.ref(`customers/55${cleanKey}/notification`).set(notifObj).catch(() => {});
+    }
+
+    await Promise.all([p1, p2, p3]);
+    return notifObj;
+  },
+
+  async broadcastNotificationToAllCustomers(title, message) {
+    const db = getDB();
+    if (!db) return Promise.resolve();
+
+    const notifObj = {
+      title: title || 'Rotta do Açaí 🍧',
+      body: message || '',
+      createdAt: Date.now(),
+      isBroadcast: true
+    };
+
+    return db.ref('customer_notifications/broadcast').set(notifObj).catch(() => {});
+  },
+
   async deleteRating(ratingId) {
     if (!ratingId) return;
 
