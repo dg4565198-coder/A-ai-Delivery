@@ -2541,13 +2541,13 @@ function renderCustomersTableAdmin() {
           ${lastDate}
         </td>
         <td class="p-3 text-right space-x-1">
-          <button onclick="editCustomerCups('${cleanPhone}', '${c.name || 'Cliente'}', ${cups})" class="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold rounded-lg text-xs transition" title="Editar Copos">
-            ✏️ Editar Pontos
+          <button onclick="openEditCustomerModal('${c.phoneKey || cleanPhone}')" class="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold rounded-lg text-xs transition" title="Editar Dados do Cliente">
+            ✏️ Editar
           </button>
           <a href="${whatsUrl}" target="_blank" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition inline-block">
             💬 WhatsApp
           </a>
-          <button onclick="handleDeleteCustomer('${cleanPhone}', '${c.name || 'Cliente'}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg text-xs transition inline-block" title="Excluir Cliente">
+          <button onclick="handleDeleteCustomer('${c.phoneKey || cleanPhone}', '${(c.name || 'Cliente').replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg text-xs transition inline-block" title="Excluir Cliente">
             🗑️ Excluir
           </button>
         </td>
@@ -2560,22 +2560,89 @@ function filterCustomersListAdmin() {
   renderCustomersTableAdmin();
 }
 
-function editCustomerCups(phone, name, currentCups) {
-  const input = prompt(`Ajustar copos de açaí de "${name}":`, currentCups);
-  if (input === null) return;
+function openEditCustomerModal(customerKey) {
+  const customersMap = window.Store.getCustomersLocally ? window.Store.getCustomersLocally() : {};
+  const cleanKey = window.Store.cleanPhoneKey ? window.Store.cleanPhoneKey(customerKey) : customerKey;
+  const customer = customersMap[customerKey] || customersMap[cleanKey] || {};
 
-  const newTotal = parseInt(input, 10);
-  if (isNaN(newTotal) || newTotal < 0) {
-    alert("Por favor, informe um número válido de copos (0 ou mais).");
+  const modal = document.getElementById('edit-customer-modal');
+  const targetKeyInput = document.getElementById('edit-target-customer-key');
+  const nameInput = document.getElementById('edit-customer-name-input');
+  const phoneInput = document.getElementById('edit-customer-phone-input');
+  const cupsInput = document.getElementById('edit-customer-cups-input');
+
+  const resolvedKey = customerKey || cleanKey;
+  if (targetKeyInput) targetKeyInput.value = resolvedKey;
+  if (nameInput) nameInput.value = customer.name || 'Cliente';
+  if (phoneInput) phoneInput.value = customer.phone || customerKey || cleanKey;
+  if (cupsInput) cupsInput.value = (customer.totalCups !== undefined) ? customer.totalCups : 0;
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.zIndex = '999999';
+    if (nameInput) setTimeout(() => nameInput.focus(), 100);
+  }
+}
+window.openEditCustomerModal = openEditCustomerModal;
+
+function closeEditCustomerModal() {
+  const modal = document.getElementById('edit-customer-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeEditCustomerModal = closeEditCustomerModal;
+
+async function handleSaveCustomerEdit() {
+  const targetKeyInput = document.getElementById('edit-target-customer-key');
+  const nameInput = document.getElementById('edit-customer-name-input');
+  const phoneInput = document.getElementById('edit-customer-phone-input');
+  const cupsInput = document.getElementById('edit-customer-cups-input');
+
+  const oldKey = targetKeyInput ? targetKeyInput.value : '';
+  const newName = nameInput ? nameInput.value.trim() : '';
+  const newPhone = phoneInput ? phoneInput.value.trim() : '';
+  const newCups = cupsInput ? Math.max(0, parseInt(cupsInput.value, 10) || 0) : 0;
+
+  if (!newName) {
+    alert('Por favor, informe o nome do cliente.');
+    return;
+  }
+  if (!newPhone) {
+    alert('Por favor, informe o telefone do cliente.');
     return;
   }
 
-  window.Store.updateCustomerPoints(phone, newTotal).then(() => {
+  const newCleanKey = window.Store.cleanPhoneKey(newPhone);
+  const oldCleanKey = window.Store.cleanPhoneKey(oldKey);
+
+  closeEditCustomerModal();
+
+  try {
+    if (oldCleanKey && oldCleanKey !== newCleanKey) {
+      await window.Store.deleteCustomer(oldCleanKey);
+      await window.Store.deleteCustomer(oldKey);
+    }
+
+    await window.Store.saveCustomerFidelity(newCleanKey, {
+      name: newName,
+      phone: newPhone,
+      totalCups: newCups
+    });
+
     renderCustomersTableAdmin();
-    alert(`✅ Pontuação de ${name} atualizada para ${newTotal} copos!`);
-  }).catch(err => {
-    alert("Erro ao atualizar pontos: " + err.message);
-  });
+    alert(`✅ Dados do cliente "${newName}" salvos com sucesso!`);
+  } catch (err) {
+    console.error('Erro ao salvar dados do cliente:', err);
+    alert('Erro ao salvar dados do cliente: ' + (err.message || err));
+  }
+}
+window.handleSaveCustomerEdit = handleSaveCustomerEdit;
+
+function editCustomerCups(phone, name, currentCups) {
+  openEditCustomerModal(phone);
 }
 
 async function handleDeleteCustomer(phone, name) {

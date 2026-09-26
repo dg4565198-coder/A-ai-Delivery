@@ -1248,6 +1248,51 @@
     </div>
   </div>
 
+  <!-- MODAL DE EDIÇÃO DE CLIENTE (NOME, TELEFONE E COPOS) -->
+  <div id="edit-customer-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4" style="display: none;">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-purple-200">
+      <div class="bg-gradient-to-r from-acai-900 to-acai-800 text-white p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <span class="text-2xl">✏️</span>
+          <div>
+            <h4 class="font-extrabold text-sm text-white">Editar Dados do Cliente</h4>
+            <p class="text-[11px] text-purple-200">Altere o nome, número do WhatsApp ou os copos acumulados</p>
+          </div>
+        </div>
+        <button onclick="closeEditCustomerModal()" class="text-gray-300 hover:text-white text-2xl font-bold px-2">&times;</button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <input type="hidden" id="edit-target-customer-key" value="">
+        
+        <div>
+          <label class="block font-bold text-gray-800 mb-1">Nome do Cliente *</label>
+          <input type="text" id="edit-customer-name-input" placeholder="Ex: Maria Silva" class="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700 font-bold text-gray-900">
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-800 mb-1">Número do WhatsApp / Telefone *</label>
+          <input type="text" id="edit-customer-phone-input" placeholder="Ex: 73999998888" class="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700 font-bold text-gray-900">
+          <span class="text-[10px] text-gray-500 block mt-1">💡 Se o cliente digitou o número errado, você pode corrigir aqui!</span>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-800 mb-1">Copos Acumulados (Pontos da Trilha) *</label>
+          <input type="number" min="0" max="1000" id="edit-customer-cups-input" placeholder="0" class="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:border-acai-700 font-bold text-acai-900 text-sm">
+        </div>
+
+        <div class="pt-3 border-t border-gray-100 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeEditCustomerModal()" class="px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button type="button" onclick="handleSaveCustomerEdit()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow flex items-center space-x-1.5">
+            <span>💾 Salvar Alterações</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DE CANCELAMENTO DE PEDIDO -->
   <div id="cancel-order-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4" style="display: none;">
     <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-rose-200">
@@ -1357,8 +1402,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <script src="js/store.js?v=65"></script>
-  <script src="js/painel.js?v=65"></script>
+  <script src="js/store.js?v=66"></script>
+  <script src="js/painel.js?v=66"></script>
   <script>
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {
