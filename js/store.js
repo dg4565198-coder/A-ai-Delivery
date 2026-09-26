@@ -1221,70 +1221,129 @@ window.Store = {
     return Promise.all([p1, p2]);
   },
 
-  deleteRating(ratingId) {
+  async deleteRating(ratingId) {
+    if (!ratingId) return;
+
     this.removeRatingLocally(ratingId);
+
     const db = getDB();
     if (!db) return Promise.resolve();
-    return db.ref('ratings/' + ratingId).remove().catch(e => console.warn('Firebase remove rating:', e));
+
+    const promises = [];
+    promises.push(db.ref('ratings/' + ratingId).remove().catch(() => {}));
+
+    let orderId = null;
+    if (ratingId.startsWith('rating_order_')) {
+      orderId = ratingId.replace('rating_order_', '');
+    } else {
+      const local = this.getRatingsLocally();
+      const match = local.find(r => r && r.id === ratingId);
+      if (match && match.orderId) orderId = match.orderId;
+    }
+
+    if (orderId) {
+      promises.push(db.ref(`orders/${orderId}/rating`).remove().catch(() => {}));
+      promises.push(db.ref(`orders/${orderId}/rated`).remove().catch(() => {}));
+    }
+
+    try {
+      const snap = await db.ref('ratings').once('value');
+      if (snap.exists()) {
+        const val = snap.val();
+        for (const k in val) {
+          if (k === ratingId || (orderId && val[k] && val[k].orderId === orderId)) {
+            promises.push(db.ref('ratings/' + k).remove().catch(() => {}));
+          }
+        }
+      }
+    } catch (e) {}
+
+    await Promise.all(promises);
+  },
+
+  async clearAllRatings() {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.ALL_RATINGS);
+      localStorage.removeItem(STORAGE_KEYS.RATED_ORDERS);
+    } catch (e) {}
+
+    const db = getDB();
+    if (!db) return Promise.resolve();
+
+    const p1 = db.ref('ratings').remove().catch(() => {});
+
+    let p2 = Promise.resolve();
+    try {
+      const snap = await db.ref('orders').once('value');
+      if (snap.exists()) {
+        const orders = snap.val();
+        const updates = {};
+        for (const orderId in orders) {
+          if (orders[orderId] && (orders[orderId].rating || orders[orderId].rated)) {
+            updates[`orders/${orderId}/rating`] = null;
+            updates[`orders/${orderId}/rated`] = null;
+          }
+        }
+        if (Object.keys(updates).length > 0) {
+          p2 = db.ref().update(updates).catch(() => {});
+        }
+      }
+    } catch (e) {}
+
+    await Promise.all([p1, p2]);
   },
 
   listenToRatings(callback) {
-    const ratingsMap = {};
-
-    // 1. Carregar primeiro avaliações salvas localmente
-    const localRatings = this.getRatingsLocally();
-    localRatings.forEach(r => {
-      if (r && r.id) {
-        ratingsMap[r.id] = r;
-      }
-    });
+    let ratingsMap = {};
 
     function trigger() {
       if (callback) callback(ratingsMap);
     }
 
-    trigger();
-
     const db = getDB();
-    if (!db) return;
-
-    // 2. Escutar nó /ratings no Firebase
-    db.ref('ratings').on('value', snapshot => {
-      if (snapshot.exists()) {
-        const val = snapshot.val();
-        Object.assign(ratingsMap, val);
-        // Atualizar cache local
-        try {
-          const arr = Object.values(ratingsMap);
-          localStorage.setItem(STORAGE_KEYS.ALL_RATINGS, JSON.stringify(arr));
-        } catch (e) {}
-      }
+    if (!db) {
+      const localRatings = this.getRatingsLocally();
+      localRatings.forEach(r => {
+        if (r && r.id) ratingsMap[r.id] = r;
+      });
       trigger();
-    });
+      return;
+    }
 
-    // 3. Escutar nó /orders no Firebase para avaliações embutidas nos pedidos
-    db.ref('orders').on('value', snapshot => {
-      if (snapshot.exists()) {
-        snapshot.forEach(child => {
-          const o = child.val();
-          if (o && o.rating && o.rating.stars) {
-            const rId = 'rating_order_' + child.key;
-            if (!ratingsMap[rId]) {
-              ratingsMap[rId] = {
-                id: rId,
-                orderId: child.key,
-                orderNumber: o.orderNumber || '#',
-                customerName: (o.customer && o.customer.name) ? o.customer.name : 'Cliente',
-                customerPhone: (o.customer && o.customer.phone) ? o.customer.phone : '',
-                stars: o.rating.stars,
-                comment: o.rating.comment || '',
-                createdAt: o.rating.createdAt || Date.now()
-              };
+    db.ref('ratings').on('value', snapRatings => {
+      const freshRatings = snapRatings.exists() ? (snapRatings.val() || {}) : {};
+      
+      db.ref('orders').once('value').then(snapOrders => {
+        const newMap = { ...freshRatings };
+
+        if (snapOrders.exists()) {
+          const ordersObj = snapOrders.val() || {};
+          for (const orderId in ordersObj) {
+            const o = ordersObj[orderId];
+            if (o && o.rating && o.rating.stars) {
+              const rId = 'rating_order_' + orderId;
+              if (!newMap[rId]) {
+                newMap[rId] = {
+                  id: rId,
+                  orderId: orderId,
+                  orderNumber: o.orderNumber || '#',
+                  customerName: (o.customer && o.customer.name) ? o.customer.name : 'Cliente',
+                  customerPhone: (o.customer && o.customer.phone) ? o.customer.phone : '',
+                  stars: o.rating.stars,
+                  comment: o.rating.comment || '',
+                  createdAt: o.rating.createdAt || Date.now()
+                };
+              }
             }
           }
-        });
-      }
-      trigger();
+        }
+
+        ratingsMap = newMap;
+        try {
+          localStorage.setItem(STORAGE_KEYS.ALL_RATINGS, JSON.stringify(Object.values(ratingsMap)));
+        } catch (e) {}
+        trigger();
+      });
     });
   },
 
