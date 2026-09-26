@@ -2925,9 +2925,7 @@ function filterCustomersListAdmin() {
 }
 
 function openSendCustomerNotifModal(customerKey) {
-  console.log('[Painel] openSendCustomerNotifModal chamado para key:', customerKey);
-  const modal = document.getElementById('send-customer-notif-modal');
-  const cardElem = document.getElementById('cust-notif-info-card');
+  console.log('[Painel] openSendCustomerNotifModal acionado para key:', customerKey);
 
   const customersMap = window.Store.getCustomersLocally ? window.Store.getCustomersLocally() : {};
   const cleanKey = window.Store.cleanPhoneKey ? window.Store.cleanPhoneKey(customerKey) : customerKey;
@@ -2936,128 +2934,160 @@ function openSendCustomerNotifModal(customerKey) {
   const name = customer.name || 'Cliente';
   const cups = parseInt(customer.totalCups, 10) || 0;
   const cleanPhone = window.Store.cleanPhoneKey(customer.phone || customerKey || cleanKey);
-
-  const phoneElem = document.getElementById('cust-notif-target-phone');
-  const nameElem = document.getElementById('cust-notif-target-name');
-  const cupsElem = document.getElementById('cust-notif-target-cups');
-
-  if (phoneElem) phoneElem.value = cleanPhone;
-  if (nameElem) nameElem.value = name;
-  if (cupsElem) cupsElem.value = cups;
-
   const lastDateStr = customer.lastOrderAt ? new Date(customer.lastOrderAt).toLocaleDateString('pt-BR') : 'Sem registros recentes';
 
-  if (cardElem) {
-    cardElem.innerHTML = `
-      <div class="flex items-center justify-between font-bold text-acai-900 text-xs">
-        <span>👤 ${name}</span>
-        <span class="text-amber-700 font-black">🍧 ${cups} copo(s)</span>
-      </div>
-      <div class="text-[11px] text-gray-500 mt-1">
-        <span>📱 Telefone: ${cleanPhone}</span> • <span>Último pedido: ${lastDateStr}</span>
-      </div>
-    `;
-  }
+  // Remover modal dinâmico anterior se existir
+  const existing = document.getElementById('send-customer-notif-modal-dynamic');
+  if (existing) existing.remove();
 
-  fillCustomerNotifTemplate('saudades');
+  const msgSaudades = `Olá, ${name}! Que saudades de você na Rotta do Açaí! 🍇 Faz um tempinho que não vemos você por aqui. Que tal pedir um açaí geladinho hoje?`;
+  const msgFidelidade = `Olá, ${name}! 🍧 Passando para lembrar que você tem ${cups} copo(s) acumulado(s) no Fidelidade da Rotta do Açaí! Falta pouco para sua recompensa!`;
+  const msgOferta = `Olá, ${name}! 🚀 Temos açaí fresquinho e adicionais deliciosos prontos para você hoje na Rotta do Açaí. Faça seu pedido!`;
+  const msgCupom = `Olá, ${name}! 🎁 Preparamos um açaí muito especial para você hoje na Rotta do Açaí! Clique para abrir o app e matar a vontade.`;
 
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.setProperty('display', 'flex', 'important');
-    modal.style.setProperty('visibility', 'visible', 'important');
-    modal.style.setProperty('opacity', '1', 'important');
-    modal.style.zIndex = '9999999';
-  } else {
-    const msg = prompt(`Digite a notificação que deseja enviar para o celular de ${name} (${cleanPhone}):`, `Olá, ${name}! Que saudades de você na Rotta do Açaí! 🍇 Faz um tempinho que não vemos você por aqui. Que tal pedir um açaí geladinho hoje?`);
-    if (msg && msg.trim()) {
-      window.Store.sendCustomerNotification(cleanPhone, "Rotta do Açaí 🍧", msg.trim()).then(() => {
-        alert("✅ Notificação enviada para o celular do cliente com sucesso!");
-      }).catch(err => {
-        alert("Erro ao enviar: " + err);
-      });
-    }
-  }
+  const modal = document.createElement('div');
+  modal.id = 'send-customer-notif-modal-dynamic';
+  modal.className = 'fixed inset-0 z-[9999999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200';
+  modal.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important; z-index: 9999999 !important;';
+
+  modal.innerHTML = `
+    <div class="bg-white text-gray-900 w-full max-w-lg rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 border border-purple-100 max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div class="flex items-center space-x-2.5">
+          <span class="text-2xl">🔔</span>
+          <div>
+            <h3 class="font-extrabold text-base sm:text-lg text-acai-900">Notificar Cliente (Sistema / Celular)</h3>
+            <p class="text-xs text-gray-500">Enviar mensagem de reconquista para a barra de notificação</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('send-customer-notif-modal-dynamic').remove()" class="text-gray-400 hover:text-gray-700 text-2xl font-bold p-1">&times;</button>
+      </div>
+
+      <!-- Resumo do Cliente -->
+      <div class="bg-purple-50/90 p-3.5 rounded-2xl border border-purple-100 space-y-1 text-xs">
+        <div class="flex items-center justify-between font-bold text-acai-900">
+          <span>👤 ${name}</span>
+          <span class="text-amber-700 font-black">🍧 ${cups} copo(s)</span>
+        </div>
+        <div class="text-[11px] text-gray-500 mt-0.5">
+          <span>📱 Telefone: ${cleanPhone}</span> • <span>Último pedido: ${lastDateStr}</span>
+        </div>
+      </div>
+
+      <!-- Seleção de Mensagens Rápidas (4 Opções) -->
+      <div class="space-y-1.5">
+        <label class="block text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
+          Escolha uma Mensagem Pronta (4 Opções Disponíveis):
+        </label>
+        <div class="grid grid-cols-1 gap-2">
+          
+          <button type="button" onclick="selectDynMsgTemplate(1, \`${msgSaudades}\`)" id="dyn-tmpl-btn-1" class="dyn-tmpl-btn text-left p-2.5 bg-purple-50 hover:bg-purple-100 text-purple-950 rounded-2xl border-2 border-purple-300 text-xs font-bold transition space-y-0.5 shadow-sm ring-4 ring-purple-600">
+            <div class="flex items-center justify-between text-acai-900 font-extrabold">
+              <span class="flex items-center gap-1.5">🍇 <span>Opção 1: Que Saudades de Você!</span></span>
+              <span class="text-[10px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full font-bold">Inatividade</span>
+            </div>
+            <p class="text-[11px] text-gray-600 font-normal leading-snug">"${msgSaudades}"</p>
+          </button>
+
+          <button type="button" onclick="selectDynMsgTemplate(2, \`${msgFidelidade}\`)" id="dyn-tmpl-btn-2" class="dyn-tmpl-btn text-left p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-950 rounded-2xl border-2 border-amber-200 text-xs font-bold transition space-y-0.5 shadow-sm">
+            <div class="flex items-center justify-between text-amber-900 font-extrabold">
+              <span class="flex items-center gap-1.5">🍧 <span>Opção 2: Saldo Fidelidade</span></span>
+              <span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">Fidelidade</span>
+            </div>
+            <p class="text-[11px] text-gray-600 font-normal leading-snug">"${msgFidelidade}"</p>
+          </button>
+
+          <button type="button" onclick="selectDynMsgTemplate(3, \`${msgOferta}\`)" id="dyn-tmpl-btn-3" class="dyn-tmpl-btn text-left p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-950 rounded-2xl border-2 border-emerald-200 text-xs font-bold transition space-y-0.5 shadow-sm">
+            <div class="flex items-center justify-between text-emerald-900 font-extrabold">
+              <span class="flex items-center gap-1.5">🚀 <span>Opção 3: Convite Açaí Geladinho</span></span>
+              <span class="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">Novidade</span>
+            </div>
+            <p class="text-[11px] text-gray-600 font-normal leading-snug">"${msgOferta}"</p>
+          </button>
+
+          <button type="button" onclick="selectDynMsgTemplate(4, \`${msgCupom}\`)" id="dyn-tmpl-btn-4" class="dyn-tmpl-btn text-left p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-950 rounded-2xl border-2 border-blue-200 text-xs font-bold transition space-y-0.5 shadow-sm">
+            <div class="flex items-center justify-between text-blue-900 font-extrabold">
+              <span class="flex items-center gap-1.5">🎁 <span>Opção 4: Carinho Exclusivo</span></span>
+              <span class="text-[10px] bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">Especial</span>
+            </div>
+            <p class="text-[11px] text-gray-600 font-normal leading-snug">"${msgCupom}"</p>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Campo de Texto da Mensagem -->
+      <div class="space-y-1">
+        <label for="cust-dyn-msg-input" class="block text-xs font-bold text-gray-700">Mensagem da Notificação (editável):</label>
+        <textarea id="cust-dyn-msg-input" rows="3" class="w-full text-xs p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-600 focus:outline-none font-medium">${msgSaudades}</textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+        <button onclick="handleSendCustomerNotifDynamic('${cleanPhone}')" class="w-full bg-acai-800 hover:bg-acai-900 text-gold-400 font-black py-3 px-3 rounded-xl shadow transition text-xs flex items-center justify-center space-x-1 active:scale-95">
+          <span>🔔 Enviar no Celular (Sistema)</span>
+        </button>
+        <button onclick="handleSendWhatsAppDynamic('${cleanPhone}', '${name}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 px-3 rounded-xl shadow transition text-xs flex items-center justify-center space-x-1 active:scale-95">
+          <span>📱 Enviar no WhatsApp</span>
+        </button>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
 }
 window.openSendCustomerNotifModal = openSendCustomerNotifModal;
 
-function closeSendCustomerNotifModal() {
-  const modal = document.getElementById('send-customer-notif-modal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.setProperty('display', 'none', 'important');
-  }
-}
+function selectDynMsgTemplate(idx, msgText) {
+  const input = document.getElementById('cust-dyn-msg-input');
+  if (input) input.value = msgText;
 
-function closeSendCustomerNotifModal() {
-  const modal = document.getElementById('send-customer-notif-modal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.setProperty('display', 'none', 'important');
-  }
-}
-
-function fillCustomerNotifTemplate(type) {
-  const name = document.getElementById('cust-notif-target-name')?.value || 'Cliente';
-  const cups = document.getElementById('cust-notif-target-cups')?.value || '0';
-  const input = document.getElementById('cust-notif-message-input');
-
-  if (!input) return;
-
-  const templates = {
-    saudades: `Olá, ${name}! Que saudades de você na Rotta do Açaí! 🍇 Faz um tempinho que não vemos você por aqui. Que tal pedir um açaí geladinho hoje?`,
-    fidelidade: `Olá, ${name}! 🍧 Passando para lembrar que você tem ${cups} copo(s) acumulado(s) no Fidelidade da Rotta do Açaí! Falta pouco para sua recompensa!`,
-    oferta: `Olá, ${name}! 🚀 Temos açaí fresquinho e adicionais deliciosos prontos para você hoje na Rotta do Açaí. Faça seu pedido!`,
-    cupom: `Olá, ${name}! 🎁 Preparamos um açaí muito especial para você hoje na Rotta do Açaí! Clique para abrir o app e matar a vontade.`
-  };
-
-  if (templates[type]) {
-    input.value = templates[type];
-  }
-
-  document.querySelectorAll('.tmpl-btn').forEach(btn => {
-    btn.classList.remove('ring-4', 'ring-purple-600', 'border-purple-600', 'bg-purple-100/90');
+  document.querySelectorAll('.dyn-tmpl-btn').forEach(btn => {
+    btn.classList.remove('ring-4', 'ring-purple-600', 'border-purple-300');
   });
 
-  const selectedBtn = document.getElementById('tmpl-btn-' + type);
+  const selectedBtn = document.getElementById('dyn-tmpl-btn-' + idx);
   if (selectedBtn) {
-    selectedBtn.classList.add('ring-4', 'ring-purple-600', 'border-purple-600', 'bg-purple-100/90');
+    selectedBtn.classList.add('ring-4', 'ring-purple-600', 'border-purple-300');
   }
 }
+window.selectDynMsgTemplate = selectDynMsgTemplate;
 
-async function handleSendCustomerNotifSystem() {
-  const phone = document.getElementById('cust-notif-target-phone').value;
-  const message = document.getElementById('cust-notif-message-input').value.trim();
+async function handleSendCustomerNotifDynamic(phone) {
+  const input = document.getElementById('cust-dyn-msg-input');
+  const message = input ? input.value.trim() : '';
 
   if (!phone) {
     alert("Erro ao identificar o telefone do cliente.");
     return;
   }
-
   if (!message) {
-    alert("Por favor, digite a mensagem da notificação.");
+    alert("Por favor, selecione ou digite uma mensagem de notificação.");
     return;
   }
 
   try {
     await window.Store.sendCustomerNotification(phone, "Rotta do Açaí 🍧", message);
-    closeSendCustomerNotifModal();
+    const dynModal = document.getElementById('send-customer-notif-modal-dynamic');
+    if (dynModal) dynModal.remove();
     alert("✅ Notificação enviada para o celular do cliente com sucesso!");
   } catch (err) {
     alert("Erro ao enviar notificação: " + (err.message || err));
   }
 }
+window.handleSendCustomerNotifDynamic = handleSendCustomerNotifDynamic;
 
-function handleSendCustomerNotifWhatsApp() {
-  const phone = document.getElementById('cust-notif-target-phone').value;
-  const message = document.getElementById('cust-notif-message-input').value.trim();
+function handleSendWhatsAppDynamic(phone, name) {
+  const input = document.getElementById('cust-dyn-msg-input');
+  const message = input ? input.value.trim() : '';
 
   if (!phone) {
     alert("Telefone do cliente não encontrado.");
     return;
   }
-
   if (!message) {
-    alert("Digite a mensagem antes de enviar pelo WhatsApp.");
+    alert("Digite uma mensagem antes de enviar pelo WhatsApp.");
     return;
   }
 
@@ -3065,6 +3095,7 @@ function handleSendCustomerNotifWhatsApp() {
   const url = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
 }
+window.handleSendWhatsAppDynamic = handleSendWhatsAppDynamic;
 
 window.openSendCustomerNotifModal = openSendCustomerNotifModal;
 window.closeSendCustomerNotifModal = closeSendCustomerNotifModal;
