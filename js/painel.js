@@ -902,6 +902,16 @@ document.addEventListener('click', function(e) {
       openCancelOrderModal(orderId);
     }
   }
+
+  const notifyBtn = e.target.closest('[data-action="notify-customer"]');
+  if (notifyBtn) {
+    e.preventDefault();
+    const customerKey = notifyBtn.getAttribute('data-customer-key');
+    console.log('[Painel Event Delegation] Clique detectado no botão Notificar cliente, key:', customerKey);
+    if (customerKey) {
+      openSendCustomerNotifModal(customerKey);
+    }
+  }
 });
 
 async function advanceOrderStatus(orderId, newStatus) {
@@ -2892,16 +2902,16 @@ function renderCustomersTableAdmin() {
           ${lastDate}
         </td>
         <td class="p-3 text-right space-x-1">
-          <button onclick="openSendCustomerNotifModal('${c.phoneKey || cleanPhone}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-acai-950 font-black rounded-lg text-xs transition inline-block shadow-sm" title="Enviar Notificação no Celular (Sistema)">
+          <button type="button" data-action="notify-customer" data-customer-key="${c.phoneKey || cleanPhone}" onclick="openSendCustomerNotifModal('${c.phoneKey || cleanPhone}')" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-acai-950 font-black rounded-lg text-xs transition inline-block shadow-sm" title="Enviar Notificação no Celular (Sistema)">
             🔔 Notificar
           </button>
-          <button onclick="openEditCustomerModal('${c.phoneKey || cleanPhone}')" class="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold rounded-lg text-xs transition" title="Editar Dados do Cliente">
+          <button type="button" onclick="openEditCustomerModal('${c.phoneKey || cleanPhone}')" class="px-2.5 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold rounded-lg text-xs transition" title="Editar Dados do Cliente">
             ✏️ Editar
           </button>
           <a href="${whatsUrl}" target="_blank" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition inline-block">
             💬 WhatsApp
           </a>
-          <button onclick="handleDeleteCustomer('${c.phoneKey || cleanPhone}', '${(c.name || 'Cliente').replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg text-xs transition inline-block" title="Excluir Cliente">
+          <button type="button" onclick="handleDeleteCustomer('${c.phoneKey || cleanPhone}', '${(c.name || 'Cliente').replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg text-xs transition inline-block" title="Excluir Cliente">
             🗑️ Excluir
           </button>
         </td>
@@ -2961,6 +2971,7 @@ function openSendCustomerNotifModal(customerKey) {
   modal.style.setProperty('display', 'flex', 'important');
   modal.style.zIndex = '999999';
 }
+window.openSendCustomerNotifModal = openSendCustomerNotifModal;
 
 function closeSendCustomerNotifModal() {
   const modal = document.getElementById('send-customer-notif-modal');
