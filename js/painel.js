@@ -2948,18 +2948,30 @@ function closeSendCustomerNotifModal() {
 }
 
 function fillCustomerNotifTemplate(type) {
-  const name = document.getElementById('cust-notif-target-name').value || 'Cliente';
-  const cups = document.getElementById('cust-notif-target-cups').value || '0';
+  const name = document.getElementById('cust-notif-target-name')?.value || 'Cliente';
+  const cups = document.getElementById('cust-notif-target-cups')?.value || '0';
   const input = document.getElementById('cust-notif-message-input');
 
   if (!input) return;
 
-  if (type === 'saudades') {
-    input.value = `Olá, ${name}! Que saudades de você na Rotta do Açaí! 🍇 Faz um tempinho que não vemos você por aqui. Que tal pedir um açaí geladinho hoje?`;
-  } else if (type === 'fidelidade') {
-    input.value = `Olá, ${name}! 🍧 Passando para lembrar que você tem ${cups} copo(s) acumulado(s) no Fidelidade da Rotta do Açaí! Falta pouco para sua recompensa!`;
-  } else if (type === 'oferta') {
-    input.value = `Olá, ${name}! 🚀 Temos açaí fresquinho e adicionais deliciosos prontos para você hoje na Rotta do Açaí. Faça seu pedido!`;
+  const templates = {
+    saudades: `Olá, ${name}! Que saudades de você na Rotta do Açaí! 🍇 Faz um tempinho que não vemos você por aqui. Que tal pedir um açaí geladinho hoje?`,
+    fidelidade: `Olá, ${name}! 🍧 Passando para lembrar que você tem ${cups} copo(s) acumulado(s) no Fidelidade da Rotta do Açaí! Falta pouco para sua recompensa!`,
+    oferta: `Olá, ${name}! 🚀 Temos açaí fresquinho e adicionais deliciosos prontos para você hoje na Rotta do Açaí. Faça seu pedido!`,
+    cupom: `Olá, ${name}! 🎁 Preparamos um açaí muito especial para você hoje na Rotta do Açaí! Clique para abrir o app e matar a vontade.`
+  };
+
+  if (templates[type]) {
+    input.value = templates[type];
+  }
+
+  document.querySelectorAll('.tmpl-btn').forEach(btn => {
+    btn.classList.remove('ring-4', 'ring-purple-600', 'border-purple-600', 'bg-purple-100/90');
+  });
+
+  const selectedBtn = document.getElementById('tmpl-btn-' + type);
+  if (selectedBtn) {
+    selectedBtn.classList.add('ring-4', 'ring-purple-600', 'border-purple-600', 'bg-purple-100/90');
   }
 }
 
