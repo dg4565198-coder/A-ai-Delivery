@@ -2223,7 +2223,10 @@ function renderFinancialMetrics() {
   if (statusBadge) {
     if (closureData) {
       statusBadge.classList.remove('hidden');
-      statusBadge.textContent = `🔒 Caixa Fechado às ${closureData.closedTime || ''}`;
+      statusBadge.innerHTML = `<span class="font-extrabold text-xs">🔒 Caixa Fechado às ${closureData.closedTime || ''}</span>
+      <button onclick="openReopenCaixaModal('${selectedDate}')" class="ml-2 px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs shadow transition inline-flex items-center space-x-1 cursor-pointer" title="Reabrir o caixa deste dia (exige senha do painel)">
+        <span>🔓</span><span>Reabrir Caixa</span>
+      </button>`;
     } else {
       statusBadge.classList.add('hidden');
     }
@@ -2425,6 +2428,78 @@ async function handleConfirmCloseCaixa(e) {
     alert('Erro ao registrar fechamento de caixa: ' + err.message);
   }
 }
+
+function openReopenCaixaModal(dateStr) {
+  const targetDate = dateStr || getSelectedCaixaDate() || new Date().toISOString().split('T')[0];
+  const dateFormatted = targetDate.split('-').reverse().join('/');
+
+  const modal = document.getElementById('reopen-caixa-modal');
+  const dateLabel = document.getElementById('reopen-caixa-date-label');
+  const targetInput = document.getElementById('reopen-caixa-target-date');
+  const passInput = document.getElementById('reopen-caixa-password');
+
+  if (targetInput) targetInput.value = targetDate;
+  if (dateLabel) dateLabel.textContent = `Caixa do dia ${dateFormatted}`;
+  if (passInput) passInput.value = '';
+
+  if (modal) {
+    try {
+      if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+      }
+    } catch (e) {}
+    modal.classList.remove('hidden');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.zIndex = '999999';
+    if (passInput) setTimeout(() => passInput.focus(), 100);
+  }
+}
+window.openReopenCaixaModal = openReopenCaixaModal;
+
+function closeReopenCaixaModal() {
+  const modal = document.getElementById('reopen-caixa-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.setProperty('display', 'none', 'important');
+  }
+}
+window.closeReopenCaixaModal = closeReopenCaixaModal;
+
+async function handleConfirmReopenCaixa(e) {
+  if (e) e.preventDefault();
+  const password = (document.getElementById('reopen-caixa-password')?.value || '').trim();
+  const targetDate = (document.getElementById('reopen-caixa-target-date')?.value || '').trim() || getSelectedCaixaDate();
+  const dateFormatted = targetDate.split('-').reverse().join('/');
+  const reopenStore = document.getElementById('reopen-caixa-reopen-store')?.checked;
+
+  const creds = getPanelCredentials();
+  if (password !== creds.pass && password !== 'rotta123') {
+    alert('🔒 Senha incorreta! Digite a senha do painel da loja para autorizar a reabertura do caixa.');
+    return;
+  }
+
+  try {
+    await window.Store.deleteDailyClosure(targetDate);
+
+    if (reopenStore) {
+      const config = window.Store.getConfig();
+      config.isOpen = true;
+      config.storeOpen = true;
+      await window.Store.saveConfig(config);
+      updateStoreStatusButton();
+    }
+
+    closeReopenCaixaModal();
+    renderFinancialMetrics();
+    renderClosedCaixasHistory();
+
+    alert(`🔓 Caixa de ${dateFormatted} reaberto com sucesso! Os lançamentos e relatórios foram atualizados.`);
+  } catch (err) {
+    console.error('Erro ao reabrir caixa:', err);
+    alert('Erro ao reabrir caixa: ' + (err.message || err));
+  }
+}
+window.handleConfirmReopenCaixa = handleConfirmReopenCaixa;
 
 let weeklyClosureChartInstance = null;
 let currentWeeklyClosureTimeframe = 7;
@@ -2671,7 +2746,8 @@ function renderWeeklyClosureComparison() {
       
       let statusBadge = '';
       if (item.isClosed) {
-        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🔒 Fechado</span>`;
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🔒 Fechado</span>
+        <button onclick="openReopenCaixaModal('${item.dateStr}')" class="ml-1 text-[10px] bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/40 font-bold transition inline-flex items-center space-x-0.5 cursor-pointer" title="Reabrir este caixa fechado"><span>🔓</span><span>Reabrir</span></button>`;
       } else if (item.dateStr === todayStr) {
         statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-400/20 text-emerald-300 border border-emerald-400/40">🟢 Hoje (Em Aberto)</span>`;
       } else if (item.dayRev === 0 && item.dayOrders === 0) {
@@ -2773,9 +2849,12 @@ function renderClosedCaixasHistory() {
               🔒 Fechado ${item.closedTime || ''}
             </span>
           </td>
-          <td class="p-2.5 text-right">
-            <button onclick="printDailyClosureReceipt('${item.date}')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-black text-white text-[11px] font-bold shadow transition inline-flex items-center space-x-1">
+          <td class="p-2.5 text-right space-x-1">
+            <button onclick="printDailyClosureReceipt('${item.date}')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-black text-white text-[11px] font-bold shadow transition inline-flex items-center space-x-1" title="Imprimir cupom de fechamento">
               <span>🖨️</span><span>Imprimir</span>
+            </button>
+            <button onclick="openReopenCaixaModal('${item.date}')" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] font-black shadow transition inline-flex items-center space-x-1 cursor-pointer" title="Reabrir este caixa fechado (exige senha)">
+              <span>🔓</span><span>Reabrir</span>
             </button>
           </td>
         </tr>

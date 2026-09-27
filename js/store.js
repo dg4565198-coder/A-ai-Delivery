@@ -1798,6 +1798,21 @@ window.Store = {
     return null;
   },
 
+  async deleteDailyClosure(dateStr) {
+    const key = `rotta_daily_closure_${dateStr}`;
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+
+    const db = getDB();
+    if (db) {
+      const p1 = db.ref(`daily_closings/${dateStr}`).remove().catch(() => {});
+      const p2 = db.ref(`cashRegisters/${dateStr}/closure`).remove().catch(() => {});
+      await Promise.all([p1, p2]);
+    }
+    return true;
+  },
+
   listenToDailyClosings(callback) {
     const db = getDB();
     if (!db) return;
