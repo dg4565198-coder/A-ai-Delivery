@@ -99,6 +99,12 @@
           <span id="store-status-text">Loja Aberta</span>
         </button>
 
+        <!-- Botão Lançar Venda (Balcão / WhatsApp) Header -->
+        <button onclick="openManualOrderModal()" class="px-3.5 py-1.5 rounded-xl bg-gold-400 hover:bg-gold-300 text-acai-950 font-black text-xs shadow flex items-center space-x-1.5 transition shrink-0">
+          <span>➕</span>
+          <span>Lançar Venda</span>
+        </button>
+
         <!-- Manter Tela Ligada (Modo Cozinha) -->
         <button id="btn-wake-lock" onclick="toggleWakeLock()" title="Manter Tela do Celular Ligada na Cozinha" class="px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/60 text-[11px] sm:text-xs font-bold transition flex items-center space-x-1.5 shadow shrink-0">
           <span id="wake-lock-status-text">💡 Tela Ligada (OFF)</span>
@@ -183,7 +189,10 @@
           <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
           <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Monitorando Pedidos em Tempo Real</span>
         </div>
-        <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+        <div class="flex items-center space-x-2 w-full sm:w-auto justify-end flex-wrap gap-y-1">
+          <button onclick="openManualOrderModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3.5 py-1.5 rounded-lg shadow transition flex items-center space-x-1">
+            <span>➕</span><span>Lançar Venda Manual</span>
+          </button>
           <button onclick="renderKanbanBoard()" class="text-xs text-acai-700 hover:text-acai-900 font-bold px-3 py-1.5 rounded-lg border border-purple-200 hover:bg-purple-50 transition">
             🔄 Atualizar
           </button>
