@@ -536,6 +536,9 @@ function createOrderCardElement(order, currentStatus) {
   let actionHtml = '';
   if (currentStatus === 'preparo') {
     actionHtml = `<div class="space-y-1.5 pt-1">
+      <button onclick="acceptOrderAndNotify('${targetOrderId}')" class="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-xl shadow transition flex items-center justify-center space-x-1.5">
+        <span>📲</span><span>Aceitar & Notificar WhatsApp</span>
+      </button>
       <div class="grid grid-cols-2 gap-2">
         <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
         <button onclick="advanceOrderStatus('${targetOrderId}', 'entrega')" class="text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Pronto'}</span></button>
@@ -544,6 +547,9 @@ function createOrderCardElement(order, currentStatus) {
     </div>`;
   } else if (currentStatus === 'entrega') {
     actionHtml = `<div class="space-y-1.5 pt-1">
+      <button onclick="notifyOrderStatusWhatsApp('${targetOrderId}', 'entrega')" class="w-full text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-xl shadow transition flex items-center justify-center space-x-1.5">
+        <span>📲</span><span>${order.deliveryType === 'entrega' ? 'Notificar Saída (WhatsApp)' : 'Notificar Pronto (WhatsApp)'}</span>
+      </button>
       <div class="grid grid-cols-2 gap-2">
         <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
         <button onclick="advanceOrderStatus('${targetOrderId}', 'concluido')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>✅ Concluir</span></button>
@@ -734,19 +740,25 @@ function openViewOrderModal(orderId) {
   let footerBtnHtml = '';
   if (status === 'preparo' || status === 'novo') {
     footerBtnHtml = `
-      <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'entrega');" class="flex-1 px-4 py-3 bg-purple-700 hover:bg-purple-800 text-white font-black text-xs rounded-2xl shadow transition flex items-center justify-center space-x-1.5">
-        <span>${order.deliveryType === 'entrega' ? '🛵 Despachar Pedido' : '🏬 Marcar Pronto para Retirada'}</span>
+      <button onclick="acceptOrderAndNotify('${targetOrderId}'); closeViewOrderModal();" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1">
+        <span>📲</span> <span>Aceitar & Notificar WhatsApp</span>
+      </button>
+      <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'entrega');" class="flex-1 px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
+        <span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Pronto'}</span>
       </button>
     `;
   } else if (status === 'entrega') {
     footerBtnHtml = `
-      <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'concluido');" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-2xl shadow transition flex items-center justify-center space-x-1.5">
+      <button onclick="notifyOrderStatusWhatsApp('${targetOrderId}', 'entrega');" class="px-3.5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1">
+        <span>📲</span> <span>Notificar WhatsApp</span>
+      </button>
+      <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'concluido');" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
         <span>✅ Concluir Pedido</span>
       </button>
     `;
   } else if (status === 'concluido') {
     footerBtnHtml = `
-      <button onclick="notifyCustomerFidelityWhatsApp('${targetOrderId}')" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-2xl shadow transition flex items-center justify-center space-x-1.5">
+      <button onclick="notifyCustomerFidelityWhatsApp('${targetOrderId}')" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
         <span>💬 Notificar Fidelidade no WhatsApp</span>
       </button>
     `;
@@ -959,6 +971,86 @@ function notifyCustomerFidelityWhatsApp(orderId) {
 }
 
 window.notifyCustomerFidelityWhatsApp = notifyCustomerFidelityWhatsApp;
+
+function notifyOrderStatusWhatsApp(orderId, statusType) {
+  const order = window.Store ? window.Store.getOrderById(orderId) : null;
+  if (!order || !order.customer || !order.customer.phone) {
+    alert('Telefone do cliente não encontrado para enviar WhatsApp.');
+    return;
+  }
+
+  const cleanPhone = window.Store.cleanPhoneKey(order.customer.phone);
+  if (!cleanPhone) {
+    alert('Telefone do cliente inválido.');
+    return;
+  }
+
+  const customerName = order.customer.name || 'Cliente';
+  const orderNum = order.orderNumber || '#';
+  const isDelivery = order.deliveryType === 'entrega';
+  const appUrl = 'https://dg4565198-coder.github.io/A-ai-Delivery/';
+
+  let msgText = '';
+  if (statusType === 'aceito') {
+    msgText = `🍇 *ROTTA DO AÇAÍ* 🍧\n\n` +
+              `Olá, *${customerName}*! 🥣\n\n` +
+              `Seu pedido *${orderNum}* foi *ACEITO* e já começou a ser preparado com carinho! 😋\n\n` +
+              `Acompanhe o status do seu pedido pelo nosso cardápio digital:\n` +
+              `${appUrl}\n\n` +
+              `Qualquer dúvida, estamos à disposição! 💜`;
+  } else if (statusType === 'entrega') {
+    if (isDelivery) {
+      msgText = `🍇 *ROTTA DO AÇAÍ* 🍧\n\n` +
+                `Olá, *${customerName}*! 🛵\n\n` +
+                `Seu pedido *${orderNum}* acaba de *SAIR PARA ENTREGA*! 🚚💨\n\n` +
+                `Nosso entregador já está a caminho. Prepare a mesa! 😋💜`;
+    } else {
+      msgText = `🍇 *ROTTA DO AÇAÍ* 🍧\n\n` +
+                `Olá, *${customerName}*! 🏬\n\n` +
+                `Seu pedido *${orderNum}* está *PRONTO PARA RETIRADA* no nosso balcão! 🥳\n\n` +
+                `Estamos te aguardando! 💜`;
+    }
+  } else if (statusType === 'concluido') {
+    notifyCustomerFidelityWhatsApp(orderId);
+    return;
+  }
+
+  const waUrl = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(msgText)}`;
+
+  try {
+    const win = window.open(waUrl, '_blank');
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+      if (confirm(`📲 Enviar notificação para ${customerName} no WhatsApp?\n\nClique em OK para abrir o WhatsApp.`)) {
+        window.location.href = waUrl;
+      }
+    }
+  } catch (e) {
+    window.location.href = waUrl;
+  }
+}
+window.notifyOrderStatusWhatsApp = notifyOrderStatusWhatsApp;
+
+async function acceptOrderAndNotify(orderId) {
+  try {
+    await window.Store.updateOrderStatus(orderId, 'preparo');
+    notifyOrderStatusWhatsApp(orderId, 'aceito');
+  } catch (err) {
+    console.error('Erro ao aceitar pedido:', err);
+    alert('Erro ao atualizar status do pedido: ' + (err.message || err));
+  }
+}
+window.acceptOrderAndNotify = acceptOrderAndNotify;
+
+async function dispatchOrderAndNotify(orderId) {
+  try {
+    await window.Store.updateOrderStatus(orderId, 'entrega');
+    notifyOrderStatusWhatsApp(orderId, 'entrega');
+  } catch (err) {
+    console.error('Erro ao despachar pedido:', err);
+    alert('Erro ao atualizar status do pedido: ' + (err.message || err));
+  }
+}
+window.dispatchOrderAndNotify = dispatchOrderAndNotify;
 
 function confirmClearOrders() {
   if (confirm('Deseja realmente limpar os pedidos concluídos do histórico?')) {
