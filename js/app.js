@@ -2553,16 +2553,17 @@ function renderCustomerChatMessages(chatData) {
 
   // Mesclar mensagens do RTDB com mensagens temporárias otimistas
   const allMessagesMap = {};
-  rtdbList.forEach(m => { allMessagesMap[m.id] = m; });
+  rtdbList.forEach(m => { if (m && m.id) allMessagesMap[m.id] = m; });
   _optimisticCustomerMessages.forEach(m => {
-    // Se a mensagem já existe no RTDB (com texto igual enviado pelo cliente recentemente), não duplicar
-    const existsInRtdb = rtdbList.some(r => r.sender === 'customer' && r.text === m.text && Math.abs(new Date(r.timestamp) - new Date(m.timestamp)) < 15000);
-    if (!existsInRtdb) {
-      allMessagesMap[m.id] = m;
+    if (m && m.id) {
+      const existsInRtdb = rtdbList.some(r => r && r.sender === 'customer' && r.text === m.text && Math.abs(new Date(r.timestamp) - new Date(m.timestamp)) < 15000);
+      if (!existsInRtdb) {
+        allMessagesMap[m.id] = m;
+      }
     }
   });
 
-  const messageList = Object.values(allMessagesMap).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const messageList = Object.values(allMessagesMap).sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
 
   if (messageList.length === 0) {
     msgFeed.innerHTML = `
@@ -2572,9 +2573,6 @@ function renderCustomerChatMessages(chatData) {
     `;
     return;
   }
-
-  const messagesObj = chatData.messages;
-  const messageList = Object.values(messagesObj).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
   let hasNewStoreMessage = false;
   let latestStoreMsgText = '';
@@ -2624,7 +2622,7 @@ function renderCustomerChatMessages(chatData) {
     if (window.Store && window.Store.markChatAsReadByCustomer) {
       window.Store.markChatAsReadByCustomer(getCustomerChatKey());
     }
-  } else if (chatData.unreadByCustomer) {
+  } else if (chatData && chatData.unreadByCustomer) {
     const badge = document.getElementById('chat-unread-badge');
     if (badge) badge.classList.remove('hidden');
   }
