@@ -4345,6 +4345,8 @@ function initPainelChatsListener() {
   }
 }
 
+let _prevUnreadCountStore = 0;
+
 function updatePainelChatUnreadBadge() {
   const badge = document.getElementById('painel-chat-badge');
   if (!badge) return;
@@ -4355,9 +4357,16 @@ function updatePainelChatUnreadBadge() {
   if (unreadCount > 0) {
     badge.textContent = unreadCount;
     badge.classList.remove('hidden');
+
+    if (unreadCount > _prevUnreadCountStore) {
+      try {
+        if (typeof testAudioAlert === 'function') testAudioAlert();
+      } catch (e) {}
+    }
   } else {
     badge.classList.add('hidden');
   }
+  _prevUnreadCountStore = unreadCount;
 }
 
 function renderPainelChatsTab() {

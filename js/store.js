@@ -1844,7 +1844,6 @@ window.Store = {
 
   async sendChatMessage(customerKey, sender, text, customerName = '', customerPhone = '') {
     if (!customerKey || !text || !text.trim()) return null;
-    const db = getDB();
     const cleanKey = this.getCleanCustomerKey(customerKey);
     const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
     const nowIso = new Date().toISOString();
@@ -1856,71 +1855,140 @@ window.Store = {
       timestamp: nowIso
     };
 
+    const updateData = {
+      customerKey: cleanKey,
+      lastMessage: text.trim(),
+      lastSender: sender,
+      lastTimestamp: nowIso
+    };
+    if (customerName) updateData.customerName = customerName;
+    if (customerPhone) updateData.customerPhone = customerPhone;
+
+    if (sender === 'customer') {
+      updateData.unreadByStore = true;
+    } else {
+      updateData.unreadByCustomer = true;
+    }
+
+    // 1. Tentar via SDK WebSockets do Firebase
+    const db = getDB();
     if (db) {
       try {
-        // 1. Push message to messages list
-        await db.ref(`chats/${cleanKey}/messages/${msgId}`).set(messageObj);
-
-        // 2. Update chat metadata
-        const updateData = {
-          customerKey: cleanKey,
-          lastMessage: text.trim(),
-          lastSender: sender,
-          lastTimestamp: nowIso
-        };
-        if (customerName) updateData.customerName = customerName;
-        if (customerPhone) updateData.customerPhone = customerPhone;
-
-        if (sender === 'customer') {
-          updateData.unreadByStore = true;
-        } else {
-          updateData.unreadByCustomer = true;
-        }
-
-        await db.ref(`chats/${cleanKey}`).update(updateData);
+        db.ref(`chats/${cleanKey}/messages/${msgId}`).set(messageObj).catch(() => {});
+        db.ref(`chats/${cleanKey}`).update(updateData).catch(() => {});
       } catch (err) {
-        console.error('Erro ao gravar mensagem no Firebase Realtime Database:', err);
+        console.warn('Firebase SDK sendChatMessage error:', err);
       }
-    } else {
-      console.warn('Firebase DB não disponível para gravar mensagem.');
     }
+
+    // 2. Garantia REST API HTTP em tempo real (Garante gravação mesmo com bloqueios)
+    try {
+      const restUrlMsg = `https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}/messages/${msgId}.json`;
+      const restUrlMeta = `https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`;
+
+      fetch(restUrlMsg, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(messageObj) }).catch(() => {});
+      fetch(restUrlMeta, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updateData) }).catch(() => {});
+    } catch (e) {
+      console.warn('REST API sendChatMessage error:', e);
+    }
+
     return messageObj;
   },
 
   listenToCustomerChat(customerKey, callback) {
-    const db = getDB();
-    if (!db || !customerKey) return null;
+    if (!customerKey) return null;
     const cleanKey = this.getCleanCustomerKey(customerKey);
-    const chatRef = db.ref(`chats/${cleanKey}`);
-    chatRef.on('value', snap => {
-      const chatData = snap.exists() ? snap.val() : null;
-      callback(chatData);
-    });
-    return chatRef;
+
+    // 1. Ouvinte via Firebase SDK WebSockets
+    const db = getDB();
+    if (db) {
+      try {
+        db.ref(`chats/${cleanKey}`).on('value', snap => {
+          const chatData = snap.exists() ? snap.val() : null;
+          callback(chatData);
+        });
+      } catch (e) {}
+    }
+
+    // 2. Polling REST API a cada 3 segundos (Tempo Real Garantido)
+    const fetchSingleChatREST = () => {
+      fetch(`https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data === 'object') {
+            callback(data);
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchSingleChatREST();
+    const intervalId = setInterval(fetchSingleChatREST, 3000);
+
+    return {
+      off: () => clearInterval(intervalId)
+    };
   },
 
   listenToAllChats(callback) {
+    // 1. Ouvinte via Firebase SDK WebSockets
     const db = getDB();
-    if (!db) return null;
-    const chatsRef = db.ref('chats');
-    chatsRef.on('value', snap => {
-      const chatsData = snap.exists() ? (snap.val() || {}) : {};
-      callback(chatsData);
-    });
-    return chatsRef;
+    if (db) {
+      try {
+        db.ref('chats').on('value', snap => {
+          const chatsData = snap.exists() ? (snap.val() || {}) : {};
+          callback(chatsData);
+        });
+      } catch (e) {}
+    }
+
+    // 2. Polling REST API a cada 3 segundos (Tempo Real Garantido no Painel)
+    const fetchAllChatsREST = () => {
+      fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/chats.json')
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data === 'object') {
+            callback(data);
+          } else if (data === null) {
+            callback({});
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchAllChatsREST();
+    const intervalId = setInterval(fetchAllChatsREST, 3000);
+
+    return {
+      off: () => clearInterval(intervalId)
+    };
   },
 
   async markChatAsReadByStore(customerKey) {
-    const db = getDB();
-    if (!db || !customerKey) return;
+    if (!customerKey) return;
     const cleanKey = this.getCleanCustomerKey(customerKey);
-    await db.ref(`chats/${cleanKey}`).update({ unreadByStore: false }).catch(() => {});
+    
+    const db = getDB();
+    if (db) db.ref(`chats/${cleanKey}`).update({ unreadByStore: false }).catch(() => {});
+    
+    fetch(`https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unreadByStore: false })
+    }).catch(() => {});
   },
 
   async markChatAsReadByCustomer(customerKey) {
-    const db = getDB();
-    if (!db || !customerKey) return;
+    if (!customerKey) return;
     const cleanKey = this.getCleanCustomerKey(customerKey);
-    await db.ref(`chats/${cleanKey}`).update({ unreadByCustomer: false }).catch(() => {});
+    
+    const db = getDB();
+    if (db) db.ref(`chats/${cleanKey}`).update({ unreadByCustomer: false }).catch(() => {});
+
+    fetch(`https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unreadByCustomer: false })
+    }).catch(() => {});
   }
 };
