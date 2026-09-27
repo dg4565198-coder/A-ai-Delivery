@@ -1252,7 +1252,12 @@
             <h3 class="font-extrabold text-sm text-acai-900 flex items-center gap-2">
               💬 Conversas dos Clientes
             </h3>
-            <span id="chat-count-badge" class="bg-purple-100 text-purple-900 text-[11px] font-black px-2 py-0.5 rounded-full">0 chats</span>
+            <div class="flex items-center space-x-1.5">
+              <button onclick="fetchCustomerChatsDirectly()" title="Forçar Atualização dos Chats" class="p-1 px-2 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-[11px] transition">
+                🔄 Atualizar
+              </button>
+              <span id="chat-count-badge" class="bg-purple-100 text-purple-900 text-[11px] font-black px-2 py-0.5 rounded-full">0 chats</span>
+            </div>
           </div>
 
           <!-- Busca de Clientes -->
@@ -1972,8 +1977,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <script src="js/store.js?v=101"></script>
-  <script src="js/painel.js?v=101"></script>
+  <script src="js/store.js?v=102"></script>
+  <script src="js/painel.js?v=102"></script>
   <script>
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {

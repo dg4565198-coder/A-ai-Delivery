@@ -1884,14 +1884,14 @@ window.Store = {
       }
     }
 
-    // 2. Garantia REST API HTTP em tempo real (PATCH Atômico)
+    // 2. Garantia REST API HTTP em tempo real (PATCH Atômico Síncrono)
     try {
       const restUrl = `https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`;
-      fetch(restUrl, {
+      await fetch(restUrl, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
-      }).catch(() => {});
+      });
     } catch (e) {
       console.warn('REST API sendChatMessage error:', e);
     }
