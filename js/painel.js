@@ -2308,6 +2308,37 @@ function handleDeleteOpenPromo() {
 }
 window.handleDeleteOpenPromo = handleDeleteOpenPromo;
 
+function fillBroadcastTemplate(title, msg) {
+  const tInput = document.getElementById('broadcast-title');
+  const mInput = document.getElementById('broadcast-msg');
+  if (tInput) tInput.value = title;
+  if (mInput) mInput.value = msg;
+}
+window.fillBroadcastTemplate = fillBroadcastTemplate;
+
+async function handleSendBroadcastNotification(e) {
+  e.preventDefault();
+  const title = (document.getElementById('broadcast-title')?.value || '').trim();
+  const message = (document.getElementById('broadcast-msg')?.value || '').trim();
+
+  if (!title || !message) {
+    alert('Por favor, preencha o título e a mensagem da notificação.');
+    return;
+  }
+
+  try {
+    await window.Store.broadcastNotificationToAllCustomers(title, message);
+    await window.Store.sendPromotion({ title: title, message: message });
+
+    alert('📢 Notificação em Massa disparada com sucesso para o celular de todos os clientes!');
+    if (typeof renderPromotionsHistory === 'function') renderPromotionsHistory();
+  } catch (err) {
+    console.error('Erro ao enviar disparo em massa:', err);
+    alert('Erro ao disparar notificação: ' + err.message);
+  }
+}
+window.handleSendBroadcastNotification = handleSendBroadcastNotification;
+
 async function handleSendInstantPromo(e) {
   e.preventDefault();
   const title = document.getElementById('promo-instant-title').value.trim();

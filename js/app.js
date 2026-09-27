@@ -27,6 +27,7 @@ function startApp() {
   try { setupPWAInstaller(); } catch (e) { console.error('PWA:', e); }
   try { setupOrderNotificationListeners(); } catch (e) { console.error('Notifications:', e); }
   try { setupPromotionsListener(); } catch (e) { console.error('Promotions:', e); }
+  try { setupBroadcastNotificationListener(); } catch (e) { console.error('Broadcast:', e); }
 }
 
 if (document.readyState === 'loading') {
@@ -872,6 +873,128 @@ async function submitFinalOrder() {
   }
 }
 
+function renderProgressBarHTML(status, deliveryType = 'entrega') {
+  if (status === 'cancelado') {
+    return `
+      <div class="bg-rose-50 p-3 rounded-xl border border-rose-200 text-xs space-y-1">
+        <div class="font-extrabold text-rose-800 flex items-center space-x-1">
+          <span>❌</span><span>Pedido Cancelado pela Loja</span>
+        </div>
+      </div>
+    `;
+  }
+
+  let progressWidth = '33%';
+  let stage1Class = 'text-purple-900 bg-purple-200 border-purple-300 font-extrabold shadow-xs';
+  let stage2Class = 'text-gray-400 bg-gray-100 border-gray-200';
+  let stage3Class = 'text-gray-400 bg-gray-100 border-gray-200';
+  let statusText = '⏱️ Estimado: 15 a 20 min • Seu pedido está sendo preparado com carinho!';
+  let barGradient = 'from-purple-600 to-purple-500';
+
+  if (status === 'entrega') {
+    progressWidth = '66%';
+    stage1Class = 'text-purple-900 bg-purple-100 border-purple-200 font-bold';
+    stage2Class = 'text-purple-900 bg-purple-200 border-purple-300 font-extrabold shadow-xs';
+    stage3Class = 'text-gray-400 bg-gray-100 border-gray-200';
+    statusText = deliveryType === 'entrega' 
+      ? '🛵 Saiu para entrega! O motoboy está a caminho do seu endereço.' 
+      : '🏬 Seu açaí está pronto para retirada no balcão!';
+    barGradient = 'from-purple-600 to-indigo-600';
+  } else if (status === 'concluido') {
+    progressWidth = '100%';
+    stage1Class = 'text-emerald-900 bg-emerald-100 border-emerald-200 font-bold';
+    stage2Class = 'text-emerald-900 bg-emerald-100 border-emerald-200 font-bold';
+    stage3Class = 'text-emerald-900 bg-emerald-200 border-emerald-300 font-extrabold shadow-xs';
+    statusText = '✅ Pedido entregue e concluído. Aproveite seu açaí!';
+    barGradient = 'from-emerald-500 to-emerald-600';
+  }
+
+  return `
+    <div class="bg-purple-50/90 p-3.5 rounded-2xl border border-purple-200 space-y-2.5 text-left shadow-xs">
+      <div class="flex items-center justify-between">
+        <span class="text-[11px] font-black text-acai-900 flex items-center gap-1">
+          <span class="animate-pulse">📍</span> Status em Tempo Real
+        </span>
+        <span class="text-[10px] font-extrabold bg-purple-200 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-300 shadow-xs">
+          ⏱️ 15 a 20 min
+        </span>
+      </div>
+
+      <div class="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden flex shadow-inner">
+        <div class="bg-gradient-to-r ${barGradient} h-full transition-all duration-500 ease-out" style="width: ${progressWidth};"></div>
+      </div>
+
+      <div class="grid grid-cols-3 text-center text-[10px] gap-1">
+        <div class="py-1 rounded-lg border ${stage1Class}">1. 🥣 Preparo</div>
+        <div class="py-1 rounded-lg border ${stage2Class}">2. 🛵 Entrega</div>
+        <div class="py-1 rounded-lg border ${stage3Class}">3. ✅ Finalizado</div>
+      </div>
+
+      <div class="text-[11px] font-bold text-purple-950 bg-white/90 p-2 rounded-xl border border-purple-100 flex items-center gap-1.5 shadow-xs">
+        <span class="w-2 h-2 rounded-full bg-purple-600 animate-ping shrink-0"></span>
+        <span>${statusText}</span>
+      </div>
+    </div>
+  `;
+}
+
+function updateTrackingModalProgress(updatedOrder) {
+  if (!updatedOrder) return;
+  const bar = document.getElementById('order-progress-bar');
+  const s1 = document.getElementById('step-stage-1');
+  const s2 = document.getElementById('step-stage-2');
+  const s3 = document.getElementById('step-stage-3');
+  const txt = document.getElementById('confirmed-status-text');
+
+  if (!txt) return;
+
+  const status = updatedOrder.status || 'novo';
+  const deliveryType = updatedOrder.deliveryType || 'entrega';
+
+  if (status === 'cancelado') {
+    if (bar) {
+      bar.style.width = '100%';
+      bar.className = 'bg-rose-500 h-full transition-all duration-500 ease-out';
+    }
+    if (s1) s1.className = 'py-1 rounded-lg border text-rose-800 bg-rose-100 border-rose-200 font-bold';
+    if (s2) s2.className = 'py-1 rounded-lg border text-rose-800 bg-rose-100 border-rose-200 font-bold';
+    if (s3) s3.className = 'py-1 rounded-lg border text-rose-800 bg-rose-200 border-rose-300 font-black';
+    txt.textContent = '❌ Pedido cancelado pela loja. Entre em contato se precisar.';
+    return;
+  }
+
+  if (status === 'novo' || status === 'preparo') {
+    if (bar) {
+      bar.style.width = '33%';
+      bar.className = 'bg-gradient-to-r from-purple-600 to-purple-500 h-full transition-all duration-500 ease-out';
+    }
+    if (s1) s1.className = 'py-1 rounded-lg border text-purple-900 bg-purple-200 border-purple-300 font-extrabold shadow-xs';
+    if (s2) s2.className = 'py-1 rounded-lg border text-gray-400 bg-gray-100 border-gray-200';
+    if (s3) s3.className = 'py-1 rounded-lg border text-gray-400 bg-gray-100 border-gray-200';
+    txt.textContent = '⏱️ Estimado: 15 a 20 min • Seu pedido está sendo preparado com carinho!';
+  } else if (status === 'entrega') {
+    if (bar) {
+      bar.style.width = '66%';
+      bar.className = 'bg-gradient-to-r from-purple-600 to-indigo-600 h-full transition-all duration-500 ease-out';
+    }
+    if (s1) s1.className = 'py-1 rounded-lg border text-purple-900 bg-purple-100 border-purple-200 font-bold';
+    if (s2) s2.className = 'py-1 rounded-lg border text-purple-900 bg-purple-200 border-purple-300 font-extrabold shadow-xs';
+    if (s3) s3.className = 'py-1 rounded-lg border text-gray-400 bg-gray-100 border-gray-200';
+    txt.textContent = deliveryType === 'entrega'
+      ? '🛵 Saiu para entrega! O motoboy está a caminho do seu endereço.'
+      : '🏬 Seu açaí está pronto para retirada no balcão!';
+  } else if (status === 'concluido') {
+    if (bar) {
+      bar.style.width = '100%';
+      bar.className = 'bg-gradient-to-r from-emerald-500 to-emerald-600 h-full transition-all duration-500 ease-out';
+    }
+    if (s1) s1.className = 'py-1 rounded-lg border text-emerald-900 bg-emerald-100 border-emerald-200 font-bold';
+    if (s2) s2.className = 'py-1 rounded-lg border text-emerald-900 bg-emerald-100 border-emerald-200 font-bold';
+    if (s3) s3.className = 'py-1 rounded-lg border text-emerald-900 bg-emerald-200 border-emerald-300 font-extrabold shadow-xs';
+    txt.textContent = '✅ Pedido entregue e concluído. Aproveite seu açaí!';
+  }
+}
+
 function showSuccessOrderModal(order) {
   const config = window.Store.getConfig();
   document.getElementById('confirmed-order-number').textContent = order.orderNumber;
@@ -941,17 +1064,11 @@ function showSuccessOrderModal(order) {
 
   document.getElementById('success-modal').classList.remove('hidden');
 
+  updateTrackingModalProgress(order);
+
   window.Store.listenToOrder(order.id, (updatedOrder) => {
-    const statusMap = {
-      novo: '🥣 Pedido aceito! Já estamos preparando seu açaí!',
-      preparo: '🥣 Pedido aceito! Seu açaí está sendo montado com muito carinho!',
-      entrega: order.deliveryType === 'entrega' ? '🛵 Seu açaí saiu para entrega! Fique atento!' : '🏬 Seu açaí está pronto para retirada no balcão!',
-      concluido: '✅ Pedido entregue! Bom apetite com a Rotta do Açaí!',
-      cancelado: '❌ Pedido cancelado pela loja. Entre em contato.'
-    };
-    const textElem = document.getElementById('confirmed-status-text');
-    if (textElem && updatedOrder.status) {
-      textElem.textContent = statusMap[updatedOrder.status] || 'Status atualizado!';
+    if (updatedOrder) {
+      updateTrackingModalProgress(updatedOrder);
     }
   });
 }
@@ -1340,6 +1457,8 @@ function renderMyOrders() {
           </div>
         </div>
 
+        ${renderProgressBarHTML(order.status, order.deliveryType)}
+
         <div class="space-y-1.5 text-xs">
           ${(order.items || []).map(i => `
             <div class="border-b border-gray-100 pb-1 text-xs last:border-0 last:pb-0">
@@ -1442,6 +1561,35 @@ function triggerPromoNotification(promo) {
 function closePromoModal() {
   const modal = document.getElementById('promo-modal');
   if (modal) modal.classList.add('hidden');
+}
+
+function setupBroadcastNotificationListener() {
+  if (!window.Store || !window.Store.listenToBroadcastNotifications) return;
+
+  window.Store.listenToBroadcastNotifications((broadcastData) => {
+    if (!broadcastData || !broadcastData.createdAt) return;
+
+    const lastSeen = localStorage.getItem('last_seen_broadcast_time') || 0;
+    if (broadcastData.createdAt > parseInt(lastSeen, 10)) {
+      localStorage.setItem('last_seen_broadcast_time', broadcastData.createdAt);
+
+      const title = broadcastData.title || 'Rotta do Açaí 🍇';
+      const body = broadcastData.body || 'Confira nossas ofertas do dia!';
+
+      sendPushNotification(title, body);
+      try { window.Store.playNotificationSound(); } catch {}
+
+      const titleElem = document.getElementById('promo-modal-title');
+      const msgElem = document.getElementById('promo-modal-message');
+      const modal = document.getElementById('promo-modal');
+
+      if (titleElem && msgElem && modal) {
+        titleElem.textContent = title;
+        msgElem.textContent = body;
+        modal.classList.remove('hidden');
+      }
+    }
+  });
 }
 
 // ==========================================================================

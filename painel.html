@@ -800,6 +800,62 @@
         </form>
       </div>
 
+      <!-- Card: Disparo de Notificação em Massa (Oferta do Dia / Notificação no Celular) -->
+      <div class="bg-white p-6 rounded-2xl border-2 border-purple-300 shadow-md space-y-4">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
+          <div class="flex items-center space-x-2.5">
+            <span class="text-3xl">📢</span>
+            <div>
+              <h3 class="font-extrabold text-base text-acai-900 leading-tight">Disparo de Notificação em Massa no Celular (Oferta do Dia)</h3>
+              <p class="text-xs text-purple-700 font-medium">Envia uma notificação PUSH instantânea na barra de notificações do celular de TODOS os clientes cadastrados!</p>
+            </div>
+          </div>
+          <span class="text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 px-3 py-1 rounded-full border border-purple-200">
+            📲 Sistema Push Ativo
+          </span>
+        </div>
+
+        <!-- Botões de Modelos Prontos Práticos -->
+        <div class="space-y-1.5">
+          <label class="block font-bold text-gray-700 text-xs">✨ Escolha um modelo rápido (ou escreva a sua frase abaixo):</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <button type="button" onclick="fillBroadcastTemplate('🍇 Oferta do Dia - Rotta do Açaí', 'Aproveite nossos combos especiais hoje! Peça seu açaí geladinho com entrega rápida. 🛵')" class="p-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl text-left font-bold text-purple-900 transition">
+              🍇 Oferta do Dia
+            </button>
+            <button type="button" onclick="fillBroadcastTemplate('🔥 Cupom de Desconto Especial!', 'Use o cupom AÇAI10 e ganhe 10% de desconto no seu pedido pelo app hoje! 😋')" class="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl text-left font-bold text-amber-900 transition">
+              🔥 Desconto Especial
+            </button>
+            <button type="button" onclick="fillBroadcastTemplate('🛵 Frete Grátis Hoje!', 'Entrega grátis para todos os pedidos realizados nas próximas 2 horas! Aproveite! 📦')" class="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-left font-bold text-emerald-900 transition">
+              🛵 Frete Grátis
+            </button>
+            <button type="button" onclick="fillBroadcastTemplate('🍧 Novo Sabor na Rotta do Açaí!', 'Venha experimentar nossas novas combinações e coberturas exclusivas! 🤤')" class="p-2 bg-pink-50 hover:bg-pink-100 border border-pink-200 rounded-xl text-left font-bold text-pink-900 transition">
+              🍧 Novo Sabor
+            </button>
+          </div>
+        </div>
+
+        <form id="broadcast-notification-form" onsubmit="handleSendBroadcastNotification(event)" class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Título da Notificação *</label>
+            <input id="broadcast-title" type="text" placeholder="Ex: 🍇 Oferta do Dia - Rotta do Açaí" value="🍇 Oferta do Dia - Rotta do Açaí" class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-bold text-acai-900 focus:outline-none focus:border-acai-700" required>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Mensagem da Notificação (Aparece no celular do cliente) *</label>
+            <textarea id="broadcast-msg" rows="2" placeholder="Ex: Aproveite nossos combos especiais hoje! Peça seu açaí geladinho com entrega rápida. 🛵" class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 font-medium focus:outline-none focus:border-acai-700" required>Aproveite nossos combos especiais hoje! Peça seu açaí geladinho com entrega rápida. 🛵</textarea>
+          </div>
+
+          <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 text-[11px] text-amber-900 font-medium flex items-center gap-2">
+            <span>💡</span>
+            <span>Esta mensagem será enviada instantaneamente para a barra de notificação do celular de todos os clientes que acessam o app!</span>
+          </div>
+
+          <button type="submit" class="w-full bg-purple-700 hover:bg-purple-800 text-gold-300 font-black py-3 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center space-x-2 text-xs">
+            <span>📢 DISPARAR NOTIFICAÇÃO EM MASSA PARA TODOS OS CELULARES</span>
+          </button>
+        </form>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         <!-- Formulário de Envio Instantâneo -->
@@ -1584,8 +1640,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <script src="js/store.js?v=75"></script>
-  <script src="js/painel.js?v=75"></script>
+  <script src="js/store.js?v=76"></script>
+  <script src="js/painel.js?v=76"></script>
   <script>
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {

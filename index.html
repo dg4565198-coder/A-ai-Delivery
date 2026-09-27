@@ -562,12 +562,33 @@
         <p class="text-xs text-gray-500">Obrigado pela preferência! Já estamos preparando o seu açaí.</p>
       </div>
 
-      <!-- Rastreio Visual do Status -->
-      <div class="bg-purple-50/70 p-4 rounded-2xl border border-purple-100 space-y-2 text-left">
-        <span class="text-xs font-bold text-acai-900 block">Status em Tempo Real:</span>
-        <div id="order-status-badge-flow" class="flex items-center space-x-2 text-xs font-bold text-amber-700 bg-amber-100/80 px-3 py-2 rounded-xl">
-          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
-          <span id="confirmed-status-text">Aguardando confirmação da loja...</span>
+      <!-- Rastreio Visual do Status com Barra em 3 Etapas -->
+      <div class="bg-purple-50/90 p-3.5 rounded-2xl border border-purple-200 space-y-2.5 text-left shadow-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-black text-acai-900 flex items-center gap-1">
+            <span class="animate-pulse">📍</span> Status em Tempo Real
+          </span>
+          <span class="text-[10px] font-extrabold bg-purple-200 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-300 shadow-xs">
+            ⏱️ 15 a 20 min
+          </span>
+        </div>
+
+        <!-- Barra de Progresso em 3 Etapas -->
+        <div class="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden flex shadow-inner">
+          <div id="order-progress-bar" class="bg-gradient-to-r from-purple-600 to-purple-500 h-full transition-all duration-500 ease-out" style="width: 33%;"></div>
+        </div>
+
+        <!-- Rótulos das 3 Etapas -->
+        <div class="grid grid-cols-3 text-center text-[10px] gap-1">
+          <div id="step-stage-1" class="py-1 rounded-lg border text-purple-900 bg-purple-200 border-purple-300 font-extrabold shadow-xs">1. 🥣 Preparo</div>
+          <div id="step-stage-2" class="py-1 rounded-lg border text-gray-400 bg-gray-100 border-gray-200">2. 🛵 Entrega</div>
+          <div id="step-stage-3" class="py-1 rounded-lg border text-gray-400 bg-gray-100 border-gray-200">3. ✅ Finalizado</div>
+        </div>
+
+        <!-- Texto Dinâmico de Status -->
+        <div id="order-status-badge-flow" class="text-[11px] font-bold text-purple-950 bg-white/90 p-2.5 rounded-xl border border-purple-100 flex items-center gap-1.5 shadow-xs">
+          <span class="w-2 h-2 rounded-full bg-purple-600 animate-ping shrink-0"></span>
+          <span id="confirmed-status-text">🥣 Pedido aceito! Já estamos preparando seu açaí...</span>
         </div>
       </div>
 
@@ -839,8 +860,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- Scripts da Aplicação & Service Worker PWA -->
-  <script src="js/store.js?v=75"></script>
-  <script src="js/app.js?v=75"></script>
+  <script src="js/store.js?v=76"></script>
+  <script src="js/app.js?v=76"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {

@@ -3,7 +3,7 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v75';
+const CACHE_NAME = 'rotta-acai-v76';
 const urlsToCache = [
   './',
   './index.html',
@@ -432,10 +432,36 @@ function checkNewOrdersForLojista() {
     .catch(() => {});
 }
 
+let _lastBroadcastTimeSW = 0;
+
+function checkBroadcastNotificationsSW() {
+  fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/customer_notifications/broadcast.json')
+    .then(res => res.json())
+    .then(data => {
+      if (!data || !data.createdAt) return;
+      if (data.createdAt > _lastBroadcastTimeSW) {
+        if (_lastBroadcastTimeSW !== 0) {
+          self.registration.showNotification(data.title || 'Rotta do Açaí 🍇', {
+            body: data.body || 'Confira nossas ofertas do dia!',
+            icon: 'assets/logo.jpg',
+            badge: 'assets/logo.jpg',
+            vibrate: [200, 100, 200, 100, 200],
+            tag: 'broadcast-' + data.createdAt,
+            renotify: true,
+            data: { url: './' }
+          });
+        }
+        _lastBroadcastTimeSW = data.createdAt;
+      }
+    })
+    .catch(() => {});
+}
+
 // Initialize stream and background loops
 startFirebaseSSEStream();
 setInterval(checkTrackedOrdersStatus, 10000);
 setInterval(checkNewOrdersForLojista, 7000);
+setInterval(checkBroadcastNotificationsSW, 12000);
 
 // Handle push notifications
 self.addEventListener('push', event => {
