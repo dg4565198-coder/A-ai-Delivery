@@ -2533,14 +2533,19 @@ function initCustomerChatListener() {
   if (!customerKey) return;
   if (_customerChatSubscribedKey === customerKey) return;
 
-  _customerChatSubscribedKey = customerKey;
-  notifyServiceWorkerTrackChat(customerKey);
-
   if (window.Store && window.Store.listenToCustomerChat) {
-    window.Store.listenToCustomerChat(customerKey, chatData => {
+    const chatRef = window.Store.listenToCustomerChat(customerKey, chatData => {
       _lastReceivedChatData = chatData;
       renderCustomerChatMessages(chatData);
     });
+    if (chatRef) {
+      _customerChatSubscribedKey = customerKey;
+      notifyServiceWorkerTrackChat(customerKey);
+    } else {
+      setTimeout(initCustomerChatListener, 1000);
+    }
+  } else {
+    setTimeout(initCustomerChatListener, 1000);
   }
 }
 

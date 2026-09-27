@@ -1857,26 +1857,32 @@ window.Store = {
     };
 
     if (db) {
-      // 1. Push message to messages list
-      await db.ref(`chats/${cleanKey}/messages/${msgId}`).set(messageObj);
+      try {
+        // 1. Push message to messages list
+        await db.ref(`chats/${cleanKey}/messages/${msgId}`).set(messageObj);
 
-      // 2. Update chat metadata
-      const updateData = {
-        customerKey: cleanKey,
-        lastMessage: text.trim(),
-        lastSender: sender,
-        lastTimestamp: nowIso
-      };
-      if (customerName) updateData.customerName = customerName;
-      if (customerPhone) updateData.customerPhone = customerPhone;
+        // 2. Update chat metadata
+        const updateData = {
+          customerKey: cleanKey,
+          lastMessage: text.trim(),
+          lastSender: sender,
+          lastTimestamp: nowIso
+        };
+        if (customerName) updateData.customerName = customerName;
+        if (customerPhone) updateData.customerPhone = customerPhone;
 
-      if (sender === 'customer') {
-        updateData.unreadByStore = true;
-      } else {
-        updateData.unreadByCustomer = true;
+        if (sender === 'customer') {
+          updateData.unreadByStore = true;
+        } else {
+          updateData.unreadByCustomer = true;
+        }
+
+        await db.ref(`chats/${cleanKey}`).update(updateData);
+      } catch (err) {
+        console.error('Erro ao gravar mensagem no Firebase Realtime Database:', err);
       }
-
-      await db.ref(`chats/${cleanKey}`).update(updateData);
+    } else {
+      console.warn('Firebase DB não disponível para gravar mensagem.');
     }
     return messageObj;
   },

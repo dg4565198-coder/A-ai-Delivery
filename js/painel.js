@@ -171,6 +171,7 @@ function runPainelApp() {
   try { loadHoursTab(); } catch (e) { console.error('Hours:', e); }
   try { loadOpenPromoCard(); } catch (e) { console.error('OpenPromo:', e); }
   try { setupFirebaseListener(); } catch (e) { console.error('Firebase:', e); }
+  try { initPainelChatsListener(); } catch (e) { console.error('Chats:', e); }
   try {
     if (window.Store.checkAndApplyAutoSchedule) {
       window.Store.checkAndApplyAutoSchedule();
@@ -4324,10 +4325,9 @@ let _hasChatListenerInitialized = false;
 
 function initPainelChatsListener() {
   if (_hasChatListenerInitialized) return;
-  _hasChatListenerInitialized = true;
 
   if (window.Store && window.Store.listenToAllChats) {
-    window.Store.listenToAllChats(chatsData => {
+    const chatRef = window.Store.listenToAllChats(chatsData => {
       _painelAllChatsMap = chatsData || {};
       updatePainelChatUnreadBadge();
       renderPainelChatsList();
@@ -4335,6 +4335,13 @@ function initPainelChatsListener() {
         renderPainelChatMessagesRoom(_selectedChatCustomerKey);
       }
     });
+    if (chatRef) {
+      _hasChatListenerInitialized = true;
+    } else {
+      setTimeout(initPainelChatsListener, 1000);
+    }
+  } else {
+    setTimeout(initPainelChatsListener, 1000);
   }
 }
 
