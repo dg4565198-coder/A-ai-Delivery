@@ -4328,7 +4328,17 @@ function initPainelChatsListener() {
 
   if (window.Store && window.Store.listenToAllChats) {
     const chatRef = window.Store.listenToAllChats(chatsData => {
-      _painelAllChatsMap = chatsData || {};
+      if (chatsData && typeof chatsData === 'object') {
+        const fresh = {};
+        for (const k in chatsData) {
+          if (chatsData[k] && typeof chatsData[k] === 'object') {
+            const item = chatsData[k];
+            item.customerKey = item.customerKey || k;
+            fresh[k] = item;
+          }
+        }
+        _painelAllChatsMap = fresh;
+      }
       updatePainelChatUnreadBadge();
       renderPainelChatsList();
       if (_selectedChatCustomerKey) {
@@ -4347,19 +4357,22 @@ function initPainelChatsListener() {
 
 async function fetchCustomerChatsDirectly() {
   try {
-    const res = await fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/chats.json?cb=' + Date.now());
+    const res = await fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/chats.json?t=' + Date.now());
     const data = await res.json();
     if (data && typeof data === 'object') {
-      _painelAllChatsMap = data;
+      const fresh = {};
+      for (const k in data) {
+        if (data[k] && typeof data[k] === 'object') {
+          const item = data[k];
+          item.customerKey = item.customerKey || k;
+          fresh[k] = item;
+        }
+      }
+      _painelAllChatsMap = fresh;
       updatePainelChatUnreadBadge();
       renderPainelChatsList();
       
-      if (!_selectedChatCustomerKey) {
-        const sorted = Object.values(data).sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
-        if (sorted[0] && sorted[0].customerKey) {
-          selectCustomerChatRoom(sorted[0].customerKey);
-        }
-      } else {
+      if (_selectedChatCustomerKey) {
         renderPainelChatMessagesRoom(_selectedChatCustomerKey);
       }
     }
@@ -4368,6 +4381,7 @@ async function fetchCustomerChatsDirectly() {
   }
 }
 
+setTimeout(initPainelChatsListener, 300);
 setTimeout(fetchCustomerChatsDirectly, 500);
 setInterval(fetchCustomerChatsDirectly, 2500);
 
@@ -4401,7 +4415,16 @@ function updatePainelChatUnreadBadge() {
 function renderPainelChatsTab() {
   initPainelChatsListener();
   renderPainelChatsList();
-  if (_selectedChatCustomerKey) {
+  
+  if (!_selectedChatCustomerKey) {
+    const chatsList = Object.values(_painelAllChatsMap || {});
+    if (chatsList.length > 0) {
+      chatsList.sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
+      if (chatsList[0] && chatsList[0].customerKey) {
+        selectCustomerChatRoom(chatsList[0].customerKey);
+      }
+    }
+  } else {
     renderPainelChatMessagesRoom(_selectedChatCustomerKey);
   }
 }
