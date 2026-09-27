@@ -2549,6 +2549,24 @@ function initCustomerChatListener() {
   }
 }
 
+async function fetchCustomerSingleChatDirectly() {
+  const customerKey = getCustomerChatKey();
+  if (!customerKey) return;
+  const cleanKey = (window.Store && window.Store.getCleanCustomerKey) ? window.Store.getCleanCustomerKey(customerKey) : customerKey;
+
+  try {
+    const res = await fetch(`https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json?cb=` + Date.now());
+    const data = await res.json();
+    if (data && typeof data === 'object') {
+      _lastReceivedChatData = data;
+      renderCustomerChatMessages(data);
+    }
+  } catch (e) {}
+}
+
+setTimeout(fetchCustomerSingleChatDirectly, 500);
+setInterval(fetchCustomerSingleChatDirectly, 2500);
+
 function renderCustomerChatMessages(chatData) {
   const msgFeed = document.getElementById('live-chat-messages');
   if (!msgFeed) return;

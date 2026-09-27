@@ -4345,6 +4345,32 @@ function initPainelChatsListener() {
   }
 }
 
+async function fetchCustomerChatsDirectly() {
+  try {
+    const res = await fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/chats.json?cb=' + Date.now());
+    const data = await res.json();
+    if (data && typeof data === 'object') {
+      _painelAllChatsMap = data;
+      updatePainelChatUnreadBadge();
+      renderPainelChatsList();
+      
+      if (!_selectedChatCustomerKey) {
+        const sorted = Object.values(data).sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
+        if (sorted[0] && sorted[0].customerKey) {
+          selectCustomerChatRoom(sorted[0].customerKey);
+        }
+      } else {
+        renderPainelChatMessagesRoom(_selectedChatCustomerKey);
+      }
+    }
+  } catch (err) {
+    console.warn('Erro ao buscar chats diretamente:', err);
+  }
+}
+
+setTimeout(fetchCustomerChatsDirectly, 500);
+setInterval(fetchCustomerChatsDirectly, 2500);
+
 let _prevUnreadCountStore = 0;
 
 function updatePainelChatUnreadBadge() {
