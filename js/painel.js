@@ -1959,13 +1959,20 @@ function renderFinancialMetrics() {
 let currentCaixaExpectedDrawer = 0;
 
 function openCloseCaixaModal() {
-  const modal = document.getElementById('close-caixa-modal');
+  let modal = document.getElementById('close-caixa-modal');
   if (!modal) {
-    alert('Erro: Modal de fechamento de caixa não encontrado. Recarregue a página.');
+    alert('Atenção: Modal de fechamento de caixa não encontrado no sistema. Por favor, recarregue a página.');
     return;
   }
 
-  const selectedDate = getSelectedCaixaDate();
+  // Garantir injeção direta no document.body para evitar clipping em celulares
+  try {
+    if (modal.parentNode !== document.body) {
+      document.body.appendChild(modal);
+    }
+  } catch (e) {}
+
+  const selectedDate = getSelectedCaixaDate() || new Date().toISOString().split('T')[0];
   const dateFormatted = selectedDate ? selectedDate.split('-').reverse().join('/') : '';
   
   const dateSub = document.getElementById('close-caixa-date-subtitle');
@@ -1973,8 +1980,8 @@ function openCloseCaixaModal() {
 
   let orders = [];
   try {
-    const rawOrders = (window.Store.getOrdersArray ? window.Store.getOrdersArray() : []) || [];
-    const allOrders = rawOrders.filter(o => o && o.status !== 'cancelado');
+    const rawOrders = (window.Store && window.Store.getOrdersArray) ? window.Store.getOrdersArray() : [];
+    const allOrders = (rawOrders || []).filter(o => o && o.status !== 'cancelado');
     orders = allOrders.filter(o => {
       if (!o) return false;
       if (!o.createdAt) return true;
@@ -1986,43 +1993,45 @@ function openCloseCaixaModal() {
       return `${yyyy}-${mm}-${dd}` === selectedDate;
     });
   } catch (err) {
-    console.warn('Erro ao filtrar pedidos:', err);
+    console.warn('Erro ao filtrar pedidos para fechamento:', err);
   }
 
-  const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+  const totalRevenue = orders.reduce((s, o) => s + (o ? (o.total || 0) : 0), 0);
   const totalCount = orders.length;
 
-  const pixOrders = orders.filter(o => o.paymentMethod === 'pix');
-  const cashOrders = orders.filter(o => o.paymentMethod === 'dinheiro');
-  const combinedOrders = orders.filter(o => o.paymentMethod === 'combinado');
+  const pixOrders = orders.filter(o => o && o.paymentMethod === 'pix');
+  const cashOrders = orders.filter(o => o && o.paymentMethod === 'dinheiro');
+  const combinedOrders = orders.filter(o => o && o.paymentMethod === 'combinado');
 
-  const pixVal = pixOrders.reduce((s, o) => s + (o.total || 0), 0);
-  const cashVal = cashOrders.reduce((s, o) => s + (o.total || 0), 0);
-  const combinedVal = combinedOrders.reduce((s, o) => s + (o.total || 0), 0);
+  const pixVal = pixOrders.reduce((s, o) => s + (o ? (o.total || 0) : 0), 0);
+  const cashVal = cashOrders.reduce((s, o) => s + (o ? (o.total || 0) : 0), 0);
+  const combinedVal = combinedOrders.reduce((s, o) => s + (o ? (o.total || 0) : 0), 0);
 
-  const cashRegData = window.Store.getCashRegisterData(selectedDate);
+  const cashRegData = (window.Store && window.Store.getCashRegisterData) ? (window.Store.getCashRegisterData(selectedDate) || {}) : {};
   const initialCash = cashRegData.initialCash || 0;
   const sangriasList = cashRegData.sangrias || [];
   const suprimentosList = cashRegData.suprimentos || [];
 
-  const totalSangrias = sangriasList.reduce((s, item) => s + (item.amount || 0), 0);
-  const totalSuprimentos = suprimentosList.reduce((s, item) => s + (item.amount || 0), 0);
+  const totalSangrias = sangriasList.reduce((s, item) => s + (item ? (item.amount || 0) : 0), 0);
+  const totalSuprimentos = suprimentosList.reduce((s, item) => s + (item ? (item.amount || 0) : 0), 0);
 
   const expectedDrawer = initialCash + cashVal + totalSuprimentos - totalSangrias;
   currentCaixaExpectedDrawer = expectedDrawer;
 
-  if (document.getElementById('close-caixa-total-revenue')) document.getElementById('close-caixa-total-revenue').textContent = window.Store.formatCurrency(totalRevenue);
+  const fmt = (v) => (window.Store && window.Store.formatCurrency) ? window.Store.formatCurrency(v) : ('R$ ' + Number(v||0).toFixed(2).replace('.', ','));
+
+  if (document.getElementById('close-caixa-total-revenue')) document.getElementById('close-caixa-total-revenue').textContent = fmt(totalRevenue);
   if (document.getElementById('close-caixa-total-orders')) document.getElementById('close-caixa-total-orders').textContent = `${totalCount} pedidos`;
-  if (document.getElementById('close-caixa-pix-val')) document.getElementById('close-caixa-pix-val').textContent = window.Store.formatCurrency(pixVal);
-  if (document.getElementById('close-caixa-cash-val')) document.getElementById('close-caixa-cash-val').textContent = window.Store.formatCurrency(cashVal);
-  if (document.getElementById('close-caixa-combined-val')) document.getElementById('close-caixa-combined-val').textContent = window.Store.formatCurrency(combinedVal);
-  if (document.getElementById('close-caixa-initial-cash')) document.getElementById('close-caixa-initial-cash').textContent = window.Store.formatCurrency(initialCash);
-  if (document.getElementById('close-caixa-suprimentos')) document.getElementById('close-caixa-suprimentos').textContent = window.Store.formatCurrency(totalSuprimentos);
-  if (document.getElementById('close-caixa-sangrias')) document.getElementById('close-caixa-sangrias').textContent = window.Store.formatCurrency(totalSangrias);
-  if (document.getElementById('close-caixa-expected-drawer')) document.getElementById('close-caixa-expected-drawer').textContent = window.Store.formatCurrency(expectedDrawer);
+  if (document.getElementById('close-caixa-pix-val')) document.getElementById('close-caixa-pix-val').textContent = fmt(pixVal);
+  if (document.getElementById('close-caixa-cash-val')) document.getElementById('close-caixa-cash-val').textContent = fmt(cashVal);
+  if (document.getElementById('close-caixa-combined-val')) document.getElementById('close-caixa-combined-val').textContent = fmt(combinedVal);
+  if (document.getElementById('close-caixa-initial-cash')) document.getElementById('close-caixa-initial-cash').textContent = fmt(initialCash);
+  if (document.getElementById('close-caixa-suprimentos')) document.getElementById('close-caixa-suprimentos').textContent = fmt(totalSuprimentos);
+  if (document.getElementById('close-caixa-sangrias')) document.getElementById('close-caixa-sangrias').textContent = fmt(totalSangrias);
+  if (document.getElementById('close-caixa-expected-drawer')) document.getElementById('close-caixa-expected-drawer').textContent = fmt(expectedDrawer);
 
   const realInput = document.getElementById('close-caixa-real-drawer');
-  if (realInput) realInput.value = expectedDrawer > 0 ? expectedDrawer : '';
+  if (realInput) realInput.value = expectedDrawer > 0 ? expectedDrawer : '0';
 
   const notesInput = document.getElementById('close-caixa-notes');
   if (notesInput) notesInput.value = '';
@@ -2031,6 +2040,7 @@ function openCloseCaixaModal() {
   if (passInput) passInput.value = '';
 
   calculateCaixaDiff();
+
   modal.classList.remove('hidden');
 }
 
