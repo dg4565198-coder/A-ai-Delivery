@@ -1773,5 +1773,61 @@ window.Store = {
       const data = snap.exists() ? (snap.val() || {}) : {};
       callback(data);
     });
+  },
+
+  async createManualOrder(orderData) {
+    const db = getDB();
+    const orderId = 'manual_' + Date.now();
+    const dateStr = orderData.dateStr || new Date().toISOString().split('T')[0];
+    const dateObj = new Date(`${dateStr}T12:00:00`);
+    
+    const orderNum = `#M-${Math.floor(100 + Math.random() * 900)}`;
+    const totalVal = parseFloat(orderData.total) || 0;
+
+    const payload = {
+      id: orderId,
+      orderNumber: orderNum,
+      createdAt: dateObj.toISOString(),
+      updatedAt: dateObj.toISOString(),
+      customer: {
+        name: orderData.customerName || 'Cliente Balcão/WhatsApp',
+        phone: orderData.customerPhone || '5500000000000'
+      },
+      deliveryType: orderData.deliveryType || 'retirada',
+      paymentMethod: orderData.paymentMethod || 'dinheiro',
+      pixAmount: parseFloat(orderData.pixAmount) || 0,
+      cashAmount: parseFloat(orderData.cashAmount) || 0,
+      total: totalVal,
+      subtotal: totalVal,
+      deliveryFee: 0,
+      items: orderData.itemsDescription ? [{
+        name: orderData.itemsDescription,
+        quantity: 1,
+        unitPrice: totalVal
+      }] : [{
+        name: 'Venda Manual / Fora do Site',
+        quantity: 1,
+        unitPrice: totalVal
+      }],
+      status: orderData.status || 'concluido',
+      notes: orderData.notes || 'Lançamento Manual de Venda',
+      isManualEntry: true
+    };
+
+    if (db) {
+      await db.ref(`orders/${orderId}`).set(payload);
+    }
+    _ordersCache[orderId] = payload;
+
+    // Se informou telefone e o pedido está concluído, pontuar fidelidade
+    if (orderData.customerPhone && payload.status === 'concluido') {
+      try {
+        await this.addCupsToCustomer(orderData.customerPhone, orderData.customerName || 'Cliente Balcão', 1);
+      } catch (e) {
+        console.warn('Erro ao pontuar fidelidade na venda manual:', e);
+      }
+    }
+
+    return payload;
   }
 };

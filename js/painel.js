@@ -3985,6 +3985,96 @@ function triggerInstallApp() {
   }
 }
 
+function openManualOrderModal() {
+  const modal = document.getElementById('manual-order-modal');
+  const dateInput = document.getElementById('mo-date');
+  const selectedDate = getSelectedCaixaDate ? getSelectedCaixaDate() : new Date().toISOString().split('T')[0];
+
+  if (dateInput) dateInput.value = selectedDate;
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.zIndex = '999999';
+  }
+}
+window.openManualOrderModal = openManualOrderModal;
+
+function closeManualOrderModal() {
+  const modal = document.getElementById('manual-order-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.setProperty('display', 'none', 'important');
+    const form = document.getElementById('manual-order-form');
+    if (form) form.reset();
+  }
+}
+window.closeManualOrderModal = closeManualOrderModal;
+
+function toggleManualOrderCombinedFields() {
+  const method = document.getElementById('mo-payment-method')?.value;
+  const container = document.getElementById('mo-combined-container');
+  if (container) {
+    if (method === 'combinado') {
+      container.classList.remove('hidden');
+    } else {
+      container.classList.add('hidden');
+    }
+  }
+}
+window.toggleManualOrderCombinedFields = toggleManualOrderCombinedFields;
+
+async function handleSaveManualOrder(e) {
+  e.preventDefault();
+  const dateStr = document.getElementById('mo-date')?.value || getSelectedCaixaDate();
+  const total = parseFloat(document.getElementById('mo-total')?.value) || 0;
+  const customerName = document.getElementById('mo-customer-name')?.value.trim() || 'Cliente Balcão/WhatsApp';
+  const customerPhone = document.getElementById('mo-customer-phone')?.value.trim() || '';
+  const paymentMethod = document.getElementById('mo-payment-method')?.value || 'dinheiro';
+  const deliveryType = document.getElementById('mo-delivery-type')?.value || 'retirada';
+  const pixAmount = parseFloat(document.getElementById('mo-pix-amount')?.value) || 0;
+  const cashAmount = parseFloat(document.getElementById('mo-cash-amount')?.value) || 0;
+  const itemsDesc = document.getElementById('mo-items-desc')?.value.trim() || 'Venda Manual / Fora do Site';
+
+  if (total <= 0) {
+    alert('Por favor, informe o valor total da venda.');
+    return;
+  }
+
+  if (paymentMethod === 'combinado') {
+    if (pixAmount <= 0 && cashAmount <= 0) {
+      alert('Para pagamento combinado, informe os valores em Pix e em Dinheiro.');
+      return;
+    }
+  }
+
+  try {
+    await window.Store.createManualOrder({
+      dateStr,
+      total,
+      customerName,
+      customerPhone,
+      paymentMethod,
+      deliveryType,
+      pixAmount,
+      cashAmount,
+      itemsDescription: itemsDesc,
+      status: 'concluido',
+      notes: 'Lançamento Manual pelo Painel'
+    });
+
+    closeManualOrderModal();
+    renderFinancialMetrics();
+    renderClosedCaixasHistory();
+    if (window.renderWeeklyClosureComparison) renderWeeklyClosureComparison();
+
+    alert(`✅ Venda manual de ${window.Store.formatCurrency(total)} lançada com sucesso no caixa de ${dateStr.split('-').reverse().join('/')}!`);
+  } catch (err) {
+    console.error('Erro ao lançar venda manual:', err);
+    alert('Erro ao lançar venda manual: ' + (err.message || err));
+  }
+}
+window.handleSaveManualOrder = handleSaveManualOrder;
+
 window.toggleWakeLock = toggleWakeLock;
 window.requestNotificationPermission = requestNotificationPermission;
 window.openInstallAppModal = openInstallAppModal;
