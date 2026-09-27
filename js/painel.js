@@ -1684,19 +1684,20 @@ function setCaixaDateToday() {
   renderFinancialMetrics();
 }
 
-function promptEditDailyGoal() {
-  const currentGoal = window.Store.getDailyGoal();
-  const input = prompt('Definir Meta Diária de Faturamento (R$):', currentGoal);
+function promptEditWeeklyGoal() {
+  const currentGoal = (window.Store && window.Store.getWeeklyGoal) ? window.Store.getWeeklyGoal() : 3500;
+  const input = prompt('Definir Meta Semanal de Faturamento (R$):', currentGoal);
   if (input === null) return;
-  const num = parseFloat(input);
+  const num = parsePtBrFloat ? parsePtBrFloat(input) : parseFloat(input);
   if (isNaN(num) || num <= 0) {
-    alert('Por favor, digite um valor numérico válido para a meta.');
+    alert('Por favor, digite um valor numérico válido para a meta semanal.');
     return;
   }
-  window.Store.setDailyGoal(num);
+  if (window.Store && window.Store.setWeeklyGoal) window.Store.setWeeklyGoal(num);
   renderFinancialMetrics();
-  alert(`✅ Meta diária atualizada para ${window.Store.formatCurrency(num)}!`);
+  alert(`✅ Meta semanal atualizada para ${window.Store.formatCurrency(num)}!`);
 }
+window.promptEditWeeklyGoal = promptEditWeeklyGoal;
 
 function promptEditInitialCash() {
   const dateStr = getSelectedCaixaDate();
@@ -1795,23 +1796,54 @@ function renderFinancialMetrics() {
   if (document.getElementById('metric-orders-count')) document.getElementById('metric-orders-count').textContent = totalCount;
   if (document.getElementById('metric-average-ticket')) document.getElementById('metric-average-ticket').textContent = window.Store.formatCurrency(avgTicket);
 
-  // 1. Meta Diária de Faturamento
-  const dailyGoal = window.Store.getDailyGoal();
-  const goalPercent = Math.min(100, Math.round((totalRevenue / dailyGoal) * 100));
+  // 1. Meta Semanal de Faturamento (Soma dos caixas/vendas dos últimos 7 dias)
+  const weeklyGoal = (window.Store && window.Store.getWeeklyGoal) ? window.Store.getWeeklyGoal() : 3500;
+  
+  const datesList7 = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    datesList7.push(`${yyyy}-${mm}-${dd}`);
+  }
+
+  let totalWeeklyRevenue = 0;
+  datesList7.forEach(dStr => {
+    const closure = (window.Store && window.Store.getDailyClosure) ? window.Store.getDailyClosure(dStr) : null;
+    if (closure && closure.totalRevenue !== undefined) {
+      totalWeeklyRevenue += (closure.totalRevenue || 0);
+    } else {
+      const dayOrders = allOrders.filter(o => {
+        if (!o.createdAt) return false;
+        const od = new Date(o.createdAt);
+        const yyyy = od.getFullYear();
+        const mm = String(od.getMonth() + 1).padStart(2, '0');
+        const dd = String(od.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}` === dStr;
+      });
+      totalWeeklyRevenue += dayOrders.reduce((s, o) => s + (o.total || 0), 0);
+    }
+  });
+
+  const goalPercent = Math.min(100, Math.round((totalWeeklyRevenue / weeklyGoal) * 100));
+
   if (document.getElementById('caixa-goal-text')) {
-    document.getElementById('caixa-goal-text').textContent = `${window.Store.formatCurrency(totalRevenue)} de ${window.Store.formatCurrency(dailyGoal)}`;
+    document.getElementById('caixa-goal-text').textContent = `${window.Store.formatCurrency(totalWeeklyRevenue)} de ${window.Store.formatCurrency(weeklyGoal)}`;
   }
   if (document.getElementById('caixa-goal-bar')) {
     document.getElementById('caixa-goal-bar').style.width = `${goalPercent}%`;
   }
   if (document.getElementById('caixa-goal-percent')) {
-    document.getElementById('caixa-goal-percent').textContent = `${goalPercent}% Atingido`;
+    document.getElementById('caixa-goal-percent').textContent = `${goalPercent}% Atingido (Semanal)`;
   }
   if (document.getElementById('caixa-goal-status')) {
     if (goalPercent >= 100) {
-      document.getElementById('caixa-goal-status').textContent = '🎉 META ALCANÇADA!';
+      document.getElementById('caixa-goal-status').textContent = '🎉 META SEMANAL ALCANÇADA!';
     } else {
-      document.getElementById('caixa-goal-status').textContent = `Faltam ${window.Store.formatCurrency(Math.max(0, dailyGoal - totalRevenue))} 🚀`;
+      document.getElementById('caixa-goal-status').textContent = `Faltam ${window.Store.formatCurrency(Math.max(0, weeklyGoal - totalWeeklyRevenue))} 🚀`;
     }
   }
 
@@ -4164,7 +4196,8 @@ window.triggerInstallApp = triggerInstallApp;
 window.getSelectedCaixaDate = getSelectedCaixaDate;
 window.handleCaixaDateChange = handleCaixaDateChange;
 window.setCaixaDateToday = setCaixaDateToday;
-window.promptEditDailyGoal = promptEditDailyGoal;
+window.promptEditDailyGoal = promptEditWeeklyGoal;
+window.promptEditWeeklyGoal = promptEditWeeklyGoal;
 window.promptEditInitialCash = promptEditInitialCash;
 window.openCashTransactionModal = openCashTransactionModal;
 window.closeCashTransactionModal = closeCashTransactionModal;

@@ -1724,21 +1724,21 @@ window.Store = {
     return this.saveCashRegisterData(dateStr, data);
   },
 
-  getDailyGoal() {
+  getWeeklyGoal() {
     try {
-      const val = localStorage.getItem('rotta_daily_goal');
-      if (val !== null) return parseFloat(val) || 500;
+      const val = localStorage.getItem('rotta_weekly_goal');
+      if (val !== null) return parseFloat(val) || 3500;
     } catch (e) {}
-    return 500;
+    return 3500;
   },
 
-  setDailyGoal(goal) {
-    const val = parseFloat(goal) || 500;
+  setWeeklyGoal(goal) {
+    const val = parseFloat(goal) || 3500;
     try {
-      localStorage.setItem('rotta_daily_goal', val);
+      localStorage.setItem('rotta_weekly_goal', val);
     } catch (e) {}
     const db = getDB();
-    if (db) db.ref('settings/dailyGoal').set(val).catch(() => {});
+    if (db) db.ref('settings/weeklyGoal').set(val).catch(() => {});
     return val;
   },
 
