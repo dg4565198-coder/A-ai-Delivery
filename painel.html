@@ -471,26 +471,26 @@
         <!-- Por Forma de Pagamento -->
         <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-3">
           <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
-            <span>💳</span> Vendas por Forma de Pagamento
+            <span>💳</span> Vendas por Forma de Pagamento <span class="text-[10px] text-purple-700 font-normal">(Clique para filtrar a tabela)</span>
           </h3>
           <div class="grid grid-cols-3 gap-2">
-            <div class="bg-purple-50/70 p-3 rounded-xl border border-purple-100 text-center">
-              <span class="text-[11px] text-gray-600 font-bold block">💠 Pix</span>
+            <button type="button" onclick="filterPaymentTable('pix')" class="bg-purple-50 hover:bg-purple-100 p-3 rounded-xl border border-purple-200 text-center transition cursor-pointer active:scale-95">
+              <span class="text-[11px] text-purple-900 font-extrabold block">💠 Pix</span>
               <span id="metric-pix-total" class="text-sm font-black text-acai-900 block mt-1">R$ 0,00</span>
               <span id="metric-pix-count" class="text-[10px] text-purple-700 font-bold">0 ped</span>
-            </div>
+            </button>
 
-            <div class="bg-blue-50/70 p-3 rounded-xl border border-blue-100 text-center">
-              <span class="text-[11px] text-gray-600 font-bold block">🔄 Combinado</span>
+            <button type="button" onclick="filterPaymentTable('combinado')" class="bg-blue-50 hover:bg-blue-100 p-3 rounded-xl border border-blue-200 text-center transition cursor-pointer active:scale-95">
+              <span class="text-[11px] text-blue-900 font-extrabold block">🔀 Combinado</span>
               <span id="metric-card-total" class="text-sm font-black text-blue-900 block mt-1">R$ 0,00</span>
               <span id="metric-card-count" class="text-[10px] text-blue-700 font-bold">0 ped</span>
-            </div>
+            </button>
 
-            <div class="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100 text-center">
-              <span class="text-[11px] text-gray-600 font-bold block">💵 Dinheiro</span>
+            <button type="button" onclick="filterPaymentTable('dinheiro')" class="bg-emerald-50 hover:bg-emerald-100 p-3 rounded-xl border border-emerald-200 text-center transition cursor-pointer active:scale-95">
+              <span class="text-[11px] text-emerald-900 font-extrabold block">💵 Dinheiro</span>
               <span id="metric-cash-total" class="text-sm font-black text-emerald-900 block mt-1">R$ 0,00</span>
               <span id="metric-cash-count" class="text-[10px] text-emerald-700 font-bold">0 ped</span>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -574,16 +574,30 @@
         </div>
       </div>
 
-      <!-- Tabela de Transações do Dia -->
+      <!-- Tabela de Transações do Dia com Conferência Pix & Dinheiro -->
       <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-          <h3 class="font-extrabold text-base text-gray-900 flex items-center gap-2">
-            <span>📑</span> Relação de Pedidos do Dia
-          </h3>
-          <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5">
-            <span>📥</span>
-            <span>Imprimir Relatório</span>
-          </button>
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+          <div>
+            <h3 class="font-extrabold text-base text-gray-900 flex items-center gap-2">
+              <span>📑</span> Conferência de Pedidos & Valores Recebidos
+            </h3>
+            <p class="text-xs text-gray-500">Filtre por forma de pagamento para conferir Pix, Dinheiro e Combinado individualmente.</p>
+          </div>
+
+          <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+            <!-- Filtros de Pagamento -->
+            <div class="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl shrink-0">
+              <button onclick="filterPaymentTable('todos')" id="pay-filter-todos" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-acai-700 text-white shadow-sm">Todos</button>
+              <button onclick="filterPaymentTable('pix')" id="pay-filter-pix" class="px-3 py-1 rounded-lg text-xs font-bold transition text-gray-600 hover:bg-gray-200 border border-gray-200">💠 Pix</button>
+              <button onclick="filterPaymentTable('dinheiro')" id="pay-filter-dinheiro" class="px-3 py-1 rounded-lg text-xs font-bold transition text-gray-600 hover:bg-gray-200 border border-gray-200">💵 Dinheiro</button>
+              <button onclick="filterPaymentTable('combinado')" id="pay-filter-combinado" class="px-3 py-1 rounded-lg text-xs font-bold transition text-gray-600 hover:bg-gray-200 border border-gray-200">🔀 Combinado</button>
+            </div>
+
+            <button onclick="window.print()" class="bg-gray-900 hover:bg-black text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5 shrink-0">
+              <span>📥</span>
+              <span>Imprimir Relatório</span>
+            </button>
+          </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -595,7 +609,7 @@
                 <th class="p-3">Cliente</th>
                 <th class="p-3">Itens</th>
                 <th class="p-3">Tipo</th>
-                <th class="p-3">Pagamento</th>
+                <th class="p-3">Pagamento Detalhado</th>
                 <th class="p-3 rounded-r-xl text-right">Valor Total</th>
               </tr>
             </thead>
@@ -1786,8 +1800,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <script src="js/store.js?v=77"></script>
-  <script src="js/painel.js?v=77"></script>
+  <script src="js/store.js?v=78"></script>
+  <script src="js/painel.js?v=78"></script>
   <script>
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {

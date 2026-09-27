@@ -1472,6 +1472,23 @@ async function handleCreateNewItem(e) {
 // ==========================================================================
 let salesChartInstance = null;
 let currentChartPeriod = 'dia';
+let currentPaymentFilter = 'todos';
+
+function filterPaymentTable(method) {
+  currentPaymentFilter = method;
+  ['todos', 'pix', 'dinheiro', 'combinado'].forEach(m => {
+    const btn = document.getElementById(`pay-filter-${m}`);
+    if (btn) {
+      if (m === method) {
+        btn.className = "px-3 py-1 rounded-lg text-xs font-bold transition bg-acai-700 text-white shadow-sm";
+      } else {
+        btn.className = "px-3 py-1 rounded-lg text-xs font-bold transition text-gray-600 hover:bg-gray-200 border border-gray-200";
+      }
+    }
+  });
+  renderFinancialMetrics();
+}
+window.filterPaymentTable = filterPaymentTable;
 
 function filterSalesChart(period) {
   currentChartPeriod = period;
@@ -1868,29 +1885,49 @@ function renderFinancialMetrics() {
   // 4. Ranking dos Produtos & Insumos Mais Vendidos (Top Vendas)
   renderTopSellers(orders);
 
-  // 5. Tabela de Transações
+  // 5. Tabela de Transações com Filtro por Forma de Pagamento
+  let filteredOrders = orders;
+  if (currentPaymentFilter !== 'todos') {
+    filteredOrders = orders.filter(o => o.paymentMethod === currentPaymentFilter);
+  }
+
   const tbody = document.getElementById('sales-table-body');
   if (tbody) {
-    if (orders.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-400 font-semibold text-center">Nenhum pedido finalizado em ${formattedDateLabel}.</td></tr>`;
+    if (filteredOrders.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-400 font-semibold text-center">Nenhum pedido encontrado para o filtro selecionado em ${formattedDateLabel}.</td></tr>`;
     } else {
-      tbody.innerHTML = orders.map(o => `
-        <tr class="hover:bg-purple-50/50 transition">
-          <td class="p-3 font-black text-acai-900">${o.orderNumber}</td>
-          <td class="p-3 text-gray-600 font-semibold">${o.timeFormatted || ''}</td>
-          <td class="p-3 font-bold text-gray-800">${o.customer ? o.customer.name : ''}</td>
-          <td class="p-3 text-gray-600 max-w-xs truncate">${o.items ? o.items.map(i => `${i.quantity}x ${i.name}`).join(', ') : ''}</td>
-          <td class="p-3">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.deliveryType === 'entrega' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}">
-              ${o.deliveryType === 'entrega' ? '🛵 Entrega' : '🏪 Retirada'}
-            </span>
-          </td>
-          <td class="p-3">
-            <span class="font-bold text-[10px] uppercase text-gray-700">${o.paymentMethod}</span>
-          </td>
-          <td class="p-3 text-right font-black text-acai-900">${window.Store.formatCurrency(o.total)}</td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = filteredOrders.map(o => {
+        let paymentBadge = '';
+        if (o.paymentMethod === 'pix') {
+          paymentBadge = `<span class="font-extrabold text-[10px] text-purple-900 bg-purple-100 px-2 py-0.5 rounded-full border border-purple-200">💠 PIX (${window.Store.formatCurrency(o.total)})</span>`;
+        } else if (o.paymentMethod === 'dinheiro') {
+          const changeText = o.paymentChange ? ` • Troco p/ ${o.paymentChange}` : '';
+          paymentBadge = `<span class="font-extrabold text-[10px] text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">💵 DINHEIRO (${window.Store.formatCurrency(o.total)}${changeText})</span>`;
+        } else if (o.paymentMethod === 'combinado') {
+          const pixPart = o.pixAmount ? window.Store.formatCurrency(o.pixAmount) : 'R$ 0,00';
+          const cashPart = o.cashAmount ? window.Store.formatCurrency(o.cashAmount) : 'R$ 0,00';
+          const changeText = o.paymentChange ? ` • Troco: ${o.paymentChange}` : '';
+          paymentBadge = `<span class="font-extrabold text-[10px] text-blue-900 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">🔀 COMBINADO (Pix: ${pixPart} + Dinh: ${cashPart}${changeText})</span>`;
+        } else {
+          paymentBadge = `<span class="font-bold text-[10px] uppercase text-gray-700">${o.paymentMethod || 'OUTRO'}</span>`;
+        }
+
+        return `
+          <tr class="hover:bg-purple-50/50 transition">
+            <td class="p-3 font-black text-acai-900">${o.orderNumber || '#'}</td>
+            <td class="p-3 text-gray-600 font-semibold">${o.timeFormatted || ''}</td>
+            <td class="p-3 font-bold text-gray-800">${o.customer ? o.customer.name : ''}</td>
+            <td class="p-3 text-gray-600 max-w-xs truncate">${o.items ? o.items.map(i => `${i.quantity}x ${i.name}`).join(', ') : ''}</td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${o.deliveryType === 'entrega' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}">
+                ${o.deliveryType === 'entrega' ? '🛵 Entrega' : '🏪 Retirada'}
+              </span>
+            </td>
+            <td class="p-3">${paymentBadge}</td>
+            <td class="p-3 text-right font-black text-acai-900">${window.Store.formatCurrency(o.total)}</td>
+          </tr>
+        `;
+      }).join('');
     }
   }
 
