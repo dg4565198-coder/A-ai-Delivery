@@ -1900,6 +1900,344 @@ function renderFinancialMetrics() {
   } catch (err) {
     console.error("Erro ao renderizar gráfico de vendas:", err);
   }
+
+  // Checar status do fechamento de caixa do dia selecionado
+  const closureData = window.Store.getDailyClosure(selectedDate);
+  const statusBadge = document.getElementById('caixa-closed-status-badge');
+  if (statusBadge) {
+    if (closureData) {
+      statusBadge.classList.remove('hidden');
+      statusBadge.textContent = `🔒 Caixa Fechado às ${closureData.closedTime || ''}`;
+    } else {
+      statusBadge.classList.add('hidden');
+    }
+  }
+
+  try {
+    renderClosedCaixasHistory();
+  } catch (err) {}
+}
+
+let currentCaixaExpectedDrawer = 0;
+
+function openCloseCaixaModal() {
+  const modal = document.getElementById('close-caixa-modal');
+  if (!modal) return;
+
+  const selectedDate = getSelectedCaixaDate();
+  const dateFormatted = selectedDate.split('-').reverse().join('/');
+  
+  const dateSub = document.getElementById('close-caixa-date-subtitle');
+  if (dateSub) dateSub.textContent = `Resumo de Vendas e Fechamento de Caixa em ${dateFormatted}`;
+
+  const allOrders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
+  const orders = allOrders.filter(o => {
+    if (!o.createdAt) return true;
+    const d = new Date(o.createdAt);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}` === selectedDate;
+  });
+
+  const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+  const totalCount = orders.length;
+
+  const pixOrders = orders.filter(o => o.paymentMethod === 'pix');
+  const cashOrders = orders.filter(o => o.paymentMethod === 'dinheiro');
+  const combinedOrders = orders.filter(o => o.paymentMethod === 'combinado');
+
+  const pixVal = pixOrders.reduce((s, o) => s + (o.total || 0), 0);
+  const cashVal = cashOrders.reduce((s, o) => s + (o.total || 0), 0);
+  const combinedVal = combinedOrders.reduce((s, o) => s + (o.total || 0), 0);
+
+  const cashRegData = window.Store.getCashRegisterData(selectedDate);
+  const initialCash = cashRegData.initialCash || 0;
+  const sangriasList = cashRegData.sangrias || [];
+  const suprimentosList = cashRegData.suprimentos || [];
+
+  const totalSangrias = sangriasList.reduce((s, item) => s + (item.amount || 0), 0);
+  const totalSuprimentos = suprimentosList.reduce((s, item) => s + (item.amount || 0), 0);
+
+  const expectedDrawer = initialCash + cashVal + totalSuprimentos - totalSangrias;
+  currentCaixaExpectedDrawer = expectedDrawer;
+
+  if (document.getElementById('close-caixa-total-revenue')) document.getElementById('close-caixa-total-revenue').textContent = window.Store.formatCurrency(totalRevenue);
+  if (document.getElementById('close-caixa-total-orders')) document.getElementById('close-caixa-total-orders').textContent = `${totalCount} pedidos`;
+  if (document.getElementById('close-caixa-pix-val')) document.getElementById('close-caixa-pix-val').textContent = window.Store.formatCurrency(pixVal);
+  if (document.getElementById('close-caixa-cash-val')) document.getElementById('close-caixa-cash-val').textContent = window.Store.formatCurrency(cashVal);
+  if (document.getElementById('close-caixa-combined-val')) document.getElementById('close-caixa-combined-val').textContent = window.Store.formatCurrency(combinedVal);
+  if (document.getElementById('close-caixa-initial-cash')) document.getElementById('close-caixa-initial-cash').textContent = window.Store.formatCurrency(initialCash);
+  if (document.getElementById('close-caixa-suprimentos')) document.getElementById('close-caixa-suprimentos').textContent = window.Store.formatCurrency(totalSuprimentos);
+  if (document.getElementById('close-caixa-sangrias')) document.getElementById('close-caixa-sangrias').textContent = window.Store.formatCurrency(totalSangrias);
+  if (document.getElementById('close-caixa-expected-drawer')) document.getElementById('close-caixa-expected-drawer').textContent = window.Store.formatCurrency(expectedDrawer);
+
+  const realInput = document.getElementById('close-caixa-real-drawer');
+  if (realInput) realInput.value = expectedDrawer > 0 ? expectedDrawer : '';
+
+  const notesInput = document.getElementById('close-caixa-notes');
+  if (notesInput) notesInput.value = '';
+
+  const passInput = document.getElementById('close-caixa-password');
+  if (passInput) passInput.value = '';
+
+  calculateCaixaDiff();
+  modal.classList.remove('hidden');
+}
+
+function closeCaixaModalClose() {
+  const modal = document.getElementById('close-caixa-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function calculateCaixaDiff() {
+  const alertElem = document.getElementById('close-caixa-diff-alert');
+  const realVal = parseFloat(document.getElementById('close-caixa-real-drawer')?.value) || 0;
+  if (!alertElem) return;
+
+  const diff = realVal - currentCaixaExpectedDrawer;
+
+  if (diff === 0) {
+    alertElem.className = 'p-3 rounded-xl bg-emerald-50 text-emerald-900 text-xs font-bold text-center border border-emerald-200';
+    alertElem.innerHTML = `✅ <strong>Caixa Perfeito!</strong> Valor contado é exatamente o esperado na gaveta.`;
+  } else if (diff > 0) {
+    alertElem.className = 'p-3 rounded-xl bg-blue-50 text-blue-900 text-xs font-bold text-center border border-blue-200';
+    alertElem.innerHTML = `🔵 <strong>Sobra no Caixa:</strong> +${window.Store.formatCurrency(diff)} a mais que o esperado.`;
+  } else {
+    alertElem.className = 'p-3 rounded-xl bg-rose-50 text-rose-900 text-xs font-bold text-center border border-rose-200';
+    alertElem.innerHTML = `🔴 <strong>Falta no Caixa:</strong> -${window.Store.formatCurrency(Math.abs(diff))} a menos que o esperado.`;
+  }
+}
+
+async function handleConfirmCloseCaixa(e) {
+  e.preventDefault();
+  const password = (document.getElementById('close-caixa-password')?.value || '').trim();
+  const creds = getPanelCredentials();
+
+  if (password !== creds.pass && password !== 'rotta123') {
+    alert('❌ Senha incorreta! Digite a senha do painel da loja para confirmar o fechamento.');
+    return;
+  }
+
+  const selectedDate = getSelectedCaixaDate();
+  const realDrawer = parseFloat(document.getElementById('close-caixa-real-drawer')?.value) || 0;
+  const notes = (document.getElementById('close-caixa-notes')?.value || '').trim();
+
+  const allOrders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
+  const orders = allOrders.filter(o => {
+    if (!o.createdAt) return true;
+    const d = new Date(o.createdAt);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}` === selectedDate;
+  });
+
+  const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+  const totalOrders = orders.length;
+
+  const pixVal = orders.filter(o => o.paymentMethod === 'pix').reduce((s, o) => s + (o.total || 0), 0);
+  const cashVal = orders.filter(o => o.paymentMethod === 'dinheiro').reduce((s, o) => s + (o.total || 0), 0);
+  const combinedVal = orders.filter(o => o.paymentMethod === 'combinado').reduce((s, o) => s + (o.total || 0), 0);
+
+  const cashRegData = window.Store.getCashRegisterData(selectedDate);
+  const initialCash = cashRegData.initialCash || 0;
+  const sangriasList = cashRegData.sangrias || [];
+  const suprimentosList = cashRegData.suprimentos || [];
+
+  const totalSangrias = sangriasList.reduce((s, item) => s + (item.amount || 0), 0);
+  const totalSuprimentos = suprimentosList.reduce((s, item) => s + (item.amount || 0), 0);
+
+  const expectedDrawer = initialCash + cashVal + totalSuprimentos - totalSangrias;
+  const diff = realDrawer - expectedDrawer;
+
+  const closurePayload = {
+    date: selectedDate,
+    closedAt: Date.now(),
+    closedTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    totalRevenue: totalRevenue,
+    totalOrders: totalOrders,
+    pixSales: pixVal,
+    cashSales: cashVal,
+    combinedSales: combinedVal,
+    initialCash: initialCash,
+    totalSuprimentos: totalSuprimentos,
+    totalSangrias: totalSangrias,
+    expectedDrawer: expectedDrawer,
+    realDrawer: realDrawer,
+    drawerDiff: diff,
+    notes: notes,
+    closedBy: creds.user || 'admin'
+  };
+
+  try {
+    await window.Store.saveDailyClosure(selectedDate, closurePayload);
+
+    // Fechar a loja no status geral
+    const config = window.Store.getConfig();
+    config.storeOpen = false;
+    await window.Store.saveConfig(config);
+    updateStoreStatusButton();
+
+    closeCaixaModalClose();
+    renderFinancialMetrics();
+    renderClosedCaixasHistory();
+
+    alert(`🔒 Caixa de ${selectedDate.split('-').reverse().join('/')} fechado com sucesso!\n\n• Faturamento Total: ${window.Store.formatCurrency(totalRevenue)}\n• Pedidos: ${totalOrders}\n• Gaveta Real: ${window.Store.formatCurrency(realDrawer)}\n\nA loja foi marcada como FECHADA.`);
+  } catch (err) {
+    alert('Erro ao registrar fechamento de caixa: ' + err.message);
+  }
+}
+
+function renderClosedCaixasHistory() {
+  const container = document.getElementById('closed-caixas-history-list');
+  if (!container) return;
+
+  const db = window.Store.getDB ? window.Store.getDB() : null;
+  if (!db) {
+    container.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-400 italic">Conectando ao banco de dados...</td></tr>`;
+    return;
+  }
+
+  db.ref('daily_closings').once('value').then(snap => {
+    if (!snap.exists()) {
+      container.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-400 italic">Nenhum caixa fechado registrado no histórico ainda.</td></tr>`;
+      return;
+    }
+
+    const closuresMap = snap.val() || {};
+    const closuresList = Object.values(closuresMap).sort((a, b) => (b.closedAt || 0) - (a.closedAt || 0));
+
+    if (closuresList.length === 0) {
+      container.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-400 italic">Nenhum fechamento de caixa encontrado.</td></tr>`;
+      return;
+    }
+
+    container.innerHTML = closuresList.map(item => {
+      const dateFmt = item.date ? item.date.split('-').reverse().join('/') : '';
+      const diffText = item.drawerDiff === 0 
+        ? '<span class="text-emerald-700 font-bold">✅ Correto</span>'
+        : (item.drawerDiff > 0 ? `<span class="text-blue-700 font-bold">+${window.Store.formatCurrency(item.drawerDiff)} (Sobra)</span>` : `<span class="text-rose-700 font-bold">-${window.Store.formatCurrency(Math.abs(item.drawerDiff))} (Falta)</span>`);
+
+      return `
+        <tr class="hover:bg-purple-50/50 transition">
+          <td class="p-2.5 font-black text-acai-900">${dateFmt}</td>
+          <td class="p-2.5 font-extrabold text-emerald-800">${window.Store.formatCurrency(item.totalRevenue || 0)}</td>
+          <td class="p-2.5 font-bold text-gray-700">${item.totalOrders || 0} ped</td>
+          <td class="p-2.5 text-xs">
+            <span class="block font-medium text-gray-500">Esp: ${window.Store.formatCurrency(item.expectedDrawer || 0)}</span>
+            <span class="block font-bold text-gray-900">Real: ${window.Store.formatCurrency(item.realDrawer || 0)} (${diffText})</span>
+          </td>
+          <td class="p-2.5">
+            <span class="px-2 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+              🔒 Fechado ${item.closedTime || ''}
+            </span>
+          </td>
+          <td class="p-2.5 text-right">
+            <button onclick="printDailyClosureReceipt('${item.date}')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-black text-white text-[11px] font-bold shadow transition inline-flex items-center space-x-1">
+              <span>🖨️</span><span>Imprimir</span>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }).catch(err => {
+    console.error("Erro ao carregar histórico de caixas:", err);
+    container.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-rose-500 text-xs">Erro ao carregar histórico.</td></tr>`;
+  });
+}
+
+function printDailyClosureReceipt(dateStr) {
+  const closure = window.Store.getDailyClosure(dateStr);
+  const selectedDate = dateStr || getSelectedCaixaDate();
+  const dateFormatted = selectedDate.split('-').reverse().join('/');
+
+  const modalContent = document.getElementById('receipt-modal-content');
+  const modal = document.getElementById('receipt-modal');
+
+  if (!modalContent || !modal) return;
+
+  const config = window.Store.getConfig();
+  const storeName = config.name || 'ROTTA DO AÇAÍ';
+
+  let closureData = closure;
+  if (!closureData) {
+    const allOrders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
+    const orders = allOrders.filter(o => {
+      if (!o.createdAt) return true;
+      const d = new Date(o.createdAt);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}` === selectedDate;
+    });
+
+    const totalRev = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const pixVal = orders.filter(o => o.paymentMethod === 'pix').reduce((s, o) => s + (o.total || 0), 0);
+    const cashVal = orders.filter(o => o.paymentMethod === 'dinheiro').reduce((s, o) => s + (o.total || 0), 0);
+    const combVal = orders.filter(o => o.paymentMethod === 'combinado').reduce((s, o) => s + (o.total || 0), 0);
+    const cashRegData = window.Store.getCashRegisterData(selectedDate);
+
+    closureData = {
+      date: selectedDate,
+      closedTime: 'Em andamento',
+      totalRevenue: totalRev,
+      totalOrders: orders.length,
+      pixSales: pixVal,
+      cashSales: cashVal,
+      combinedSales: combVal,
+      initialCash: cashRegData.initialCash || 0,
+      totalSuprimentos: (cashRegData.suprimentos || []).reduce((s, i) => s + (i.amount || 0), 0),
+      totalSangrias: (cashRegData.sangrias || []).reduce((s, i) => s + (i.amount || 0), 0),
+      expectedDrawer: (cashRegData.initialCash || 0) + cashVal + ((cashRegData.suprimentos || []).reduce((s, i) => s + (i.amount || 0), 0)) - ((cashRegData.sangrias || []).reduce((s, i) => s + (i.amount || 0), 0)),
+      realDrawer: (cashRegData.initialCash || 0) + cashVal,
+      drawerDiff: 0
+    };
+  }
+
+  modalContent.innerHTML = `
+    <div class="text-center font-black text-sm uppercase tracking-wider border-b border-black pb-2 mb-2">
+      ${storeName}<br>
+      <span class="text-xs font-bold">RELATÓRIO DE FECHAMENTO DE CAIXA</span>
+    </div>
+
+    <div class="text-xs space-y-1 mb-3">
+      <div><strong>Data:</strong> ${dateFormatted}</div>
+      <div><strong>Fechado às:</strong> ${closureData.closedTime || '22:00'}</div>
+      <div><strong>Operador:</strong> ${closureData.closedBy || 'Lojista'}</div>
+    </div>
+
+    <div class="border-t border-b border-black py-2 my-2 text-xs space-y-1 font-bold">
+      <div class="flex justify-between"><span>FATURAMENTO TOTAL:</span> <span>${window.Store.formatCurrency(closureData.totalRevenue || 0)}</span></div>
+      <div class="flex justify-between"><span>TOTAL DE PEDIDOS:</span> <span>${closureData.totalOrders || 0}</span></div>
+    </div>
+
+    <div class="text-xs space-y-1 border-b border-black pb-2 mb-2">
+      <div class="font-bold uppercase text-[11px] mb-1">Detalhamento por Pagamento:</div>
+      <div class="flex justify-between"><span>• Vendas no Pix:</span> <span>${window.Store.formatCurrency(closureData.pixSales || 0)}</span></div>
+      <div class="flex justify-between"><span>• Vendas no Dinheiro:</span> <span>${window.Store.formatCurrency(closureData.cashSales || 0)}</span></div>
+      <div class="flex justify-between"><span>• Vendas no Combinado:</span> <span>${window.Store.formatCurrency(closureData.combinedSales || 0)}</span></div>
+    </div>
+
+    <div class="text-xs space-y-1 border-b border-black pb-2 mb-2">
+      <div class="font-bold uppercase text-[11px] mb-1">Conferência de Gaveta:</div>
+      <div class="flex justify-between"><span>(+) Troco Inicial:</span> <span>${window.Store.formatCurrency(closureData.initialCash || 0)}</span></div>
+      <div class="flex justify-between"><span>(+) Suprimentos:</span> <span>${window.Store.formatCurrency(closureData.totalSuprimentos || 0)}</span></div>
+      <div class="flex justify-between"><span>(-) Sangrias:</span> <span>${window.Store.formatCurrency(closureData.totalSangrias || 0)}</span></div>
+      <div class="flex justify-between font-black text-sm pt-1 border-t border-dashed border-gray-400"><span>= Dinheiro Esperado:</span> <span>${window.Store.formatCurrency(closureData.expectedDrawer || 0)}</span></div>
+      <div class="flex justify-between font-black text-sm"><span>= Dinheiro Real Contado:</span> <span>${window.Store.formatCurrency(closureData.realDrawer || 0)}</span></div>
+      ${closureData.drawerDiff !== undefined ? `<div class="flex justify-between font-bold text-xs pt-1"><span>Diferença (Sobra/Falta):</span> <span>${closureData.drawerDiff >= 0 ? '+' : ''}${window.Store.formatCurrency(closureData.drawerDiff)}</span></div>` : ''}
+    </div>
+
+    ${closureData.notes ? `<div class="text-[11px] italic mb-3"><strong>Obs:</strong> ${closureData.notes}</div>` : ''}
+
+    <div class="text-center text-[10px] mt-4 border-t border-black pt-2 font-mono">
+      Impresso em ${new Date().toLocaleString('pt-BR')}<br>
+      ROTTA DO AÇAÍ • GESTÃO DE CAIXA
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
 }
 
 function renderTopSellers(orders) {
@@ -3299,6 +3637,12 @@ window.promptEditInitialCash = promptEditInitialCash;
 window.openCashTransactionModal = openCashTransactionModal;
 window.closeCashTransactionModal = closeCashTransactionModal;
 window.handleSaveCashTransaction = handleSaveCashTransaction;
+window.openCloseCaixaModal = openCloseCaixaModal;
+window.closeCaixaModalClose = closeCaixaModalClose;
+window.calculateCaixaDiff = calculateCaixaDiff;
+window.handleConfirmCloseCaixa = handleConfirmCloseCaixa;
+window.renderClosedCaixasHistory = renderClosedCaixasHistory;
+window.printDailyClosureReceipt = printDailyClosureReceipt;
 
 
 

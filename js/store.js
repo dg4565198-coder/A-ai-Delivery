@@ -1740,5 +1740,38 @@ window.Store = {
     const db = getDB();
     if (db) db.ref('settings/dailyGoal').set(val).catch(() => {});
     return val;
+  },
+
+  async saveDailyClosure(dateStr, closurePayload) {
+    const key = `rotta_daily_closure_${dateStr}`;
+    try {
+      localStorage.setItem(key, JSON.stringify(closurePayload));
+    } catch (e) {}
+
+    const db = getDB();
+    if (db) {
+      const p1 = db.ref(`daily_closings/${dateStr}`).set(closurePayload).catch(() => {});
+      const p2 = db.ref(`cashRegisters/${dateStr}/closure`).set(closurePayload).catch(() => {});
+      await Promise.all([p1, p2]);
+    }
+    return closurePayload;
+  },
+
+  getDailyClosure(dateStr) {
+    const key = `rotta_daily_closure_${dateStr}`;
+    try {
+      const data = localStorage.getItem(key);
+      if (data) return JSON.parse(data);
+    } catch (e) {}
+    return null;
+  },
+
+  listenToDailyClosings(callback) {
+    const db = getDB();
+    if (!db) return;
+    db.ref('daily_closings').on('value', snap => {
+      const data = snap.exists() ? (snap.val() || {}) : {};
+      callback(data);
+    });
   }
 };
