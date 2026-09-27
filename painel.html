@@ -99,12 +99,6 @@
           <span id="store-status-text">Loja Aberta</span>
         </button>
 
-        <!-- Botão Lançar Venda (Balcão / WhatsApp) Header -->
-        <button onclick="openManualOrderModal()" class="px-3.5 py-1.5 rounded-xl bg-gold-400 hover:bg-gold-300 text-acai-950 font-black text-xs shadow flex items-center space-x-1.5 transition shrink-0">
-          <span>➕</span>
-          <span>Lançar Venda</span>
-        </button>
-
         <!-- Manter Tela Ligada (Modo Cozinha) -->
         <button id="btn-wake-lock" onclick="toggleWakeLock()" title="Manter Tela do Celular Ligada na Cozinha" class="px-3 py-1.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-300 border border-purple-700/60 text-[11px] sm:text-xs font-bold transition flex items-center space-x-1.5 shadow shrink-0">
           <span id="wake-lock-status-text">💡 Tela Ligada (OFF)</span>
@@ -189,10 +183,7 @@
           <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
           <span class="text-xs font-bold text-gray-700 uppercase tracking-wide">Monitorando Pedidos em Tempo Real</span>
         </div>
-        <div class="flex items-center space-x-2 w-full sm:w-auto justify-end flex-wrap gap-y-1">
-          <button onclick="openManualOrderModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3.5 py-1.5 rounded-lg shadow transition flex items-center space-x-1">
-            <span>➕</span><span>Lançar Venda Manual</span>
-          </button>
+        <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
           <button onclick="renderKanbanBoard()" class="text-xs text-acai-700 hover:text-acai-900 font-bold px-3 py-1.5 rounded-lg border border-purple-200 hover:bg-purple-50 transition">
             🔄 Atualizar
           </button>
@@ -1958,7 +1949,7 @@
           </div>
           <div>
             <label class="block font-bold text-gray-700 mb-1">Valor Total (R$)</label>
-            <input type="number" step="0.01" min="0.01" id="mo-total" placeholder="0,00" class="w-full px-3 py-2 rounded-xl border border-gray-300 font-black text-sm text-emerald-700 focus:outline-none focus:border-acai-700" required>
+            <input type="text" inputmode="decimal" id="mo-total" placeholder="Ex: 35,00" class="w-full px-3 py-2 rounded-xl border border-gray-300 font-black text-sm text-emerald-700 focus:outline-none focus:border-acai-700" required>
           </div>
         </div>
 
@@ -1995,11 +1986,11 @@
         <div id="mo-combined-container" class="hidden grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
           <div>
             <label class="block font-bold text-blue-900 mb-1">Parte em Pix (R$)</label>
-            <input type="number" step="0.01" id="mo-pix-amount" placeholder="0,00" class="w-full px-3 py-1.5 rounded-lg border border-blue-300 font-bold text-xs">
+            <input type="text" inputmode="decimal" id="mo-pix-amount" placeholder="Ex: 20,00" class="w-full px-3 py-1.5 rounded-lg border border-blue-300 font-bold text-xs">
           </div>
           <div>
             <label class="block font-bold text-blue-900 mb-1">Parte em Dinheiro (R$)</label>
-            <input type="number" step="0.01" id="mo-cash-amount" placeholder="0,00" class="w-full px-3 py-1.5 rounded-lg border border-blue-300 font-bold text-xs">
+            <input type="text" inputmode="decimal" id="mo-cash-amount" placeholder="Ex: 15,00" class="w-full px-3 py-1.5 rounded-lg border border-blue-300 font-bold text-xs">
           </div>
         </div>
 

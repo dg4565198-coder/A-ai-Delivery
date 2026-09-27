@@ -3985,17 +3985,34 @@ function triggerInstallApp() {
   }
 }
 
+function parsePtBrFloat(val) {
+  if (val === null || val === undefined) return 0;
+  const str = String(val).replace('R$', '').trim().replace(/\./g, '').replace(',', '.');
+  return parseFloat(str) || 0;
+}
+
 function openManualOrderModal() {
-  const modal = document.getElementById('manual-order-modal');
+  let modal = document.getElementById('manual-order-modal');
+  if (!modal) {
+    alert("Erro ao localizar o modal de venda manual. Recarregue a página.");
+    return;
+  }
+
+  if (modal.parentNode !== document.body) {
+    document.body.appendChild(modal);
+  }
+
   const dateInput = document.getElementById('mo-date');
-  const selectedDate = getSelectedCaixaDate ? getSelectedCaixaDate() : new Date().toISOString().split('T')[0];
+  const selectedDate = (typeof getSelectedCaixaDate === 'function') ? getSelectedCaixaDate() : new Date().toISOString().split('T')[0];
 
   if (dateInput) dateInput.value = selectedDate;
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.setProperty('display', 'flex', 'important');
-    modal.style.zIndex = '999999';
-  }
+  
+  modal.classList.remove('hidden');
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.zIndex = '999999';
+
+  const totalInput = document.getElementById('mo-total');
+  if (totalInput) setTimeout(() => totalInput.focus(), 150);
 }
 window.openManualOrderModal = openManualOrderModal;
 
@@ -4024,25 +4041,28 @@ function toggleManualOrderCombinedFields() {
 window.toggleManualOrderCombinedFields = toggleManualOrderCombinedFields;
 
 async function handleSaveManualOrder(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
+
   const dateStr = document.getElementById('mo-date')?.value || getSelectedCaixaDate();
-  const total = parseFloat(document.getElementById('mo-total')?.value) || 0;
+  const rawTotal = document.getElementById('mo-total')?.value || '';
+  const total = parsePtBrFloat(rawTotal);
+
   const customerName = document.getElementById('mo-customer-name')?.value.trim() || 'Cliente Balcão/WhatsApp';
   const customerPhone = document.getElementById('mo-customer-phone')?.value.trim() || '';
   const paymentMethod = document.getElementById('mo-payment-method')?.value || 'dinheiro';
   const deliveryType = document.getElementById('mo-delivery-type')?.value || 'retirada';
-  const pixAmount = parseFloat(document.getElementById('mo-pix-amount')?.value) || 0;
-  const cashAmount = parseFloat(document.getElementById('mo-cash-amount')?.value) || 0;
+  const pixAmount = parsePtBrFloat(document.getElementById('mo-pix-amount')?.value);
+  const cashAmount = parsePtBrFloat(document.getElementById('mo-cash-amount')?.value);
   const itemsDesc = document.getElementById('mo-items-desc')?.value.trim() || 'Venda Manual / Fora do Site';
 
   if (total <= 0) {
-    alert('Por favor, informe o valor total da venda.');
+    alert('Por favor, informe um valor de venda válido (ex: 35,00 ou 35).');
     return;
   }
 
   if (paymentMethod === 'combinado') {
     if (pixAmount <= 0 && cashAmount <= 0) {
-      alert('Para pagamento combinado, informe os valores em Pix e em Dinheiro.');
+      alert('Para pagamento combinado, informe os valores parciais em Pix e em Dinheiro.');
       return;
     }
   }
