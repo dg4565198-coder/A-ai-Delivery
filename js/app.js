@@ -2470,6 +2470,8 @@ function saveChatIdentity() {
   initCustomerChatListener();
 }
 
+let _optimisticCustomerMessages = [];
+
 function sendQuickChatMessage(text) {
   const input = document.getElementById('live-chat-input');
   if (input) input.value = text;
@@ -2482,7 +2484,12 @@ async function handleSendCustomerChatMessage(event) {
   if (!input) return;
 
   const text = input.value.trim();
-  if (!text) return;
+  if (!text) {
+    if (typeof showToast === 'function') {
+      showToast('⚠️ Digite uma mensagem antes de enviar!');
+    }
+    return;
+  }
 
   const customerKey = getCustomerChatKey();
   const customerName = getCustomerSavedName();
@@ -2490,15 +2497,24 @@ async function handleSendCustomerChatMessage(event) {
 
   input.value = '';
 
-  if (window.Store && window.Store.sendChatMessage) {
-    await window.Store.sendChatMessage(customerKey, 'customer', text, customerName, customerPhone);
-    notifyServiceWorkerTrackChat(customerKey);
-  }
+  // Renderizar otimisticamente na tela de imediato
+  const tempMsg = {
+    id: 'temp_' + Date.now(),
+    sender: 'customer',
+    text: text,
+    timestamp: new Date().toISOString()
+  };
+  _optimisticCustomerMessages.push(tempMsg);
+  renderCustomerChatMessages(_lastReceivedChatData);
 
-  setTimeout(() => {
-    const msgFeed = document.getElementById('live-chat-messages');
-    if (msgFeed) msgFeed.scrollTop = msgFeed.scrollHeight;
-  }, 100);
+  if (window.Store && window.Store.sendChatMessage) {
+    try {
+      await window.Store.sendChatMessage(customerKey, 'customer', text, customerName, customerPhone);
+      notifyServiceWorkerTrackChat(customerKey);
+    } catch (err) {
+      console.warn('Erro ao enviar mensagem no chat:', err);
+    }
+  }
 }
 
 function notifyServiceWorkerTrackChat(customerKey) {
@@ -2510,6 +2526,8 @@ function notifyServiceWorkerTrackChat(customerKey) {
   }
 }
 
+let _lastReceivedChatData = null;
+
 function initCustomerChatListener() {
   const customerKey = getCustomerChatKey();
   if (!customerKey) return;
@@ -2520,6 +2538,7 @@ function initCustomerChatListener() {
 
   if (window.Store && window.Store.listenToCustomerChat) {
     window.Store.listenToCustomerChat(customerKey, chatData => {
+      _lastReceivedChatData = chatData;
       renderCustomerChatMessages(chatData);
     });
   }
@@ -2529,7 +2548,23 @@ function renderCustomerChatMessages(chatData) {
   const msgFeed = document.getElementById('live-chat-messages');
   if (!msgFeed) return;
 
-  if (!chatData || !chatData.messages) {
+  const rtdbMessagesObj = (chatData && chatData.messages) ? chatData.messages : {};
+  const rtdbList = Object.values(rtdbMessagesObj);
+
+  // Mesclar mensagens do RTDB com mensagens temporárias otimistas
+  const allMessagesMap = {};
+  rtdbList.forEach(m => { allMessagesMap[m.id] = m; });
+  _optimisticCustomerMessages.forEach(m => {
+    // Se a mensagem já existe no RTDB (com texto igual enviado pelo cliente recentemente), não duplicar
+    const existsInRtdb = rtdbList.some(r => r.sender === 'customer' && r.text === m.text && Math.abs(new Date(r.timestamp) - new Date(m.timestamp)) < 15000);
+    if (!existsInRtdb) {
+      allMessagesMap[m.id] = m;
+    }
+  });
+
+  const messageList = Object.values(allMessagesMap).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  if (messageList.length === 0) {
     msgFeed.innerHTML = `
       <div class="text-center text-xs text-gray-400 py-6">
         👋 Olá! Envie sua primeira mensagem para falar com a Rotta do Açaí.

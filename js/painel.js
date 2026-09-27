@@ -4521,18 +4521,30 @@ async function handleSendStoreChatMessage(e) {
 
   input.value = '';
 
-  const chatObj = _painelAllChatsMap[_selectedChatCustomerKey];
-  const custName = chatObj ? chatObj.customerName : '';
-  const custPhone = chatObj ? chatObj.customerPhone : '';
+  const chatObj = _painelAllChatsMap[_selectedChatCustomerKey] || { messages: {} };
+  const custName = chatObj.customerName || '';
+  const custPhone = chatObj.customerPhone || '';
+
+  // Renderizar otimisticamente
+  if (!chatObj.messages) chatObj.messages = {};
+  const tempId = 'temp_store_' + Date.now();
+  chatObj.messages[tempId] = {
+    id: tempId,
+    sender: 'store',
+    text: text,
+    timestamp: new Date().toISOString()
+  };
+  chatObj.lastMessage = text;
+  chatObj.lastTimestamp = new Date().toISOString();
+  renderPainelChatMessagesRoom(_selectedChatCustomerKey);
 
   if (window.Store && window.Store.sendChatMessage) {
-    await window.Store.sendChatMessage(_selectedChatCustomerKey, 'store', text, custName, custPhone);
+    try {
+      await window.Store.sendChatMessage(_selectedChatCustomerKey, 'store', text, custName, custPhone);
+    } catch (err) {
+      console.warn('Erro ao enviar resposta do lojista:', err);
+    }
   }
-
-  setTimeout(() => {
-    const messagesFeed = document.getElementById('painel-chat-messages');
-    if (messagesFeed) messagesFeed.scrollTop = messagesFeed.scrollHeight;
-  }, 100);
 }
 
 function escapeHtmlPainel(str) {

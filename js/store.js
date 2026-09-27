@@ -1834,10 +1834,18 @@ window.Store = {
   // =========================================================================
   // LIVE CHAT (SAC AO VIVO) METHODS
   // =========================================================================
+  getCleanCustomerKey(customerKey) {
+    if (!customerKey) return '';
+    const str = String(customerKey).trim();
+    if (str.startsWith('cliente_')) return str;
+    const digits = str.replace(/\D/g, '');
+    return digits || str;
+  },
+
   async sendChatMessage(customerKey, sender, text, customerName = '', customerPhone = '') {
     if (!customerKey || !text || !text.trim()) return null;
     const db = getDB();
-    const cleanKey = String(customerKey).replace(/\D/g, '') || customerKey;
+    const cleanKey = this.getCleanCustomerKey(customerKey);
     const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
     const nowIso = new Date().toISOString();
 
@@ -1876,7 +1884,7 @@ window.Store = {
   listenToCustomerChat(customerKey, callback) {
     const db = getDB();
     if (!db || !customerKey) return null;
-    const cleanKey = String(customerKey).replace(/\D/g, '') || customerKey;
+    const cleanKey = this.getCleanCustomerKey(customerKey);
     const chatRef = db.ref(`chats/${cleanKey}`);
     chatRef.on('value', snap => {
       const chatData = snap.exists() ? snap.val() : null;
@@ -1899,14 +1907,14 @@ window.Store = {
   async markChatAsReadByStore(customerKey) {
     const db = getDB();
     if (!db || !customerKey) return;
-    const cleanKey = String(customerKey).replace(/\D/g, '') || customerKey;
+    const cleanKey = this.getCleanCustomerKey(customerKey);
     await db.ref(`chats/${cleanKey}`).update({ unreadByStore: false }).catch(() => {});
   },
 
   async markChatAsReadByCustomer(customerKey) {
     const db = getDB();
     if (!db || !customerKey) return;
-    const cleanKey = String(customerKey).replace(/\D/g, '') || customerKey;
+    const cleanKey = this.getCleanCustomerKey(customerKey);
     await db.ref(`chats/${cleanKey}`).update({ unreadByCustomer: false }).catch(() => {});
   }
 };
