@@ -3,7 +3,7 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v90';
+const CACHE_NAME = 'rotta-acai-v91';
 const urlsToCache = [
   './',
   './index.html',
@@ -66,6 +66,8 @@ self.addEventListener('fetch', event => {
 // BACKGROUND ORDER TRACKING & SYSTEM PUSH NOTIFICATIONS ENGINE
 // =========================================================================
 let _trackedOrdersMap = {}; // { orderId: lastKnownStatus }
+let _trackedChatCustomerKey = null;
+let _lastKnownChatMsgId = null;
 let _knownLojistaOrders = null;
 let _isStreamInitialized = false;
 let _streamAbortController = null;
@@ -81,6 +83,11 @@ self.addEventListener('message', event => {
       }
     });
     checkTrackedOrdersStatus();
+  }
+
+  if (event.data.type === 'TRACK_CHAT' && event.data.customerKey) {
+    _trackedChatCustomerKey = event.data.customerKey;
+    checkTrackedChatStatus();
   }
 
   if (event.data.type === 'STOP_TRACKING' && event.data.orderId) {
@@ -457,9 +464,41 @@ function checkBroadcastNotificationsSW() {
     .catch(() => {});
 }
 
+function checkTrackedChatStatus() {
+  if (!_trackedChatCustomerKey) return;
+  const cleanKey = String(_trackedChatCustomerKey).replace(/\D/g, '') || _trackedChatCustomerKey;
+  const firebaseUrl = `https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`;
+
+  fetch(firebaseUrl)
+    .then(res => res.json())
+    .then(chatObj => {
+      if (!chatObj || !chatObj.messages || !chatObj.unreadByCustomer) return;
+
+      const messagesObj = chatObj.messages;
+      const messageList = Object.values(messagesObj).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      const lastMsg = messageList[messageList.length - 1];
+
+      if (lastMsg && lastMsg.sender === 'store' && lastMsg.id !== _lastKnownChatMsgId) {
+        _lastKnownChatMsgId = lastMsg.id;
+
+        self.registration.showNotification('💬 Rotta do Açaí respondeu:', {
+          body: lastMsg.text || 'Nova mensagem do atendimento!',
+          icon: 'assets/logo.jpg',
+          badge: 'assets/logo.jpg',
+          vibrate: [300, 100, 300, 100, 300],
+          tag: 'rotta-chat-' + lastMsg.id,
+          renotify: true,
+          data: { url: './index.html?openChat=true' }
+        });
+      }
+    })
+    .catch(() => {});
+}
+
 // Initialize stream and background loops
 startFirebaseSSEStream();
 setInterval(checkTrackedOrdersStatus, 10000);
+setInterval(checkTrackedChatStatus, 10000);
 setInterval(checkNewOrdersForLojista, 7000);
 setInterval(checkBroadcastNotificationsSW, 12000);
 
@@ -492,6 +531,10 @@ self.addEventListener('notificationclick', event => {
         if (client.url && 'focus' in client) {
           if (urlToOpen.includes('painel.html') && client.url.includes('painel.html')) {
             client.postMessage({ type: 'REFRESH_PANEL' });
+            return client.focus();
+          }
+          if (urlToOpen.includes('openChat=true') || event.notification.tag?.startsWith('rotta-chat-')) {
+            client.postMessage({ type: 'OPEN_LIVE_CHAT' });
             return client.focus();
           }
           client.postMessage({ type: 'OPEN_MY_ORDERS' });

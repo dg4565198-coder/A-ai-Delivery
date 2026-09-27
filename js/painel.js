@@ -370,17 +370,17 @@ function testAudioAlert() {
 // 4. NAVEGAÇÃO POR ABAS
 // ==========================================================================
 function switchTab(tabId) {
-  const tabs = ['kanban', 'estoque', 'horarios', 'promocoes', 'caixa', 'config', 'avaliacoes', 'fidelidade'];
+  const tabs = ['kanban', 'estoque', 'horarios', 'promocoes', 'caixa', 'config', 'avaliacoes', 'fidelidade', 'chat'];
   tabs.forEach(t => {
     const content = document.getElementById('tab-content-' + t);
     const btn = document.getElementById('tab-btn-' + t);
     if (!content || !btn) return;
     if (t === tabId) {
       content.classList.remove('hidden');
-      btn.className = "tab-button px-4 py-2 text-xs font-bold rounded-lg transition bg-acai-800 text-gold-400 flex items-center space-x-2";
+      btn.className = "tab-button px-4 py-2 text-xs font-bold rounded-lg transition bg-acai-800 text-gold-400 flex items-center space-x-2 relative";
     } else {
       content.classList.add('hidden');
-      btn.className = "tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5";
+      btn.className = "tab-button px-4 py-2 text-xs font-bold rounded-lg transition text-purple-200 hover:bg-acai-800 flex items-center space-x-1.5 relative";
     }
   });
 
@@ -390,6 +390,7 @@ function switchTab(tabId) {
   if (tabId === 'promocoes') { renderPromotionsHistory(); loadOpenPromoCard(); }
   if (tabId === 'avaliacoes') renderRatingsTab();
   if (tabId === 'fidelidade') renderFidelityAdminTab();
+  if (tabId === 'chat') renderPainelChatsTab();
 }
 
 // ==========================================================================
@@ -4313,6 +4314,248 @@ window.calculateCaixaDiff = calculateCaixaDiff;
 window.handleConfirmCloseCaixa = handleConfirmCloseCaixa;
 window.renderClosedCaixasHistory = renderClosedCaixasHistory;
 window.printDailyClosureReceipt = printDailyClosureReceipt;
+
+// ==========================================================================
+// CHAT COM CLIENTES (SAC AO VIVO LOJISTA)
+// ==========================================================================
+let _painelAllChatsMap = {};
+let _selectedChatCustomerKey = null;
+let _hasChatListenerInitialized = false;
+
+function initPainelChatsListener() {
+  if (_hasChatListenerInitialized) return;
+  _hasChatListenerInitialized = true;
+
+  if (window.Store && window.Store.listenToAllChats) {
+    window.Store.listenToAllChats(chatsData => {
+      _painelAllChatsMap = chatsData || {};
+      updatePainelChatUnreadBadge();
+      renderPainelChatsList();
+      if (_selectedChatCustomerKey) {
+        renderPainelChatMessagesRoom(_selectedChatCustomerKey);
+      }
+    });
+  }
+}
+
+function updatePainelChatUnreadBadge() {
+  const badge = document.getElementById('painel-chat-badge');
+  if (!badge) return;
+
+  const chats = Object.values(_painelAllChatsMap || {});
+  const unreadCount = chats.filter(c => c.unreadByStore).length;
+
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+function renderPainelChatsTab() {
+  initPainelChatsListener();
+  renderPainelChatsList();
+  if (_selectedChatCustomerKey) {
+    renderPainelChatMessagesRoom(_selectedChatCustomerKey);
+  }
+}
+
+function renderPainelChatsList() {
+  const container = document.getElementById('painel-chats-list');
+  const countBadge = document.getElementById('chat-count-badge');
+  const searchInput = document.getElementById('chat-search-input');
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+  if (!container) return;
+
+  const chatsList = Object.values(_painelAllChatsMap || {});
+  if (countBadge) countBadge.textContent = `${chatsList.length} chat(s)`;
+
+  if (chatsList.length === 0) {
+    container.innerHTML = `
+      <div class="text-center text-gray-400 py-8 text-xs">
+        Nenhuma conversa iniciada por clientes ainda.
+      </div>
+    `;
+    return;
+  }
+
+  chatsList.sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
+
+  const filtered = chatsList.filter(chat => {
+    if (!query) return true;
+    const name = (chat.customerName || '').toLowerCase();
+    const phone = (chat.customerPhone || chat.customerKey || '').toLowerCase();
+    const msg = (chat.lastMessage || '').toLowerCase();
+    return name.includes(query) || phone.includes(query) || msg.includes(query);
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="text-center text-gray-400 py-6 text-xs">
+        Nenhuma conversa encontrada para "${query}".
+      </div>
+    `;
+    return;
+  }
+
+  const html = filtered.map(chat => {
+    const isSelected = chat.customerKey === _selectedChatCustomerKey;
+    const isUnread = chat.unreadByStore;
+    const timeStr = chat.lastTimestamp ? new Date(chat.lastTimestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const name = chat.customerName || 'Cliente';
+    const lastMsg = chat.lastMessage || 'Conversa iniciada';
+
+    return `
+      <div onclick="selectCustomerChatRoom('${chat.customerKey}')" class="p-3 rounded-2xl transition cursor-pointer flex items-center justify-between space-x-2 border ${isSelected ? 'bg-purple-900 text-white border-purple-900 shadow-md' : (isUnread ? 'bg-purple-50/90 text-gray-900 border-purple-200 font-bold' : 'bg-white text-gray-800 border-gray-100 hover:bg-gray-50')}">
+        <div class="flex items-center space-x-2.5 min-w-0 flex-1">
+          <div class="w-8 h-8 rounded-full ${isSelected ? 'bg-gold-400 text-acai-950 font-black' : 'bg-purple-100 text-purple-900 font-extrabold'} text-xs flex items-center justify-center shrink-0">
+            👤
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center justify-between">
+              <h5 class="font-extrabold text-xs truncate ${isSelected ? 'text-gold-300' : 'text-gray-900'}">${escapeHtmlPainel(name)}</h5>
+              <span class="text-[9px] ${isSelected ? 'text-purple-200' : 'text-gray-400'} shrink-0 ml-1">${timeStr}</span>
+            </div>
+            <p class="text-[11px] truncate ${isSelected ? 'text-purple-100/90' : (isUnread ? 'text-purple-900 font-semibold' : 'text-gray-500')}">${escapeHtmlPainel(lastMsg)}</p>
+          </div>
+        </div>
+        ${isUnread ? `<span class="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 animate-ping"></span>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+function filterCustomerChatsList() {
+  renderPainelChatsList();
+}
+
+function selectCustomerChatRoom(customerKey) {
+  _selectedChatCustomerKey = customerKey;
+  
+  if (window.Store && window.Store.markChatAsReadByStore) {
+    window.Store.markChatAsReadByStore(customerKey);
+  }
+
+  renderPainelChatsList();
+  renderPainelChatMessagesRoom(customerKey);
+}
+
+function renderPainelChatMessagesRoom(customerKey) {
+  const chatObj = _painelAllChatsMap[customerKey];
+  const headerName = document.getElementById('painel-chat-customer-name');
+  const headerPhone = document.getElementById('painel-chat-customer-phone');
+  const messagesFeed = document.getElementById('painel-chat-messages');
+  const footerForm = document.getElementById('painel-chat-footer');
+
+  if (!chatObj) return;
+
+  if (headerName) headerName.textContent = chatObj.customerName || 'Cliente';
+  if (headerPhone) headerPhone.textContent = `📱 ${chatObj.customerPhone || customerKey}`;
+  if (footerForm) footerForm.classList.remove('hidden');
+
+  if (!messagesFeed) return;
+
+  const messagesObj = chatObj.messages || {};
+  const messageList = Object.values(messagesObj).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  if (messageList.length === 0) {
+    messagesFeed.innerHTML = `
+      <div class="text-center text-xs text-gray-400 py-8">
+        Nenhuma mensagem trocada com este cliente ainda.
+      </div>
+    `;
+    return;
+  }
+
+  const html = messageList.map(msg => {
+    const isStore = msg.sender === 'store';
+    const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+    if (isStore) {
+      return `
+        <div class="flex flex-col items-end">
+          <div class="flex items-center space-x-1 mb-0.5">
+            <span class="text-[10px] font-bold text-purple-900">Atendimento Loja 🍇</span>
+          </div>
+          <div class="max-w-[75%] bg-acai-900 text-purple-100 rounded-2xl rounded-tr-none px-4 py-2.5 shadow-sm text-xs space-y-1">
+            <p class="leading-relaxed whitespace-pre-wrap">${escapeHtmlPainel(msg.text)}</p>
+            <span class="text-[9px] text-purple-300/70 block text-right">${timeStr}</span>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="flex flex-col items-start">
+          <div class="flex items-center space-x-1 mb-0.5">
+            <span class="text-[10px] font-bold text-gray-700">${escapeHtmlPainel(chatObj.customerName || 'Cliente')}</span>
+          </div>
+          <div class="max-w-[75%] bg-white border border-purple-200 text-gray-900 rounded-2xl rounded-tl-none px-4 py-2.5 shadow-sm text-xs space-y-1">
+            <p class="leading-relaxed whitespace-pre-wrap">${escapeHtmlPainel(msg.text)}</p>
+            <span class="text-[9px] text-gray-400 block text-right">${timeStr}</span>
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
+
+  messagesFeed.innerHTML = html;
+  messagesFeed.scrollTop = messagesFeed.scrollHeight;
+}
+
+function insertStoreQuickReply(text) {
+  const input = document.getElementById('painel-chat-input');
+  if (input) input.value = text;
+}
+
+async function handleSendStoreChatMessage(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('painel-chat-input');
+  if (!input || !_selectedChatCustomerKey) return;
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+
+  const chatObj = _painelAllChatsMap[_selectedChatCustomerKey];
+  const custName = chatObj ? chatObj.customerName : '';
+  const custPhone = chatObj ? chatObj.customerPhone : '';
+
+  if (window.Store && window.Store.sendChatMessage) {
+    await window.Store.sendChatMessage(_selectedChatCustomerKey, 'store', text, custName, custPhone);
+  }
+
+  setTimeout(() => {
+    const messagesFeed = document.getElementById('painel-chat-messages');
+    if (messagesFeed) messagesFeed.scrollTop = messagesFeed.scrollHeight;
+  }, 100);
+}
+
+function escapeHtmlPainel(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+window.renderPainelChatsTab = renderPainelChatsTab;
+window.filterCustomerChatsList = filterCustomerChatsList;
+window.selectCustomerChatRoom = selectCustomerChatRoom;
+window.insertStoreQuickReply = insertStoreQuickReply;
+window.handleSendStoreChatMessage = handleSendStoreChatMessage;
+
+setTimeout(() => {
+  if (typeof initPainelChatsListener === 'function') {
+    initPainelChatsListener();
+  }
+}, 3500);
+
 
 
 

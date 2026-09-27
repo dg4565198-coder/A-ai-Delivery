@@ -1829,5 +1829,84 @@ window.Store = {
     }
 
     return payload;
+  },
+
+  // =========================================================================
+  // LIVE CHAT (SAC AO VIVO) METHODS
+  // =========================================================================
+  async sendChatMessage(customerKey, sender, text, customerName = '', customerPhone = '') {
+    if (!customerKey || !text || !text.trim()) return null;
+    const db = getDB();
+    const cleanKey = String(customerKey).replace(/\D/g, '') || customerKey;
+    const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+    const nowIso = new Date().toISOString();
+
+    const messageObj = {
+      id: msgId,
+      sender: sender, // 'customer' | 'store'
+      text: text.trim(),
+      timestamp: nowIso
+    };
+
+    if (db) {
+      // 1. Push message to messages list
+      await db.ref(`chats/${cleanKey}/messages/${msgId}`).set(messageObj);
+
+      // 2. Update chat metadata
+      const updateData = {
+        customerKey: cleanKey,
+        lastMessage: text.trim(),
+        lastSender: sender,
+        lastTimestamp: nowIso
+      };
+      if (customerName) updateData.customerName = customerName;
+      if (customerPhone) updateData.customerPhone = customerPhone;
+
+      if (sender === 'customer') {
+        updateData.unreadByStore = true;
+      } else {
+        updateData.unreadByCustomer = true;
+      }
+
+      await db.ref(`chats/${cleanKey}`).update(updateData);
+    }
+    return messageObj;
+  },
+
+  listenToCustomerChat(customerKey, callback) {
+    const db = getDB();
+    if (!db || !customerKey) return null;
+    const cleanKey = String(customerKey).replace(/\D/g, '') || customerKey;
+    const chatRef = db.ref(`chats/${cleanKey}`);
+    chatRef.on('value', snap => {
+      const chatData = snap.exists() ? snap.val() : null;
+      callback(chatData);
+    });
+    return chatRef;
+  },
+
+  listenToAllChats(callback) {
+    const db = getDB();
+    if (!db) return null;
+    const chatsRef = db.ref('chats');
+    chatsRef.on('value', snap => {
+      const chatsData = snap.exists() ? (snap.val() || {}) : {};
+      callback(chatsData);
+    });
+    return chatsRef;
+  },
+
+  async markChatAsReadByStore(customerKey) {
+    const db = getDB();
+    if (!db || !customerKey) return;
+    const cleanKey = String(customerKey).replace(/\D/g, '') || customerKey;
+    await db.ref(`chats/${cleanKey}`).update({ unreadByStore: false }).catch(() => {});
+  },
+
+  async markChatAsReadByCustomer(customerKey) {
+    const db = getDB();
+    if (!db || !customerKey) return;
+    const cleanKey = String(customerKey).replace(/\D/g, '') || customerKey;
+    await db.ref(`chats/${cleanKey}`).update({ unreadByCustomer: false }).catch(() => {});
   }
 };

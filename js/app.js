@@ -2332,3 +2332,322 @@ window.setupCustomerWinbackNotifListener = function() {
     attachWinbackListener(savedPhone);
   }
 };
+
+// ==========================================================================
+// 14. CHAT AO VIVO (SAC) & SISTEMA DE NOTIFICAÇÕES PUSH PARA O CLIENTE
+// ==========================================================================
+let _customerChatSubscribedKey = null;
+let _lastSeenChatMessageIds = new Set();
+let _isChatModalOpen = false;
+
+function getCustomerChatKey() {
+  try {
+    const rawFidelity = localStorage.getItem('rotta_customer_fidelity_phone');
+    if (rawFidelity && rawFidelity.replace(/\D/g, '')) {
+      return rawFidelity.replace(/\D/g, '');
+    }
+    const rawCust = localStorage.getItem('rotta_customer_data');
+    if (rawCust) {
+      const parsed = JSON.parse(rawCust);
+      if (parsed && parsed.phone && parsed.phone.replace(/\D/g, '')) {
+        return parsed.phone.replace(/\D/g, '');
+      }
+    }
+    const tempKey = localStorage.getItem('rotta_temp_chat_key');
+    if (tempKey) return tempKey;
+  } catch (e) {}
+
+  const newTemp = 'cliente_' + Math.random().toString(36).substring(2, 9);
+  try { localStorage.setItem('rotta_temp_chat_key', newTemp); } catch (e) {}
+  return newTemp;
+}
+
+function getCustomerSavedName() {
+  try {
+    const rawCust = localStorage.getItem('rotta_customer_data');
+    if (rawCust) {
+      const parsed = JSON.parse(rawCust);
+      if (parsed && parsed.name) return parsed.name;
+    }
+    const savedName = localStorage.getItem('rotta_temp_chat_name');
+    if (savedName) return savedName;
+  } catch(e) {}
+  return 'Cliente';
+}
+
+function openLiveChatModal() {
+  const modal = document.getElementById('live-chat-modal');
+  if (!modal) return;
+
+  _isChatModalOpen = true;
+  modal.classList.remove('hidden');
+
+  const badge = document.getElementById('chat-unread-badge');
+  if (badge) badge.classList.add('hidden');
+
+  const customerKey = getCustomerChatKey();
+  
+  const identityBox = document.getElementById('chat-identity-box');
+  if (identityBox) {
+    if (customerKey.startsWith('cliente_')) {
+      identityBox.classList.remove('hidden');
+    } else {
+      identityBox.classList.add('hidden');
+    }
+  }
+
+  checkChatNotificationPermission();
+  initCustomerChatListener();
+
+  if (window.Store && window.Store.markChatAsReadByCustomer) {
+    window.Store.markChatAsReadByCustomer(customerKey);
+  }
+
+  setTimeout(() => {
+    const msgFeed = document.getElementById('live-chat-messages');
+    if (msgFeed) msgFeed.scrollTop = msgFeed.scrollHeight;
+  }, 200);
+}
+
+function closeLiveChatModal() {
+  const modal = document.getElementById('live-chat-modal');
+  if (modal) modal.classList.add('hidden');
+  _isChatModalOpen = false;
+}
+
+function checkChatNotificationPermission() {
+  const banner = document.getElementById('chat-notification-banner');
+  if (!banner) return;
+
+  if ("Notification" in window) {
+    if (Notification.permission === "default") {
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+function requestChatNotificationPermission() {
+  if ("Notification" in window) {
+    Notification.requestPermission().then(permission => {
+      checkChatNotificationPermission();
+      if (permission === 'granted') {
+        showToast('🔔 Notificações ativadas com sucesso!');
+      }
+    });
+  }
+}
+
+function saveChatIdentity() {
+  const nameInput = document.getElementById('chat-input-name');
+  const phoneInput = document.getElementById('chat-input-phone');
+  
+  const name = nameInput ? nameInput.value.trim() : '';
+  const phone = phoneInput ? phoneInput.value.replace(/\D/g, '') : '';
+
+  if (!name || !phone || phone.length < 8) {
+    showToast('⚠️ Por favor, informe seu nome e telefone válido!');
+    return;
+  }
+
+  try {
+    localStorage.setItem('rotta_temp_chat_name', name);
+    localStorage.setItem('rotta_customer_fidelity_phone', phone);
+    const existingData = localStorage.getItem('rotta_customer_data');
+    const custObj = existingData ? JSON.parse(existingData) : {};
+    custObj.name = name;
+    custObj.phone = phone;
+    localStorage.setItem('rotta_customer_data', JSON.stringify(custObj));
+  } catch (e) {}
+
+  const identityBox = document.getElementById('chat-identity-box');
+  if (identityBox) identityBox.classList.add('hidden');
+
+  showToast('✅ Identificação salva! Como podemos te ajudar?');
+  initCustomerChatListener();
+}
+
+function sendQuickChatMessage(text) {
+  const input = document.getElementById('live-chat-input');
+  if (input) input.value = text;
+  handleSendCustomerChatMessage();
+}
+
+async function handleSendCustomerChatMessage(event) {
+  if (event) event.preventDefault();
+  const input = document.getElementById('live-chat-input');
+  if (!input) return;
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  const customerKey = getCustomerChatKey();
+  const customerName = getCustomerSavedName();
+  const customerPhone = localStorage.getItem('rotta_customer_fidelity_phone') || customerKey;
+
+  input.value = '';
+
+  if (window.Store && window.Store.sendChatMessage) {
+    await window.Store.sendChatMessage(customerKey, 'customer', text, customerName, customerPhone);
+    notifyServiceWorkerTrackChat(customerKey);
+  }
+
+  setTimeout(() => {
+    const msgFeed = document.getElementById('live-chat-messages');
+    if (msgFeed) msgFeed.scrollTop = msgFeed.scrollHeight;
+  }, 100);
+}
+
+function notifyServiceWorkerTrackChat(customerKey) {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'TRACK_CHAT',
+      customerKey: customerKey
+    });
+  }
+}
+
+function initCustomerChatListener() {
+  const customerKey = getCustomerChatKey();
+  if (!customerKey) return;
+  if (_customerChatSubscribedKey === customerKey) return;
+
+  _customerChatSubscribedKey = customerKey;
+  notifyServiceWorkerTrackChat(customerKey);
+
+  if (window.Store && window.Store.listenToCustomerChat) {
+    window.Store.listenToCustomerChat(customerKey, chatData => {
+      renderCustomerChatMessages(chatData);
+    });
+  }
+}
+
+function renderCustomerChatMessages(chatData) {
+  const msgFeed = document.getElementById('live-chat-messages');
+  if (!msgFeed) return;
+
+  if (!chatData || !chatData.messages) {
+    msgFeed.innerHTML = `
+      <div class="text-center text-xs text-gray-400 py-6">
+        👋 Olá! Envie sua primeira mensagem para falar com a Rotta do Açaí.
+      </div>
+    `;
+    return;
+  }
+
+  const messagesObj = chatData.messages;
+  const messageList = Object.values(messagesObj).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  let hasNewStoreMessage = false;
+  let latestStoreMsgText = '';
+
+  const html = messageList.map(msg => {
+    const isCustomer = msg.sender === 'customer';
+    const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+    if (!isCustomer && !_lastSeenChatMessageIds.has(msg.id)) {
+      if (_lastSeenChatMessageIds.size > 0) {
+        hasNewStoreMessage = true;
+        latestStoreMsgText = msg.text;
+      }
+      _lastSeenChatMessageIds.add(msg.id);
+    } else {
+      _lastSeenChatMessageIds.add(msg.id);
+    }
+
+    if (isCustomer) {
+      return `
+        <div class="flex flex-col items-end">
+          <div class="max-w-[80%] bg-acai-900 text-purple-100 rounded-2xl rounded-tr-none px-4 py-2.5 shadow-sm text-xs space-y-1">
+            <p class="leading-relaxed whitespace-pre-wrap">${escapeHtmlApp(msg.text)}</p>
+            <span class="text-[9px] text-purple-300/70 block text-right">${timeStr}</span>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="flex flex-col items-start">
+          <div class="flex items-center space-x-1 mb-0.5">
+            <span class="text-[10px] font-bold text-acai-900">Rotta do Açaí 🍇</span>
+          </div>
+          <div class="max-w-[80%] bg-white border border-purple-200 text-gray-800 rounded-2xl rounded-tl-none px-4 py-2.5 shadow-sm text-xs space-y-1">
+            <p class="leading-relaxed whitespace-pre-wrap">${escapeHtmlApp(msg.text)}</p>
+            <span class="text-[9px] text-gray-400 block text-right">${timeStr}</span>
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
+
+  msgFeed.innerHTML = html;
+
+  if (_isChatModalOpen) {
+    msgFeed.scrollTop = msgFeed.scrollHeight;
+    if (window.Store && window.Store.markChatAsReadByCustomer) {
+      window.Store.markChatAsReadByCustomer(getCustomerChatKey());
+    }
+  } else if (chatData.unreadByCustomer) {
+    const badge = document.getElementById('chat-unread-badge');
+    if (badge) badge.classList.remove('hidden');
+  }
+
+  if (hasNewStoreMessage) {
+    triggerCustomerChatPushNotification(latestStoreMsgText);
+  }
+}
+
+function escapeHtmlApp(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function triggerCustomerChatPushNotification(text) {
+  try {
+    if (window.Store && window.Store.playNotificationSound) {
+      window.Store.playNotificationSound();
+    }
+  } catch (e) {}
+
+  const title = "💬 Rotta do Açaí respondeu:";
+  const body = text || "Nova mensagem do atendimento!";
+
+  if (!_isChatModalOpen && typeof showToast === 'function') {
+    showToast(`💬 Rotta do Açaí: "${body}"`);
+  }
+
+  if ("Notification" in window && Notification.permission === "granted") {
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification(title, {
+          body: body,
+          icon: "assets/logo.jpg",
+          badge: "assets/logo.jpg",
+          vibrate: [300, 100, 300, 100, 300],
+          tag: "rotta-chat-" + Date.now(),
+          data: { url: "index.html?openChat=true" }
+        });
+      }).catch(() => {});
+    } else {
+      try {
+        new Notification(title, {
+          body: body,
+          icon: "assets/logo.jpg"
+        });
+      } catch (e) {}
+    }
+  }
+}
+
+setTimeout(() => {
+  if (typeof initCustomerChatListener === 'function') {
+    initCustomerChatListener();
+  }
+}, 2000);
+
