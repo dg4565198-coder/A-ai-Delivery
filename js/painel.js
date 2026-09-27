@@ -1770,7 +1770,8 @@ function handleSaveCashTransaction(e) {
 
 function renderFinancialMetrics() {
   const selectedDate = getSelectedCaixaDate();
-  const allOrders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
+  const rawOrders = (window.Store.getOrdersArray ? window.Store.getOrdersArray() : []) || [];
+  const allOrders = rawOrders.filter(o => o && o.status !== 'cancelado');
 
   const orders = allOrders.filter(o => {
     if (!o.createdAt) return true;
@@ -1959,23 +1960,34 @@ let currentCaixaExpectedDrawer = 0;
 
 function openCloseCaixaModal() {
   const modal = document.getElementById('close-caixa-modal');
-  if (!modal) return;
+  if (!modal) {
+    alert('Erro: Modal de fechamento de caixa não encontrado. Recarregue a página.');
+    return;
+  }
 
   const selectedDate = getSelectedCaixaDate();
-  const dateFormatted = selectedDate.split('-').reverse().join('/');
+  const dateFormatted = selectedDate ? selectedDate.split('-').reverse().join('/') : '';
   
   const dateSub = document.getElementById('close-caixa-date-subtitle');
   if (dateSub) dateSub.textContent = `Resumo de Vendas e Fechamento de Caixa em ${dateFormatted}`;
 
-  const allOrders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
-  const orders = allOrders.filter(o => {
-    if (!o.createdAt) return true;
-    const d = new Date(o.createdAt);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}` === selectedDate;
-  });
+  let orders = [];
+  try {
+    const rawOrders = (window.Store.getOrdersArray ? window.Store.getOrdersArray() : []) || [];
+    const allOrders = rawOrders.filter(o => o && o.status !== 'cancelado');
+    orders = allOrders.filter(o => {
+      if (!o) return false;
+      if (!o.createdAt) return true;
+      const d = new Date(o.createdAt);
+      if (isNaN(d.getTime())) return true;
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}` === selectedDate;
+    });
+  } catch (err) {
+    console.warn('Erro ao filtrar pedidos:', err);
+  }
 
   const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
   const totalCount = orders.length;
