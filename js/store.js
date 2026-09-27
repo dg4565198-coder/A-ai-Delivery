@@ -867,6 +867,37 @@ window.Store = {
     return Promise.resolve();
   },
 
+  async notifyOrderAccepted(orderId) {
+    const db = getDB();
+    const order = this.getOrderById(orderId);
+    const targetKey = (order && (order.id || order.key)) ? (order.id || order.key) : orderId;
+
+    const notifId = 'aceito_' + Date.now();
+    const updateObj = {
+      status: 'preparo',
+      acceptedNotified: true,
+      acceptedNotifiedAt: new Date().toISOString(),
+      lastNotifId: notifId,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (order) {
+      order.status = 'preparo';
+      order.acceptedNotified = true;
+      order.acceptedNotifiedAt = updateObj.acceptedNotifiedAt;
+      order.lastNotifId = notifId;
+    }
+
+    if (db && targetKey) {
+      try {
+        await db.ref('orders/' + targetKey).update(updateObj);
+      } catch (e) {
+        console.error('[Store] Erro ao notificar aceite no Firebase:', e);
+      }
+    }
+    return Promise.resolve(updateObj);
+  },
+
   getOrderById(orderId) {
     if (!orderId) return null;
     if (_ordersCache[orderId]) return _ordersCache[orderId];

@@ -3,7 +3,7 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v106';
+const CACHE_NAME = 'rotta-acai-v107';
 const urlsToCache = [
   './assets/styles.css',
   './assets/logo.jpg',
@@ -109,6 +109,8 @@ self.addEventListener('message', event => {
   }
 });
 
+let _notifiedLastIds = {};
+
 function checkTrackedOrdersStatus() {
   const orderIds = Object.keys(_trackedOrdersMap);
   if (orderIds.length === 0) return;
@@ -128,6 +130,19 @@ function checkTrackedOrdersStatus() {
             });
           }).catch(() => {});
           return;
+        }
+
+        if (order.lastNotifId && !_notifiedLastIds[order.lastNotifId]) {
+          _notifiedLastIds[order.lastNotifId] = true;
+          self.registration.showNotification('Rotta do Açaí 🍇', {
+            body: `🥣 Seu Pedido ${order.orderNumber || ''} foi aceito e está sendo preparado com muito carinho!`,
+            icon: 'assets/logo.jpg',
+            badge: 'assets/logo.jpg',
+            vibrate: [300, 100, 300, 100, 300],
+            tag: 'rotta-notif-' + order.lastNotifId,
+            renotify: true,
+            data: { url: './', orderId: orderId, status: 'preparo' }
+          });
         }
 
         const lastStatus = _trackedOrdersMap[orderId];

@@ -533,13 +533,20 @@ function createOrderCardElement(order, currentStatus) {
       </div>
     </div>`;
 
+  const isAcceptedNotified = !!order.acceptedNotified;
+  const acceptBtnHtml = !isAcceptedNotified
+    ? `<button onclick="acceptAndNotifyCustomerOrder('${targetOrderId}')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-xl shadow transition flex items-center justify-center space-x-1 shrink-0" title="Aceitar pedido e notificar celular do cliente">
+        <span>🔔</span><span>Aceitar Pedido</span>
+       </button>`
+    : `<button disabled class="text-xs bg-gray-200 text-gray-500 font-bold py-2 px-2 rounded-xl cursor-not-allowed flex items-center justify-center space-x-1 shrink-0 opacity-80" title="Notificação de aceite já enviada ao cliente">
+        <span>✅</span><span>Aceite Enviado</span>
+       </button>`;
+
   let actionHtml = '';
   if (currentStatus === 'preparo') {
     actionHtml = `<div class="space-y-1.5 pt-1">
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="advanceOrderStatus('${targetOrderId}', 'preparo')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-xl shadow transition flex items-center justify-center space-x-1 shrink-0" title="Aceita o pedido e envia notificação no celular do cliente">
-          <span>🔔</span><span>Aceitar Pedido</span>
-        </button>
+        ${acceptBtnHtml}
         <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-xl transition flex items-center justify-center space-x-1 shrink-0">
           <span>🖨️</span><span>Comanda</span>
         </button>
@@ -743,12 +750,19 @@ function openViewOrderModal(orderId) {
 
   const targetOrderId = order.id || order.key || orderId;
 
+  const isAcceptedNotified = !!order.acceptedNotified;
   let footerBtnHtml = '';
   if (status === 'preparo' || status === 'novo') {
+    const modalAcceptBtn = !isAcceptedNotified
+      ? `<button onclick="acceptAndNotifyCustomerOrder('${targetOrderId}'); closeViewOrderModal();" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1">
+          <span>🔔</span> <span>Aceitar Pedido</span>
+         </button>`
+      : `<button disabled class="px-3.5 py-2.5 bg-gray-200 text-gray-500 font-bold text-xs rounded-xl cursor-not-allowed flex items-center justify-center space-x-1 opacity-80">
+          <span>✅</span> <span>Aceite Enviado</span>
+         </button>`;
+
     footerBtnHtml = `
-      <button onclick="advanceOrderStatus('${targetOrderId}', 'preparo'); closeViewOrderModal();" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1">
-        <span>🔔</span> <span>Aceitar Pedido</span>
-      </button>
+      ${modalAcceptBtn}
       <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'entrega');" class="flex-1 px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
         <span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Marcar Pronto'}</span>
       </button>
@@ -980,6 +994,19 @@ function notifyCustomerFidelityWhatsApp(orderId) {
     window.location.href = waUrl;
   }
 }
+
+async function acceptAndNotifyCustomerOrder(orderId) {
+  try {
+    await window.Store.notifyOrderAccepted(orderId);
+    if (typeof showInAppToast === 'function') {
+      showInAppToast('🔔 Aceite Enviado!', 'Notificação enviada com sucesso para o celular do cliente.');
+    }
+  } catch (err) {
+    console.error('Erro ao notificar aceite:', err);
+    alert('Erro ao enviar notificação de aceite: ' + (err.message || err));
+  }
+}
+window.acceptAndNotifyCustomerOrder = acceptAndNotifyCustomerOrder;
 
 window.notifyCustomerFidelityWhatsApp = notifyCustomerFidelityWhatsApp;
 
