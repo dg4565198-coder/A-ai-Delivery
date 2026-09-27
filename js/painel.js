@@ -536,31 +536,37 @@ function createOrderCardElement(order, currentStatus) {
   let actionHtml = '';
   if (currentStatus === 'preparo') {
     actionHtml = `<div class="space-y-1.5 pt-1">
-      <button onclick="acceptOrderAndNotify('${targetOrderId}')" class="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-xl shadow transition flex items-center justify-center space-x-1.5">
-        <span>📲</span><span>Aceitar & Notificar WhatsApp</span>
-      </button>
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
-        <button onclick="advanceOrderStatus('${targetOrderId}', 'entrega')" class="text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Pronto'}</span></button>
+        <button onclick="advanceOrderStatus('${targetOrderId}', 'preparo')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-xl shadow transition flex items-center justify-center space-x-1 shrink-0" title="Aceita o pedido e envia notificação no celular do cliente">
+          <span>🔔</span><span>Aceitar Pedido</span>
+        </button>
+        <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-xl transition flex items-center justify-center space-x-1 shrink-0">
+          <span>🖨️</span><span>Comanda</span>
+        </button>
       </div>
-      <button type="button" data-action="cancel-order" data-order-id="${targetOrderId}" onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
+      <button onclick="advanceOrderStatus('${targetOrderId}', 'entrega')" class="w-full text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-xl shadow transition flex items-center justify-center space-x-1">
+        <span>${order.deliveryType === 'entrega' ? '🛵 Despachar Pedido' : '🏬 Marcar Pronto'}</span>
+      </button>
+      <button type="button" data-action="cancel-order" data-order-id="${targetOrderId}" onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1">
+        <span>❌</span><span>Cancelar Pedido</span>
+      </button>
     </div>`;
   } else if (currentStatus === 'entrega') {
     actionHtml = `<div class="space-y-1.5 pt-1">
-      <button onclick="notifyOrderStatusWhatsApp('${targetOrderId}', 'entrega')" class="w-full text-xs bg-purple-600 hover:bg-purple-700 text-white font-black py-2 px-2 rounded-xl shadow transition flex items-center justify-center space-x-1.5">
-        <span>📲</span><span>${order.deliveryType === 'entrega' ? 'Notificar Saída (WhatsApp)' : 'Notificar Pronto (WhatsApp)'}</span>
-      </button>
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>🖨️</span><span>Comanda</span></button>
-        <button onclick="advanceOrderStatus('${targetOrderId}', 'concluido')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1"><span>✅ Concluir</span></button>
+        <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-2 rounded-lg transition flex items-center justify-center space-x-1">
+          <span>🖨️</span><span>Comanda</span>
+        </button>
+        <button onclick="advanceOrderStatus('${targetOrderId}', 'concluido')" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2 px-2 rounded-lg shadow transition flex items-center justify-center space-x-1">
+          <span>✅ Concluir</span>
+        </button>
       </div>
-      <button type="button" data-action="cancel-order" data-order-id="${targetOrderId}" onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1"><span>❌</span><span>Cancelar Pedido</span></button>
+      <button type="button" data-action="cancel-order" data-order-id="${targetOrderId}" onclick="openCancelOrderModal('${targetOrderId}')" class="w-full text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1">
+        <span>❌</span><span>Cancelar Pedido</span>
+      </button>
     </div>`;
   } else {
     actionHtml = `<div class="space-y-1.5 pt-1">
-      <button onclick="notifyCustomerFidelityWhatsApp('${targetOrderId}')" class="w-full text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded-lg transition shadow flex items-center justify-center space-x-1">
-        <span>💬</span><span>Notificar Fidelidade no WhatsApp</span>
-      </button>
       <div class="grid grid-cols-2 gap-2">
         <button onclick="openReceiptModal('${targetOrderId}')" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-1.5 px-2 rounded-lg transition flex items-center justify-center space-x-1">
           <span>🖨️</span><span>Comanda</span>
@@ -740,18 +746,15 @@ function openViewOrderModal(orderId) {
   let footerBtnHtml = '';
   if (status === 'preparo' || status === 'novo') {
     footerBtnHtml = `
-      <button onclick="acceptOrderAndNotify('${targetOrderId}'); closeViewOrderModal();" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1">
-        <span>📲</span> <span>Aceitar & Notificar WhatsApp</span>
+      <button onclick="advanceOrderStatus('${targetOrderId}', 'preparo'); closeViewOrderModal();" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1">
+        <span>🔔</span> <span>Aceitar Pedido</span>
       </button>
       <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'entrega');" class="flex-1 px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
-        <span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Pronto'}</span>
+        <span>${order.deliveryType === 'entrega' ? '🛵 Despachar' : '🏬 Marcar Pronto'}</span>
       </button>
     `;
   } else if (status === 'entrega') {
     footerBtnHtml = `
-      <button onclick="notifyOrderStatusWhatsApp('${targetOrderId}', 'entrega');" class="px-3.5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1">
-        <span>📲</span> <span>Notificar WhatsApp</span>
-      </button>
       <button onclick="closeViewOrderModal(); advanceOrderStatus('${targetOrderId}', 'concluido');" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center space-x-1.5">
         <span>✅ Concluir Pedido</span>
       </button>
@@ -929,6 +932,14 @@ document.addEventListener('click', function(e) {
 
 async function advanceOrderStatus(orderId, newStatus) {
   await window.Store.updateOrderStatus(orderId, newStatus);
+  const statusLabels = {
+    preparo: 'Pedido Aceito! Notificação enviada para o celular do cliente. 🥣',
+    entrega: 'Pedido Despachado / Pronto! 🛵',
+    concluido: 'Pedido Concluído com Sucesso! ✅'
+  };
+  if (typeof showInAppToast === 'function') {
+    showInAppToast('🔔 Status Atualizado', statusLabels[newStatus] || `Status alterado para ${newStatus}`);
+  }
   if (newStatus === 'concluido') {
     notifyCustomerFidelityWhatsApp(orderId);
   }
