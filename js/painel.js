@@ -1581,23 +1581,26 @@ function renderSalesChart(ordersInput, period) {
     });
 
   } else if (targetPeriod === 'semana') {
-    // 7 dias da semana atual (Dom, Seg, Ter, Qua, Qui, Sex, Sáb)
-    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    labels = days;
-    revenueData = [0, 0, 0, 0, 0, 0, 0];
-    ordersCountData = [0, 0, 0, 0, 0, 0, 0];
+    const weekDayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    labels = [];
+    revenueData = [];
+    ordersCountData = [];
 
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-
+    // Gerar os últimos 7 dias da semana terminando HOJE (sem incluir datas futuras)
     const weekDates = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
-      weekDates.push(`${yyyy}-${mm}-${dd}`);
+      const dStr = `${yyyy}-${mm}-${dd}`;
+      const dayName = weekDayNames[d.getDay()];
+
+      labels.push(`${dayName} (${dd}/${mm})`);
+      revenueData.push(0);
+      ordersCountData.push(0);
+      weekDates.push(dStr);
     }
 
     weekDates.forEach((dStr, dayIdx) => {
