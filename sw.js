@@ -3,16 +3,10 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v99';
+const CACHE_NAME = 'rotta-acai-v100';
 const urlsToCache = [
-  './',
-  './index.html',
-  './painel.html',
   './assets/styles.css',
   './assets/logo.jpg',
-  './js/store.js',
-  './js/app.js',
-  './js/painel.js',
   './manifest.json',
   './manifest-painel.json'
 ];
@@ -41,10 +35,19 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Network-First strategy
+// Network-First / Network-Only para JS e HTML (Garante atualizações instantâneas)
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-  
+  const url = event.request.url;
+
+  // JS, HTML e chamadas Firebase REST sempre vão direto para a rede
+  if (url.includes('.js') || url.includes('.html') || url.includes('firebaseio.com')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then(networkResponse => {
