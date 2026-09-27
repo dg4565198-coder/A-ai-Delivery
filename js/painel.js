@@ -1503,11 +1503,12 @@ function filterSalesChart(period) {
     }
   });
 
-  const orders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
+  const orders = (window.Store.getOrdersArray ? window.Store.getOrdersArray() : []).filter(o => o && o.status !== 'cancelado');
   renderSalesChart(orders, period);
 }
+window.filterSalesChart = filterSalesChart;
 
-function renderSalesChart(orders, period) {
+function renderSalesChart(ordersInput, period) {
   const canvas = document.getElementById('sales-chart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -1517,17 +1518,49 @@ function renderSalesChart(orders, period) {
     salesChartInstance = null;
   }
 
+  const rawOrders = ordersInput || (window.Store.getOrdersArray ? window.Store.getOrdersArray() : []);
+  const orders = rawOrders.filter(o => o && o.status !== 'cancelado');
+
+  // Buscar histórico de fechamentos de caixa no localStorage
+  const allClosures = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('rotta_daily_closure_')) {
+        const dateStr = key.replace('rotta_daily_closure_', '');
+        try {
+          allClosures[dateStr] = JSON.parse(localStorage.getItem(key));
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+
   let labels = [];
   let revenueData = [];
   let ordersCountData = [];
 
-  if (period === 'dia') {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const targetPeriod = period || currentChartPeriod || 'dia';
+
+  if (targetPeriod === 'dia') {
+    const selectedDate = (typeof getSelectedCaixaDate === 'function') ? getSelectedCaixaDate() : now.toISOString().split('T')[0];
     const hours = [10, 12, 14, 16, 18, 20, 22];
     labels = hours.map(h => `${h}:00`);
     revenueData = hours.map(() => 0);
     ordersCountData = hours.map(() => 0);
 
-    orders.forEach(o => {
+    const dayOrders = orders.filter(o => {
+      if (!o.createdAt) return true;
+      const d = new Date(o.createdAt);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}` === selectedDate;
+    });
+
+    dayOrders.forEach(o => {
       let orderHour = 14;
       if (o.createdAt) {
         orderHour = new Date(o.createdAt).getHours();
@@ -1547,43 +1580,112 @@ function renderSalesChart(orders, period) {
       ordersCountData[idx] += 1;
     });
 
-  } else if (period === 'semana') {
+  } else if (targetPeriod === 'semana') {
+    // 7 dias da semana atual (Dom, Seg, Ter, Qua, Qui, Sex, Sáb)
     const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     labels = days;
     revenueData = [0, 0, 0, 0, 0, 0, 0];
     ordersCountData = [0, 0, 0, 0, 0, 0, 0];
 
-    orders.forEach(o => {
-      const d = o.createdAt ? new Date(o.createdAt) : new Date();
-      const dayIdx = d.getDay();
-      revenueData[dayIdx] += (o.total || 0);
-      ordersCountData[dayIdx] += 1;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      weekDates.push(`${yyyy}-${mm}-${dd}`);
+    }
+
+    weekDates.forEach((dStr, dayIdx) => {
+      const closure = allClosures[dStr];
+      if (closure && closure.totalRevenue !== undefined) {
+        revenueData[dayIdx] += (closure.totalRevenue || 0);
+        ordersCountData[dayIdx] += (closure.totalOrders || 0);
+      } else {
+        const dayOrders = orders.filter(o => {
+          if (!o.createdAt) return false;
+          const od = new Date(o.createdAt);
+          const yyyy = od.getFullYear();
+          const mm = String(od.getMonth() + 1).padStart(2, '0');
+          const dd = String(od.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}` === dStr;
+        });
+
+        revenueData[dayIdx] += dayOrders.reduce((s, o) => s + (o.total || 0), 0);
+        ordersCountData[dayIdx] += dayOrders.length;
+      }
     });
 
-  } else if (period === 'mes') {
-    labels = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'];
+  } else if (targetPeriod === 'mes') {
+    labels = ['Semana 1 (1-7)', 'Semana 2 (8-14)', 'Semana 3 (15-21)', 'Semana 4 (22+)'];
     revenueData = [0, 0, 0, 0];
     ordersCountData = [0, 0, 0, 0];
 
-    orders.forEach(o => {
-      const d = o.createdAt ? new Date(o.createdAt) : new Date();
-      const dateNum = d.getDate();
-      let weekIdx = Math.floor((dateNum - 1) / 7);
-      if (weekIdx > 3) weekIdx = 3;
-      revenueData[weekIdx] += (o.total || 0);
-      ordersCountData[weekIdx] += 1;
+    Object.keys(allClosures).forEach(dStr => {
+      const parts = dStr.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0]);
+        const m = parseInt(parts[1]) - 1;
+        const dayNum = parseInt(parts[2]);
+
+        if (y === currentYear && m === currentMonth) {
+          let weekIdx = Math.floor((dayNum - 1) / 7);
+          if (weekIdx > 3) weekIdx = 3;
+          const c = allClosures[dStr];
+          revenueData[weekIdx] += (c.totalRevenue || 0);
+          ordersCountData[weekIdx] += (c.totalOrders || 0);
+        }
+      }
     });
 
-  } else if (period === 'ano') {
+    orders.forEach(o => {
+      if (!o.createdAt) return;
+      const d = new Date(o.createdAt);
+      if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!allClosures[dateStr]) {
+          let weekIdx = Math.floor((d.getDate() - 1) / 7);
+          if (weekIdx > 3) weekIdx = 3;
+          revenueData[weekIdx] += (o.total || 0);
+          ordersCountData[weekIdx] += 1;
+        }
+      }
+    });
+
+  } else if (targetPeriod === 'ano') {
     labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     revenueData = new Array(12).fill(0);
     ordersCountData = new Array(12).fill(0);
 
+    Object.keys(allClosures).forEach(dStr => {
+      const parts = dStr.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0]);
+        const m = parseInt(parts[1]) - 1;
+
+        if (y === currentYear && m >= 0 && m < 12) {
+          const c = allClosures[dStr];
+          revenueData[m] += (c.totalRevenue || 0);
+          ordersCountData[m] += (c.totalOrders || 0);
+        }
+      }
+    });
+
     orders.forEach(o => {
-      const d = o.createdAt ? new Date(o.createdAt) : new Date();
-      const monthIdx = d.getMonth();
-      revenueData[monthIdx] += (o.total || 0);
-      ordersCountData[monthIdx] += 1;
+      if (!o.createdAt) return;
+      const d = new Date(o.createdAt);
+      if (d.getFullYear() === currentYear) {
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!allClosures[dateStr]) {
+          const m = d.getMonth();
+          revenueData[m] += (o.total || 0);
+          ordersCountData[m] += 1;
+        }
+      }
     });
   }
 
