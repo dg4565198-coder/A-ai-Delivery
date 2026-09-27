@@ -3,7 +3,7 @@
  * Background Order Tracking & Realtime Push Notification Engine (SSE + Telegram Bot + Polling)
  */
 
-const CACHE_NAME = 'rotta-acai-v102';
+const CACHE_NAME = 'rotta-acai-v104';
 const urlsToCache = [
   './assets/styles.css',
   './assets/logo.jpg',
@@ -467,41 +467,9 @@ function checkBroadcastNotificationsSW() {
     .catch(() => {});
 }
 
-function checkTrackedChatStatus() {
-  if (!_trackedChatCustomerKey) return;
-  const cleanKey = String(_trackedChatCustomerKey).replace(/\D/g, '') || _trackedChatCustomerKey;
-  const firebaseUrl = `https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`;
-
-  fetch(firebaseUrl)
-    .then(res => res.json())
-    .then(chatObj => {
-      if (!chatObj || !chatObj.messages || !chatObj.unreadByCustomer) return;
-
-      const messagesObj = chatObj.messages;
-      const messageList = Object.values(messagesObj).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      const lastMsg = messageList[messageList.length - 1];
-
-      if (lastMsg && lastMsg.sender === 'store' && lastMsg.id !== _lastKnownChatMsgId) {
-        _lastKnownChatMsgId = lastMsg.id;
-
-        self.registration.showNotification('💬 Rotta do Açaí respondeu:', {
-          body: lastMsg.text || 'Nova mensagem do atendimento!',
-          icon: 'assets/logo.jpg',
-          badge: 'assets/logo.jpg',
-          vibrate: [300, 100, 300, 100, 300],
-          tag: 'rotta-chat-' + lastMsg.id,
-          renotify: true,
-          data: { url: './index.html?openChat=true' }
-        });
-      }
-    })
-    .catch(() => {});
-}
-
 // Initialize stream and background loops
 startFirebaseSSEStream();
 setInterval(checkTrackedOrdersStatus, 10000);
-setInterval(checkTrackedChatStatus, 10000);
 setInterval(checkNewOrdersForLojista, 7000);
 setInterval(checkBroadcastNotificationsSW, 12000);
 
