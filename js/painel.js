@@ -997,7 +997,17 @@ function notifyCustomerFidelityWhatsApp(orderId) {
 
 async function acceptAndNotifyCustomerOrder(orderId) {
   try {
+    const order = window.Store ? window.Store.getOrderById(orderId) : null;
+    if (order) {
+      order.acceptedNotified = true;
+    }
+    if (typeof renderKanbanBoard === 'function') {
+      renderKanbanBoard();
+    }
     await window.Store.notifyOrderAccepted(orderId);
+    if (typeof renderKanbanBoard === 'function') {
+      renderKanbanBoard();
+    }
     if (typeof showInAppToast === 'function') {
       showInAppToast('🔔 Aceite Enviado!', 'Notificação enviada com sucesso para o celular do cliente.');
     }
