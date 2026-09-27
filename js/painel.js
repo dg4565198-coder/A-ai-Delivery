@@ -249,6 +249,17 @@ function setupFirebaseListener() {
   window.Store.listenToCustomers(() => {
     renderCustomersTableAdmin();
   });
+
+  if (window.Store && window.Store.listenToAllChats) {
+    window.Store.listenToAllChats(chatsData => {
+      _painelAllChatsMap = chatsData || {};
+      updatePainelChatUnreadBadge();
+      renderPainelChatsList();
+      if (_selectedChatCustomerKey) {
+        renderPainelChatMessagesRoom(_selectedChatCustomerKey);
+      }
+    });
+  }
 }
 
 function showInAppToast(title, body) {

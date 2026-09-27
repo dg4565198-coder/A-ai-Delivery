@@ -1937,18 +1937,21 @@ window.Store = {
   listenToAllChats(callback) {
     const updateCacheAndNotify = (chatsData) => {
       if (!chatsData || typeof chatsData !== 'object') return;
+      const freshMap = {};
       for (const k in chatsData) {
         if (chatsData[k] && typeof chatsData[k] === 'object') {
-          chatsData[k].customerKey = chatsData[k].customerKey || k;
-          _chatsCache[k] = chatsData[k];
+          const item = chatsData[k];
+          item.customerKey = item.customerKey || k;
+          freshMap[k] = item;
         }
       }
+      _chatsCache = freshMap;
       if (callback) callback(_chatsCache);
     };
 
     if (callback) callback(_chatsCache);
 
-    // 1. Ouvinte via Firebase SDK WebSockets (usando snapshot.forEach como em listenToOrders)
+    // 1. Ouvinte via Firebase SDK WebSockets
     const db = getDB();
     if (db) {
       try {
@@ -1969,7 +1972,7 @@ window.Store = {
       } catch (e) {}
     }
 
-    // 2. Polling REST API a cada 2 segundos (Tempo Real Garantido no Painel)
+    // 2. Polling REST API a cada 2 segundos (Tempo Real Ininterrupto)
     const fetchAllChatsREST = () => {
       fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/chats.json?t=' + Date.now())
         .then(res => res.json())
