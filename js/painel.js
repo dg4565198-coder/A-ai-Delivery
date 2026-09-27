@@ -3991,6 +3991,64 @@ function parsePtBrFloat(val) {
   return parseFloat(str) || 0;
 }
 
+function renderQuickProductsSelector() {
+  const container = document.getElementById('mo-quick-products-list');
+  if (!container) return;
+
+  const products = (window.Store && window.Store.getProducts) ? window.Store.getProducts() : [];
+  if (!products || products.length === 0) {
+    container.innerHTML = `<span class="text-[11px] text-purple-400 italic">Nenhum produto cadastrado no cardápio</span>`;
+    return;
+  }
+
+  container.innerHTML = products.map(p => {
+    const icon = p.icon || '🍧';
+    const name = p.name || 'Produto';
+    const price = parseFloat(p.price) || 0;
+    const priceFmt = (window.Store && window.Store.formatCurrency) ? window.Store.formatCurrency(price) : `R$ ${price.toFixed(2).replace('.', ',')}`;
+    const cleanName = name.replace(/'/g, "\\'");
+
+    return `
+      <button type="button" onclick="selectQuickProductForManualOrder('${cleanName}', ${price})" class="px-2.5 py-1.5 bg-white hover:bg-purple-100 text-acai-900 border border-purple-200 rounded-xl text-[11px] font-bold shadow-sm transition active:scale-95 flex items-center space-x-1 shrink-0">
+        <span>${icon}</span>
+        <span>${name}</span>
+        <span class="text-emerald-700 font-black pl-0.5">(${priceFmt})</span>
+      </button>
+    `;
+  }).join('');
+}
+window.renderQuickProductsSelector = renderQuickProductsSelector;
+
+function selectQuickProductForManualOrder(productName, productPrice) {
+  const descInput = document.getElementById('mo-items-desc');
+  const totalInput = document.getElementById('mo-total');
+
+  if (descInput) {
+    if (descInput.value.trim()) {
+      descInput.value += `, 1x ${productName}`;
+    } else {
+      descInput.value = `1x ${productName}`;
+    }
+  }
+
+  if (totalInput) {
+    const currentVal = parsePtBrFloat(totalInput.value);
+    const newVal = currentVal + (parseFloat(productPrice) || 0);
+    totalInput.value = (window.Store && window.Store.formatCurrency) 
+      ? window.Store.formatCurrency(newVal).replace('R$', '').trim() 
+      : newVal.toFixed(2).replace('.', ',');
+  }
+}
+window.selectQuickProductForManualOrder = selectQuickProductForManualOrder;
+
+function clearManualOrderItems() {
+  const descInput = document.getElementById('mo-items-desc');
+  const totalInput = document.getElementById('mo-total');
+  if (descInput) descInput.value = '';
+  if (totalInput) totalInput.value = '';
+}
+window.clearManualOrderItems = clearManualOrderItems;
+
 function openManualOrderModal() {
   let modal = document.getElementById('manual-order-modal');
   if (!modal) {
@@ -4007,6 +4065,8 @@ function openManualOrderModal() {
 
   if (dateInput) dateInput.value = selectedDate;
   
+  renderQuickProductsSelector();
+
   modal.classList.remove('hidden');
   modal.style.setProperty('display', 'flex', 'important');
   modal.style.zIndex = '999999';
