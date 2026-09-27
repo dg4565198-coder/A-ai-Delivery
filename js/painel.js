@@ -4032,6 +4032,7 @@ function openSendCustomerNotifModal(customerKey) {
   const msgFidelidade = `Olá, ${name}! 🍧 Passando para lembrar que você tem ${cups} copo(s) acumulado(s) no Fidelidade da Rotta do Açaí! Falta pouco para sua recompensa!`;
   const msgOferta = `Olá, ${name}! 🚀 Temos açaí fresquinho e adicionais deliciosos prontos para você hoje na Rotta do Açaí. Faça seu pedido!`;
   const msgCupom = `Olá, ${name}! 🎁 Preparamos um açaí muito especial para você hoje na Rotta do Açaí! Clique para abrir o app e matar a vontade.`;
+  const msgAgradecimento = `Olá, ${name}! 😋 Muito obrigado pela sua compra na Rotta do Açaí! Seu pedido foi preparado com muito carinho. Desejamos a você um excelente e delicioso apetite! 💜`;
 
   const modal = document.createElement('div');
   modal.id = 'send-customer-notif-modal-dynamic';
@@ -4063,10 +4064,10 @@ function openSendCustomerNotifModal(customerKey) {
         </div>
       </div>
 
-      <!-- Seleção de Mensagens Rápidas (4 Opções) -->
+      <!-- Seleção de Mensagens Rápidas (5 Opções) -->
       <div class="space-y-1.5">
         <label class="block text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
-          Escolha uma Mensagem Pronta (4 Opções Disponíveis):
+          Escolha uma Mensagem Pronta (5 Opções Disponíveis):
         </label>
         <div class="grid grid-cols-1 gap-2">
           
@@ -4100,6 +4101,14 @@ function openSendCustomerNotifModal(customerKey) {
               <span class="text-[10px] bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">Especial</span>
             </div>
             <p class="text-[11px] text-gray-600 font-normal leading-snug">"${msgCupom}"</p>
+          </button>
+
+          <button type="button" onclick="selectDynMsgTemplate(5, \`${msgAgradecimento}\`)" id="dyn-tmpl-btn-5" class="dyn-tmpl-btn text-left p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-950 rounded-2xl border-2 border-rose-200 text-xs font-bold transition space-y-0.5 shadow-sm">
+            <div class="flex items-center justify-between text-rose-900 font-extrabold">
+              <span class="flex items-center gap-1.5">😋 <span>Opção 5: Agradecimento & Bom Apetite</span></span>
+              <span class="text-[10px] bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full font-bold">Agradecimento</span>
+            </div>
+            <p class="text-[11px] text-gray-600 font-normal leading-snug">"${msgAgradecimento}"</p>
           </button>
 
         </div>
