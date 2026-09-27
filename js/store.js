@@ -1871,24 +1871,27 @@ window.Store = {
       updateData.unreadByCustomer = true;
     }
 
-    // 1. Tentar via SDK WebSockets do Firebase
+    // Inserir mensagem de forma atômica no mapa updateData
+    updateData[`messages/${msgId}`] = messageObj;
+
+    // 1. SDK WebSockets do Firebase (Atualização Atômica)
     const db = getDB();
     if (db) {
       try {
-        db.ref(`chats/${cleanKey}/messages/${msgId}`).set(messageObj).catch(() => {});
         db.ref(`chats/${cleanKey}`).update(updateData).catch(() => {});
       } catch (err) {
         console.warn('Firebase SDK sendChatMessage error:', err);
       }
     }
 
-    // 2. Garantia REST API HTTP em tempo real (Garante gravação mesmo com bloqueios)
+    // 2. Garantia REST API HTTP em tempo real (PATCH Atômico)
     try {
-      const restUrlMsg = `https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}/messages/${msgId}.json`;
-      const restUrlMeta = `https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`;
-
-      fetch(restUrlMsg, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(messageObj) }).catch(() => {});
-      fetch(restUrlMeta, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updateData) }).catch(() => {});
+      const restUrl = `https://rotta-do-acai-default-rtdb.firebaseio.com/chats/${cleanKey}.json`;
+      fetch(restUrl, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      }).catch(() => {});
     } catch (e) {
       console.warn('REST API sendChatMessage error:', e);
     }

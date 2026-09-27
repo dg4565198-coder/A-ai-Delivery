@@ -4386,31 +4386,62 @@ setTimeout(fetchCustomerChatsDirectly, 500);
 setInterval(fetchCustomerChatsDirectly, 2500);
 
 let _prevUnreadCountStore = 0;
+let _lastNotifiedChatCustomerKey = null;
 
 function updatePainelChatUnreadBadge() {
   const badge = document.getElementById('painel-chat-badge');
-  if (!badge) return;
+  const alertBanner = document.getElementById('painel-chat-alert-banner');
+  const alertText = document.getElementById('chat-alert-text');
+  const alertTime = document.getElementById('chat-alert-time');
 
   const chats = Object.values(_painelAllChatsMap || {});
-  const unreadCount = chats.filter(c => c.unreadByStore).length;
+  const unreadChats = chats.filter(c => c.unreadByStore);
+  const unreadCount = unreadChats.length;
 
   if (unreadCount > 0) {
-    badge.textContent = unreadCount;
-    badge.classList.remove('hidden');
+    if (badge) {
+      badge.textContent = unreadCount;
+      badge.classList.remove('hidden');
+    }
 
-    if (unreadCount > _prevUnreadCountStore) {
-      try {
-        if (typeof testAudioAlert === 'function') testAudioAlert();
-        if (typeof showInAppToast === 'function') {
-          showInAppToast('💬 NOVO CHAT DO CLIENTE', 'Você recebeu uma nova mensagem no Chat de Atendimento!');
-        }
-      } catch (e) {}
+    unreadChats.sort((a, b) => new Date(b.lastTimestamp || 0) - new Date(a.lastTimestamp || 0));
+    const latestUnread = unreadChats[0];
+
+    if (latestUnread) {
+      const custName = latestUnread.customerName || 'Cliente';
+      const custMsg = latestUnread.lastMessage || 'Nova mensagem enviada pelo cliente';
+      const timeStr = latestUnread.lastTimestamp ? new Date(latestUnread.lastTimestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Agora';
+      _lastNotifiedChatCustomerKey = latestUnread.customerKey;
+
+      if (alertBanner && alertText) {
+        alertText.textContent = `${custName}: "${custMsg}"`;
+        if (alertTime) alertTime.textContent = timeStr;
+        alertBanner.classList.remove('hidden');
+      }
+
+      if (unreadCount > _prevUnreadCountStore) {
+        try {
+          if (typeof testAudioAlert === 'function') testAudioAlert();
+          if (typeof showInAppToast === 'function') {
+            showInAppToast(`💬 CHAT DE ${custName.toUpperCase()}`, `"${custMsg}"`);
+          }
+        } catch (e) {}
+      }
     }
   } else {
-    badge.classList.add('hidden');
+    if (badge) badge.classList.add('hidden');
+    if (alertBanner) alertBanner.classList.add('hidden');
   }
   _prevUnreadCountStore = unreadCount;
 }
+
+function openChatFromAlertBanner() {
+  switchTab('chat');
+  if (_lastNotifiedChatCustomerKey) {
+    selectCustomerChatRoom(_lastNotifiedChatCustomerKey);
+  }
+}
+window.openChatFromAlertBanner = openChatFromAlertBanner;
 
 function renderPainelChatsTab() {
   initPainelChatsListener();
