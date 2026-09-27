@@ -430,6 +430,70 @@
         </div>
       </div>
 
+      <!-- Card: Comparativo Semanal de Fechamentos de Caixa -->
+      <div class="bg-gradient-to-br from-purple-900 via-acai-900 to-acai-950 text-white p-5 rounded-2xl border border-purple-700 shadow-lg space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-purple-700/60 pb-3">
+          <div>
+            <h3 class="font-black text-base text-gold-400 flex items-center gap-2">
+              <span>📊</span> Comparativo Semanal de Fechamentos de Caixa
+            </h3>
+            <p class="text-xs text-purple-200">Evolução da receita fechada, médias diárias e dia de pico dos últimos caixas.</p>
+          </div>
+
+          <!-- Filtro de Período do Fechamento -->
+          <div class="flex items-center space-x-1.5 bg-purple-950/80 p-1.5 rounded-xl border border-purple-700 shrink-0">
+            <button onclick="changeWeeklyClosureTimeframe(7)" id="closure-tf-7" class="px-3 py-1 rounded-lg text-xs font-black transition bg-gold-400 text-acai-950 shadow-sm">7 Dias</button>
+            <button onclick="changeWeeklyClosureTimeframe(14)" id="closure-tf-14" class="px-3 py-1 rounded-lg text-xs font-black transition text-purple-300 hover:bg-purple-800">14 Dias</button>
+            <button onclick="changeWeeklyClosureTimeframe(30)" id="closure-tf-30" class="px-3 py-1 rounded-lg text-xs font-black transition text-purple-300 hover:bg-purple-800">30 Dias</button>
+          </div>
+        </div>
+
+        <!-- Metric Cards Principais do Período -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+          <div class="bg-purple-950/60 p-3 rounded-xl border border-purple-700/70">
+            <span class="text-[10px] uppercase font-bold text-purple-300 block">Total Fechado</span>
+            <span id="weekly-closure-total-rev" class="text-lg font-black text-gold-400 block mt-1">R$ 0,00</span>
+            <span id="weekly-closure-closed-days-count" class="text-[10px] text-purple-300 block">0 caixas fechados</span>
+          </div>
+
+          <div class="bg-purple-950/60 p-3 rounded-xl border border-purple-700/70">
+            <span class="text-[10px] uppercase font-bold text-purple-300 block">Média por Dia</span>
+            <span id="weekly-closure-avg-rev" class="text-lg font-black text-emerald-400 block mt-1">R$ 0,00</span>
+            <span class="text-[10px] text-purple-300 block">por caixa encerrado</span>
+          </div>
+
+          <div class="bg-purple-950/60 p-3 rounded-xl border border-purple-700/70">
+            <span class="text-[10px] uppercase font-bold text-purple-300 block">🏆 Dia de Pico</span>
+            <span id="weekly-closure-peak-day" class="text-sm font-black text-amber-300 block mt-1">Nenhum</span>
+            <span id="weekly-closure-peak-val" class="text-[10px] text-gold-400 font-bold block">R$ 0,00</span>
+          </div>
+
+          <div class="bg-purple-950/60 p-3 rounded-xl border border-purple-700/70">
+            <span class="text-[10px] uppercase font-bold text-purple-300 block">Pedidos Atendidos</span>
+            <span id="weekly-closure-total-orders" class="text-lg font-black text-sky-400 block mt-1">0</span>
+            <span class="text-[10px] text-purple-300 block">no período acumulado</span>
+          </div>
+        </div>
+
+        <!-- Canvas do Gráfico do Comparativo Semanal -->
+        <div class="bg-purple-950/40 p-4 rounded-xl border border-purple-700/50">
+          <div class="relative w-full h-56 md:h-64">
+            <canvas id="weekly-closure-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Lista Detalhada em Barras de Faturamento por Dia -->
+        <div class="bg-purple-950/60 p-4 rounded-xl border border-purple-700/60 space-y-3">
+          <h4 class="text-xs font-extrabold uppercase tracking-wider text-purple-200 flex items-center justify-between">
+            <span>📅 Detalhamento Diário do Comparativo</span>
+            <span class="text-[10px] text-purple-300 font-normal">Faturamento vs Sobra/Falta</span>
+          </h4>
+          <div id="weekly-closure-bars-list" class="space-y-2.5 text-xs">
+            <p class="text-purple-300 italic text-center py-2 text-xs">Carregando comparativo semanal de caixas...</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Card: Histórico de Caixas Fechados por Data (Firebase) -->
       <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4">
         <div class="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">

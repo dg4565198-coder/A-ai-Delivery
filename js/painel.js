@@ -2148,8 +2148,301 @@ async function handleConfirmCloseCaixa(e) {
   }
 }
 
+let weeklyClosureChartInstance = null;
+let currentWeeklyClosureTimeframe = 7;
+
+function changeWeeklyClosureTimeframe(days) {
+  currentWeeklyClosureTimeframe = days;
+  [7, 14, 30].forEach(d => {
+    const btn = document.getElementById(`closure-tf-${d}`);
+    if (btn) {
+      if (d === days) {
+        btn.className = 'px-3 py-1 rounded-lg text-xs font-black transition bg-gold-400 text-acai-950 shadow-sm';
+      } else {
+        btn.className = 'px-3 py-1 rounded-lg text-xs font-black transition text-purple-300 hover:bg-purple-800';
+      }
+    }
+  });
+  renderWeeklyClosureComparison();
+}
+window.changeWeeklyClosureTimeframe = changeWeeklyClosureTimeframe;
+
+function renderWeeklyClosureComparison() {
+  const chartCanvas = document.getElementById('weekly-closure-chart');
+  const barsContainer = document.getElementById('weekly-closure-bars-list');
+  if (!chartCanvas || !barsContainer) return;
+
+  const db = window.Store.getDB ? window.Store.getDB() : null;
+  if (!db) {
+    barsContainer.innerHTML = `<p class="text-purple-300 italic text-center py-2 text-xs">Conectando ao banco de dados...</p>`;
+    return;
+  }
+
+  db.ref('daily_closings').once('value').then(snap => {
+    const closuresMap = snap.exists() ? (snap.val() || {}) : {};
+    
+    // Gerar array dos últimos N dias no formato YYYY-MM-DD
+    const daysCount = currentWeeklyClosureTimeframe || 7;
+    const datesList = [];
+    const now = new Date();
+    
+    for (let i = daysCount - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      datesList.push(`${yyyy}-${mm}-${dd}`);
+    }
+
+    const allOrders = window.Store.getOrdersArray().filter(o => o.status !== 'cancelado');
+
+    let totalPeriodRevenue = 0;
+    let totalPeriodOrders = 0;
+    let closedDaysCount = 0;
+    let maxRev = 0;
+    let peakDayLabel = 'Nenhum';
+    let peakDayVal = 0;
+
+    const chartLabels = [];
+    const chartRevenue = [];
+    const chartOrders = [];
+    const barItemsData = [];
+
+    const weekDayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    datesList.forEach(dateStr => {
+      const parts = dateStr.split('-');
+      const dObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      const dayName = weekDayNames[dObj.getDay()];
+      const dateFmt = `${dayName} (${parts[2]}/${parts[1]})`;
+
+      const closurePayload = closuresMap[dateStr] || window.Store.getDailyClosure(dateStr);
+
+      let dayRev = 0;
+      let dayOrders = 0;
+      let isClosed = false;
+      let diff = 0;
+      let pixVal = 0;
+      let cashVal = 0;
+      let combVal = 0;
+
+      if (closurePayload) {
+        isClosed = true;
+        closedDaysCount++;
+        dayRev = closurePayload.totalRevenue || 0;
+        dayOrders = closurePayload.totalOrders || 0;
+        diff = closurePayload.drawerDiff || 0;
+        pixVal = closurePayload.pixSales || 0;
+        cashVal = closurePayload.cashSales || 0;
+        combVal = closurePayload.combinedSales || 0;
+      } else {
+        // Se ainda não foi fechado, calcula pelas vendas em tempo real
+        const dayOrdersList = allOrders.filter(o => {
+          if (!o.createdAt) return false;
+          const od = new Date(o.createdAt);
+          const yyyy = od.getFullYear();
+          const mm = String(od.getMonth() + 1).padStart(2, '0');
+          const dd = String(od.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}` === dateStr;
+        });
+
+        dayRev = dayOrdersList.reduce((s, o) => s + (o.total || 0), 0);
+        dayOrders = dayOrdersList.length;
+        pixVal = dayOrdersList.filter(o => o.paymentMethod === 'pix').reduce((s, o) => s + (o.total || 0), 0);
+        cashVal = dayOrdersList.filter(o => o.paymentMethod === 'dinheiro').reduce((s, o) => s + (o.total || 0), 0);
+        combVal = dayOrdersList.filter(o => o.paymentMethod === 'combinado').reduce((s, o) => s + (o.total || 0), 0);
+      }
+
+      totalPeriodRevenue += dayRev;
+      totalPeriodOrders += dayOrders;
+
+      if (dayRev > maxRev) {
+        maxRev = dayRev;
+        peakDayLabel = dateFmt;
+        peakDayVal = dayRev;
+      }
+
+      chartLabels.push(dateFmt);
+      chartRevenue.push(dayRev);
+      chartOrders.push(dayOrders);
+
+      barItemsData.push({
+        dateStr,
+        dateFmt,
+        dayRev,
+        dayOrders,
+        isClosed,
+        diff,
+        pixVal,
+        cashVal,
+        combVal
+      });
+    });
+
+    const avgDaily = closedDaysCount > 0 ? (totalPeriodRevenue / closedDaysCount) : (datesList.length > 0 ? totalPeriodRevenue / datesList.length : 0);
+
+    // Atualizar metric stat cards
+    const totalRevEl = document.getElementById('weekly-closure-total-rev');
+    const closedCountEl = document.getElementById('weekly-closure-closed-days-count');
+    const avgRevEl = document.getElementById('weekly-closure-avg-rev');
+    const peakDayEl = document.getElementById('weekly-closure-peak-day');
+    const peakValEl = document.getElementById('weekly-closure-peak-val');
+    const totalOrdersEl = document.getElementById('weekly-closure-total-orders');
+
+    if (totalRevEl) totalRevEl.textContent = window.Store.formatCurrency(totalPeriodRevenue);
+    if (closedCountEl) closedCountEl.textContent = `${closedDaysCount} caixas fechados (${daysCount}d)`;
+    if (avgRevEl) avgRevEl.textContent = window.Store.formatCurrency(avgDaily);
+    if (peakDayEl) peakDayEl.textContent = peakDayLabel;
+    if (peakValEl) peakValEl.textContent = window.Store.formatCurrency(peakDayVal);
+    if (totalOrdersEl) totalOrdersEl.textContent = totalPeriodOrders;
+
+    // Renderizar Chart.js
+    if (weeklyClosureChartInstance) {
+      weeklyClosureChartInstance.destroy();
+      weeklyClosureChartInstance = null;
+    }
+
+    const ctx = chartCanvas.getContext('2d');
+    weeklyClosureChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          {
+            label: 'Faturamento Fechado (R$)',
+            data: chartRevenue,
+            backgroundColor: 'rgba(251, 191, 36, 0.85)',
+            borderColor: '#f39c12',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Qtd Pedidos',
+            data: chartOrders,
+            backgroundColor: 'rgba(56, 189, 248, 0.85)',
+            borderColor: '#38bdf8',
+            borderWidth: 1.5,
+            borderRadius: 6,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            ticks: {
+              color: '#e9d5ff',
+              callback: function(val) { return 'R$ ' + val; },
+              font: { size: 10 }
+            },
+            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: {
+              color: '#7dd3fc',
+              stepSize: 1,
+              font: { size: 10 }
+            }
+          },
+          x: {
+            ticks: { color: '#e9d5ff', font: { size: 10, weight: 'bold' } },
+            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+            labels: { color: '#ffffff', font: { size: 11, weight: 'bold' } }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) label += ': ';
+                if (context.datasetIndex === 0) {
+                  label += 'R$ ' + context.parsed.y.toFixed(2).replace('.', ',');
+                } else {
+                  label += context.parsed.y + ' pedidos';
+                }
+                return label;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Renderizar Lista de Barras de Progresso
+    const highestValInPeriod = Math.max(...chartRevenue, 1);
+    
+    barsContainer.innerHTML = barItemsData.map(item => {
+      const pct = Math.round((item.dayRev / highestValInPeriod) * 100);
+      const statusBadge = item.isClosed
+        ? `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🔒 Fechado</span>`
+        : `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">⏳ Em Aberto</span>`;
+
+      const diffBadge = item.isClosed 
+        ? (item.diff === 0 
+            ? '<span class="text-emerald-300 font-bold text-[10px]">✅ Sem divergência</span>' 
+            : (item.diff > 0 
+                ? `<span class="text-sky-300 font-bold text-[10px]">+${window.Store.formatCurrency(item.diff)} (Sobra)</span>` 
+                : `<span class="text-rose-300 font-bold text-[10px]">-${window.Store.formatCurrency(Math.abs(item.diff))} (Falta)</span>`))
+        : '';
+
+      return `
+        <div class="bg-purple-900/60 p-3 rounded-xl border border-purple-700/60 space-y-1.5 transition hover:bg-purple-900/90">
+          <div class="flex items-center justify-between text-xs flex-wrap gap-1">
+            <div class="flex items-center space-x-2">
+              <span class="font-extrabold text-gold-300">${item.dateFmt}</span>
+              ${statusBadge}
+            </div>
+            <div class="flex items-center space-x-2">
+              ${diffBadge}
+              <span class="font-black text-white text-sm">${window.Store.formatCurrency(item.dayRev)}</span>
+              <span class="text-[10px] text-purple-300 font-semibold">(${item.dayOrders} ped)</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-purple-950 rounded-full h-2.5 overflow-hidden border border-purple-700/60 p-0.5">
+            <div class="bg-gradient-to-r from-gold-500 via-amber-400 to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+          </div>
+
+          <!-- Breakdown Pix / Dinheiro / Combinado -->
+          <div class="flex items-center justify-between text-[10px] text-purple-200 font-medium pt-0.5">
+            <span>💠 Pix: <b>${window.Store.formatCurrency(item.pixVal)}</b></span>
+            <span>💵 Dinheiro: <b>${window.Store.formatCurrency(item.cashVal)}</b></span>
+            <span>🔀 Combinado: <b>${window.Store.formatCurrency(item.combVal)}</b></span>
+          </div>
+        </div>
+      `;
+    }).reverse().join(''); // Mais recentes no topo
+
+  }).catch(err => {
+    console.error("Erro ao gerar comparativo semanal:", err);
+    barsContainer.innerHTML = `<p class="text-rose-400 italic text-center py-2 text-xs">Erro ao carregar comparativo.</p>`;
+  });
+}
+window.renderWeeklyClosureComparison = renderWeeklyClosureComparison;
+
 function renderClosedCaixasHistory() {
   const container = document.getElementById('closed-caixas-history-list');
+  
+  // Atualizar também o gráfico comparativo semanal
+  renderWeeklyClosureComparison();
+
+  if (!container) return;
   if (!container) return;
 
   const db = window.Store.getDB ? window.Store.getDB() : null;
