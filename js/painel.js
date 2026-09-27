@@ -2383,14 +2383,24 @@ function renderWeeklyClosureComparison() {
       }
     });
 
+    const todayStr = new Date().toISOString().split('T')[0];
+
     // Renderizar Lista de Barras de Progresso
     const highestValInPeriod = Math.max(...chartRevenue, 1);
     
     barsContainer.innerHTML = barItemsData.map(item => {
       const pct = Math.round((item.dayRev / highestValInPeriod) * 100);
-      const statusBadge = item.isClosed
-        ? `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🔒 Fechado</span>`
-        : `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">⏳ Em Aberto</span>`;
+      
+      let statusBadge = '';
+      if (item.isClosed) {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">🔒 Fechado</span>`;
+      } else if (item.dateStr === todayStr) {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-400/20 text-emerald-300 border border-emerald-400/40">🟢 Hoje (Em Aberto)</span>`;
+      } else if (item.dayRev === 0 && item.dayOrders === 0) {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/20 text-purple-300 border border-purple-500/30">⚪ Sem Movimento</span>`;
+      } else {
+        statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">⚠️ Não Fechado</span>`;
+      }
 
       const diffBadge = item.isClosed 
         ? (item.diff === 0 
