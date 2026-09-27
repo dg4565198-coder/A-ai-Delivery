@@ -104,6 +104,7 @@ const DEFAULT_CALDAS = [
 
 let _db = null;
 let _ordersCache = {};
+let _chatsCache = {};
 let _orderCount = 0;
 let _currentConfig = DEFAULT_CONFIG;
 let _stockCache = {
@@ -1931,33 +1932,54 @@ window.Store = {
   },
 
   listenToAllChats(callback) {
-    // 1. Ouvinte via Firebase SDK WebSockets
+    const updateCacheAndNotify = (chatsData) => {
+      if (!chatsData || typeof chatsData !== 'object') return;
+      for (const k in chatsData) {
+        if (chatsData[k] && typeof chatsData[k] === 'object') {
+          chatsData[k].customerKey = chatsData[k].customerKey || k;
+          _chatsCache[k] = chatsData[k];
+        }
+      }
+      if (callback) callback(_chatsCache);
+    };
+
+    if (callback) callback(_chatsCache);
+
+    // 1. Ouvinte via Firebase SDK WebSockets (usando snapshot.forEach como em listenToOrders)
     const db = getDB();
     if (db) {
       try {
-        db.ref('chats').on('value', snap => {
-          const chatsData = snap.exists() ? (snap.val() || {}) : {};
-          callback(chatsData);
+        db.ref('chats').on('value', snapshot => {
+          const freshMap = {};
+          if (snapshot.exists()) {
+            snapshot.forEach(child => {
+              const val = child.val();
+              if (val && typeof val === 'object') {
+                val.customerKey = val.customerKey || child.key;
+                freshMap[child.key] = val;
+              }
+            });
+          }
+          _chatsCache = freshMap;
+          if (callback) callback(_chatsCache);
         });
       } catch (e) {}
     }
 
-    // 2. Polling REST API a cada 3 segundos (Tempo Real Garantido no Painel)
+    // 2. Polling REST API a cada 2 segundos (Tempo Real Garantido no Painel)
     const fetchAllChatsREST = () => {
-      fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/chats.json')
+      fetch('https://rotta-do-acai-default-rtdb.firebaseio.com/chats.json?t=' + Date.now())
         .then(res => res.json())
         .then(data => {
           if (data && typeof data === 'object') {
-            callback(data);
-          } else if (data === null) {
-            callback({});
+            updateCacheAndNotify(data);
           }
         })
         .catch(() => {});
     };
 
     fetchAllChatsREST();
-    const intervalId = setInterval(fetchAllChatsREST, 3000);
+    const intervalId = setInterval(fetchAllChatsREST, 2000);
 
     return {
       off: () => clearInterval(intervalId)

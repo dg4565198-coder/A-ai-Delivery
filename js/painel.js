@@ -4387,6 +4387,9 @@ function updatePainelChatUnreadBadge() {
     if (unreadCount > _prevUnreadCountStore) {
       try {
         if (typeof testAudioAlert === 'function') testAudioAlert();
+        if (typeof showInAppToast === 'function') {
+          showInAppToast('💬 NOVO CHAT DO CLIENTE', 'Você recebeu uma nova mensagem no Chat de Atendimento!');
+        }
       } catch (e) {}
     }
   } else {
