@@ -167,6 +167,15 @@
       <button onclick="filterCategory('copos')" class="cat-btn px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-cat="copos">
         🍧 Copos Tradicionais
       </button>
+      <button onclick="filterCategory('adicionais')" class="cat-btn px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-cat="adicionais">
+        🍫 Adicionais Pagos (Nutella, Cremes Extra)
+      </button>
+      <button onclick="filterCategory('complementos')" class="cat-btn px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-cat="complementos">
+        🥣 Cremes & Complementos
+      </button>
+      <button onclick="filterCategory('caldas')" class="cat-btn px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-cat="caldas">
+        🍯 Coberturas & Caldas
+      </button>
     </div>
   </nav>
 
@@ -883,8 +892,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- Scripts da Aplicação & Service Worker PWA -->
-  <script src="js/store.js?v=111"></script>
-  <script src="js/app.js?v=111"></script>
+  <script src="js/store.js?v=112"></script>
+  <script src="js/app.js?v=112"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {

@@ -234,7 +234,10 @@ function filterCategory(category) {
 
   const titles = {
     todos: '🍧 Cardápio Completo',
-    copos: '🍧 Copos Tradicionais de Açaí'
+    copos: '🍧 Copos Tradicionais de Açaí',
+    adicionais: '🍫 Adicionais Pagos (Nutella, Cremes Extra...)',
+    complementos: '🥣 Cremes & Complementos do Açaí',
+    caldas: '🍯 Coberturas & Caldas'
   };
 
   const titleElem = document.getElementById('current-category-title');
@@ -245,14 +248,131 @@ function filterCategory(category) {
   renderProducts();
 }
 
+function openFirstCustomizableProductModal() {
+  const products = window.Store.getProducts().filter(p => p.available !== false && p.allowsCustomization);
+  if (products.length > 0) {
+    handleProductClick(products[0].id);
+  } else {
+    const anyProd = window.Store.getProducts().find(p => p.available !== false);
+    if (anyProd) handleProductClick(anyProd.id);
+  }
+}
+
 function renderProducts() {
   const grid = document.getElementById('products-grid');
   if (!grid) return;
 
+  const activeCat = state.activeCategory || 'todos';
+
+  if (activeCat === 'adicionais') {
+    const addons = window.Store.getPaidAddons().filter(a => a.available !== false);
+    if (addons.length === 0) {
+      grid.innerHTML = `<div class="col-span-full py-12 text-center text-gray-400"><span class="text-3xl block mb-2">🍫</span>Nenhum adicional pago cadastrado no momento.</div>`;
+      return;
+    }
+    grid.innerHTML = addons.map(addon => `
+      <div class="product-card bg-white rounded-2xl p-4 border border-rose-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <span class="absolute top-3 right-3 bg-rose-100 text-rose-800 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-rose-200 shadow-sm">
+          🍫 Adicional Pago
+        </span>
+        <div class="flex items-start space-x-3.5">
+          <div class="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-3xl shrink-0 shadow-inner overflow-hidden">
+            ${addon.image ? `<img src="${addon.image}" class="w-full h-full object-cover">` : (addon.icon || '🍫')}
+          </div>
+          <div class="flex-1 pr-12">
+            <h4 class="font-bold text-gray-900 text-base leading-snug">${addon.name}</h4>
+            <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">Adicional extra para turbine seu açaí no copo.</p>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] text-gray-400 block uppercase font-bold">Valor Extra</span>
+            <span class="text-base font-extrabold text-rose-800">+ ${window.Store.formatCurrency(addon.price || 0)}</span>
+          </div>
+          <button onclick="openFirstCustomizableProductModal()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow transition flex items-center space-x-1 active:scale-95">
+            <span>Pedir no Copo</span>
+            <span class="font-bold text-gold-300">+</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+    return;
+  }
+
+  if (activeCat === 'complementos') {
+    const toppings = window.Store.getFreeToppings().filter(t => t.available !== false);
+    if (toppings.length === 0) {
+      grid.innerHTML = `<div class="col-span-full py-12 text-center text-gray-400"><span class="text-3xl block mb-2">🥣</span>Nenhum complemento cadastrado no momento.</div>`;
+      return;
+    }
+    grid.innerHTML = toppings.map(top => `
+      <div class="product-card bg-white rounded-2xl p-4 border border-purple-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <span class="absolute top-3 right-3 bg-purple-100 text-purple-800 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-purple-200 shadow-sm">
+          🥣 Creme / Complemento
+        </span>
+        <div class="flex items-start space-x-3.5">
+          <div class="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-3xl shrink-0 shadow-inner overflow-hidden">
+            ${top.image ? `<img src="${top.image}" class="w-full h-full object-cover">` : (top.icon || '🥣')}
+          </div>
+          <div class="flex-1 pr-12">
+            <h4 class="font-bold text-gray-900 text-base leading-snug">${top.name}</h4>
+            <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">Opção de complemento incluso na montagem do seu copo.</p>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] text-purple-800 block uppercase font-bold">Incluso no Copo</span>
+            <span class="text-xs font-black text-purple-900">Grátis na montagem</span>
+          </div>
+          <button onclick="openFirstCustomizableProductModal()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow transition flex items-center space-x-1 active:scale-95">
+            <span>Escolher no Copo</span>
+            <span class="font-bold text-gold-300">+</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+    return;
+  }
+
+  if (activeCat === 'caldas') {
+    const caldas = window.Store.getCaldas().filter(c => c.available !== false);
+    if (caldas.length === 0) {
+      grid.innerHTML = `<div class="col-span-full py-12 text-center text-gray-400"><span class="text-3xl block mb-2">🍯</span>Nenhuma calda cadastrada no momento.</div>`;
+      return;
+    }
+    grid.innerHTML = caldas.map(calda => `
+      <div class="product-card bg-white rounded-2xl p-4 border border-amber-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <span class="absolute top-3 right-3 bg-amber-100 text-amber-900 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-amber-200 shadow-sm">
+          🍯 Cobertura / Calda
+        </span>
+        <div class="flex items-start space-x-3.5">
+          <div class="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-3xl shrink-0 shadow-inner overflow-hidden">
+            ${calda.image ? `<img src="${calda.image}" class="w-full h-full object-cover">` : (calda.icon || '🍯')}
+          </div>
+          <div class="flex-1 pr-12">
+            <h4 class="font-bold text-gray-900 text-base leading-snug">${calda.name}</h4>
+            <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">Opção de calda inclusa para finalizar seu copo.</p>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] text-amber-800 block uppercase font-bold">Incluso no Copo</span>
+            <span class="text-xs font-black text-amber-900">Grátis na montagem</span>
+          </div>
+          <button onclick="openFirstCustomizableProductModal()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow transition flex items-center space-x-1 active:scale-95">
+            <span>Escolher no Copo</span>
+            <span class="font-bold text-gold-300">+</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+    return;
+  }
+
   const products = window.Store.getProducts().filter(p => p.available !== false);
-  const filtered = state.activeCategory === 'todos' 
+  const filtered = activeCat === 'todos' 
     ? products 
-    : products.filter(p => p.category === state.activeCategory);
+    : products.filter(p => p.category === activeCat);
 
   if (filtered.length === 0) {
     grid.innerHTML = `
@@ -264,7 +384,7 @@ function renderProducts() {
     return;
   }
 
-  grid.innerHTML = filtered.map(prod => `
+  let html = filtered.map(prod => `
     <div class="product-card bg-white rounded-2xl p-4 border border-gray-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
       ${prod.badge ? `<span class="absolute top-3 right-3 bg-gold-500 text-acai-950 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow-sm">${prod.badge}</span>` : ''}
       
@@ -291,6 +411,49 @@ function renderProducts() {
       </div>
     </div>
   `).join('');
+
+  if (activeCat === 'todos') {
+    const paidAddons = window.Store.getPaidAddons().filter(a => a.available !== false);
+    if (paidAddons.length > 0) {
+      html += `
+        <div class="col-span-full pt-6 mt-4 border-t border-gray-200">
+          <h3 class="text-base font-extrabold text-acai-900 mb-3 flex items-center gap-2">
+            <span>🍫</span> Adicionais Pagos (Nutella, Cremes Extra...)
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${paidAddons.map(addon => `
+              <div class="product-card bg-white rounded-2xl p-4 border border-rose-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                <span class="absolute top-3 right-3 bg-rose-100 text-rose-800 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-rose-200 shadow-sm">
+                  🍫 Adicional Pago
+                </span>
+                <div class="flex items-start space-x-3.5">
+                  <div class="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-3xl shrink-0 shadow-inner overflow-hidden">
+                    ${addon.image ? `<img src="${addon.image}" class="w-full h-full object-cover">` : (addon.icon || '🍫')}
+                  </div>
+                  <div class="flex-1 pr-12">
+                    <h4 class="font-bold text-gray-900 text-base leading-snug">${addon.name}</h4>
+                    <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">Adicional extra para turbine seu açaí no copo.</p>
+                  </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                  <div>
+                    <span class="text-[10px] text-gray-400 block uppercase font-bold">Valor Extra</span>
+                    <span class="text-base font-extrabold text-rose-800">+ ${window.Store.formatCurrency(addon.price || 0)}</span>
+                  </div>
+                  <button onclick="openFirstCustomizableProductModal()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow transition flex items-center space-x-1 active:scale-95">
+                    <span>Pedir no Copo</span>
+                    <span class="font-bold text-gold-300">+</span>
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  grid.innerHTML = html;
 }
 
 // ==========================================================================
@@ -362,8 +525,8 @@ function renderBuilderFruits() {
       <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-emerald-500 bg-emerald-50/70 font-semibold' : 'border-gray-200 bg-white'}">
         <div class="flex items-center space-x-2.5">
           <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFruit('${fruit.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
-          ${fruit.image ? `<img src="${fruit.image}" class="w-8 h-8 object-cover rounded-lg border border-purple-100 shadow-sm shrink-0">` : `<span class="text-base">${fruit.icon || '🍓'}</span>`}
-          <span class="text-gray-800">${fruit.name}</span>
+          ${fruit.image ? `<img src="${fruit.image}" class="w-12 h-12 object-cover rounded-xl border border-emerald-200 shadow-sm shrink-0">` : `<span class="w-12 h-12 text-xl rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">${fruit.icon || '🍓'}</span>`}
+          <span class="text-gray-800 font-bold">${fruit.name}</span>
         </div>
       </label>
     `;
@@ -404,11 +567,11 @@ function renderBuilderFreeToppings() {
   container.innerHTML = toppings.map(top => {
     const isSelected = state.selectedFreeToppings.some(t => t.id === top.id);
     return `
-      <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-emerald-600 bg-emerald-50/60 font-semibold' : 'border-gray-200 bg-white'}">
+      <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs ${isSelected ? 'border-purple-600 bg-purple-50/60 font-semibold' : 'border-gray-200 bg-white'}">
         <div class="flex items-center space-x-2.5">
-          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFreeTopping('${top.id}')" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
-          ${top.image ? `<img src="${top.image}" class="w-8 h-8 object-cover rounded-lg border border-purple-100 shadow-sm shrink-0">` : `<span class="text-base">${top.icon || '🥣'}</span>`}
-          <span class="text-gray-800">${top.name}</span>
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFreeTopping('${top.id}')" class="rounded text-purple-600 focus:ring-purple-500 h-3.5 w-3.5">
+          ${top.image ? `<img src="${top.image}" class="w-12 h-12 object-cover rounded-xl border border-purple-200 shadow-sm shrink-0">` : `<span class="w-12 h-12 text-xl rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0">${top.icon || '🥣'}</span>`}
+          <span class="text-gray-800 font-bold">${top.name}</span>
         </div>
       </label>
     `;
@@ -451,8 +614,8 @@ function renderBuilderCaldas() {
       <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs cursor-pointer ${isSelected ? 'border-amber-500 bg-amber-50/80 font-bold shadow-sm' : 'border-gray-200 bg-white'}" onclick="selectCalda('${calda.id}')">
         <div class="flex items-center space-x-2.5">
           <input type="radio" name="builder_calda_choice" ${isSelected ? 'checked' : ''} class="text-amber-600 focus:ring-amber-500 h-3.5 w-3.5">
-          ${calda.image ? `<img src="${calda.image}" class="w-8 h-8 object-cover rounded-lg border border-purple-100 shadow-sm shrink-0">` : `<span class="text-base">${calda.icon || '🍯'}</span>`}
-          <span class="text-gray-800">${calda.name}</span>
+          ${calda.image ? `<img src="${calda.image}" class="w-12 h-12 object-cover rounded-xl border border-amber-200 shadow-sm shrink-0">` : `<span class="w-12 h-12 text-xl rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">${calda.icon || '🍯'}</span>`}
+          <span class="text-gray-800 font-bold">${calda.name}</span>
         </div>
       </label>
     `;
@@ -487,7 +650,7 @@ function renderBuilderPaidAddons() {
       <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs cursor-pointer ${isSelected ? 'border-rose-500 bg-rose-50/70 font-semibold' : 'border-gray-200 bg-white'}">
         <div class="flex items-center space-x-2.5">
           <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="togglePaidAddon('${addon.id}')" class="rounded text-rose-600 focus:ring-rose-500 h-3.5 w-3.5">
-          ${addon.image ? `<img src="${addon.image}" class="w-8 h-8 object-cover rounded-lg border border-purple-100 shadow-sm shrink-0">` : `<span class="text-base">${addon.icon || '🍫'}</span>`}
+          ${addon.image ? `<img src="${addon.image}" class="w-12 h-12 object-cover rounded-xl border border-rose-200 shadow-sm shrink-0">` : `<span class="w-12 h-12 text-xl rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">${addon.icon || '🍫'}</span>`}
           <div class="flex flex-col">
             <span class="text-gray-800 font-bold">${addon.name}</span>
             <span class="text-[11px] text-rose-700 font-extrabold">+ ${priceFormatted}</span>
