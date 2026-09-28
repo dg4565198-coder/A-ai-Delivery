@@ -28,6 +28,8 @@ function startApp() {
   try { setupOrderNotificationListeners(); } catch (e) { console.error('Notifications:', e); }
   try { setupPromotionsListener(); } catch (e) { console.error('Promotions:', e); }
   try { setupBroadcastNotificationListener(); } catch (e) { console.error('Broadcast:', e); }
+  try { syncPromotionsFeedFromFirebase(); } catch (e) { console.error('Sync promos feed:', e); }
+  try { updateProfileNotifBadge(); } catch (e) { console.error('Profile badge:', e); }
 }
 
 if (document.readyState === 'loading') {
@@ -1773,6 +1775,7 @@ function setupPromotionsListener() {
 function triggerPromoNotification(promo) {
   sendPushNotification(`📢 ${promo.title}`, promo.message);
   try { window.Store.playNotificationSound(); } catch {}
+  try { saveStoreNotificationToFeed(promo); } catch (e) {}
 
   const titleElem = document.getElementById('promo-modal-title');
   const msgElem = document.getElementById('promo-modal-message');
@@ -1805,6 +1808,14 @@ function setupBroadcastNotificationListener() {
 
       sendPushNotification(title, body);
       try { window.Store.playNotificationSound(); } catch {}
+      try {
+        saveStoreNotificationToFeed({
+          id: 'bc_' + broadcastData.createdAt,
+          title: title,
+          message: body,
+          createdAt: broadcastData.createdAt
+        });
+      } catch (e) {}
 
       const titleElem = document.getElementById('promo-modal-title');
       const msgElem = document.getElementById('promo-modal-message');
@@ -2052,23 +2063,323 @@ function switchAppTab(tab) {
   const btnMenu = document.getElementById('nav-btn-menu');
   const btnFidelidade = document.getElementById('nav-btn-fidelidade');
   const btnPedidos = document.getElementById('nav-btn-pedidos');
+  const btnPerfil = document.getElementById('nav-btn-perfil');
 
   if (btnMenu) btnMenu.className = "nav-tab-btn flex flex-col items-center space-y-1 text-purple-300 hover:text-gold-300 font-bold transition";
   if (btnFidelidade) btnFidelidade.className = "nav-tab-btn flex flex-col items-center space-y-1 text-purple-300 hover:text-gold-300 font-bold transition relative";
   if (btnPedidos) btnPedidos.className = "nav-tab-btn flex flex-col items-center space-y-1 text-purple-300 hover:text-gold-300 font-bold transition";
+  if (btnPerfil) btnPerfil.className = "nav-tab-btn flex flex-col items-center space-y-1 text-purple-300 hover:text-gold-300 font-bold transition relative";
 
   if (tab === 'menu') {
     if (btnMenu) btnMenu.className = "nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition";
     closeFidelityModal();
     closeMyOrdersModal();
+    closeCustomerProfileModal();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } else if (tab === 'fidelidade') {
     if (btnFidelidade) btnFidelidade.className = "nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition relative";
+    closeMyOrdersModal();
+    closeCustomerProfileModal();
     openFidelityModal();
   } else if (tab === 'pedidos') {
     if (btnPedidos) btnPedidos.className = "nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition";
+    closeFidelityModal();
+    closeCustomerProfileModal();
     openMyOrdersModal();
+  } else if (tab === 'perfil') {
+    if (btnPerfil) btnPerfil.className = "nav-tab-btn flex flex-col items-center space-y-1 text-gold-400 font-bold transition relative";
+    closeFidelityModal();
+    closeMyOrdersModal();
+    openCustomerProfileModal();
   }
+}
+
+// ==========================================================================
+// MODAL DE PERFIL DO CLIENTE & NOTIFICAÇÕES (12 HORAS MAX)
+// ==========================================================================
+const PROFILE_NOTIFS_STORAGE_KEY = 'rotta_profile_notifications_v1';
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+function openCustomerProfileModal() {
+  const modal = document.getElementById('customer-profile-modal');
+  if (modal) modal.classList.remove('hidden');
+  loadCustomerProfileForm();
+  renderProfileNotifications();
+  renderProfileFavorites();
+  updateProfileNotifBadge();
+}
+
+function closeCustomerProfileModal() {
+  const modal = document.getElementById('customer-profile-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function switchProfileTab(tabName) {
+  const btnDados = document.getElementById('profile-tab-btn-dados');
+  const btnNotifs = document.getElementById('profile-tab-btn-notificacoes');
+  const btnFavs = document.getElementById('profile-tab-btn-favoritos');
+
+  const contentDados = document.getElementById('profile-tab-content-dados');
+  const contentNotifs = document.getElementById('profile-tab-content-notificacoes');
+  const contentFavs = document.getElementById('profile-tab-content-favoritos');
+
+  if (btnDados) btnDados.className = "flex-1 py-2 px-1 text-center rounded-xl text-purple-300 hover:text-white transition flex items-center justify-center gap-1";
+  if (btnNotifs) btnNotifs.className = "flex-1 py-2 px-1 text-center rounded-xl text-purple-300 hover:text-white transition flex items-center justify-center gap-1 relative";
+  if (btnFavs) btnFavs.className = "flex-1 py-2 px-1 text-center rounded-xl text-purple-300 hover:text-white transition flex items-center justify-center gap-1";
+
+  if (contentDados) contentDados.classList.add('hidden');
+  if (contentNotifs) contentNotifs.classList.add('hidden');
+  if (contentFavs) contentFavs.classList.add('hidden');
+
+  if (tabName === 'dados') {
+    if (btnDados) btnDados.className = "flex-1 py-2 px-1 text-center rounded-xl bg-purple-800/80 text-gold-300 shadow transition flex items-center justify-center gap-1 font-bold";
+    if (contentDados) contentDados.classList.remove('hidden');
+    loadCustomerProfileForm();
+  } else if (tabName === 'notificacoes') {
+    if (btnNotifs) btnNotifs.className = "flex-1 py-2 px-1 text-center rounded-xl bg-purple-800/80 text-gold-300 shadow transition flex items-center justify-center gap-1 font-bold relative";
+    if (contentNotifs) contentNotifs.classList.remove('hidden');
+    markProfileNotificationsAsRead();
+    renderProfileNotifications();
+  } else if (tabName === 'favoritos') {
+    if (btnFavs) btnFavs.className = "flex-1 py-2 px-1 text-center rounded-xl bg-purple-800/80 text-gold-300 shadow transition flex items-center justify-center gap-1 font-bold";
+    if (contentFavs) contentFavs.classList.remove('hidden');
+    renderProfileFavorites();
+  }
+}
+
+function loadCustomerProfileForm() {
+  const data = window.Store.getCustomerData() || {};
+  const nameInput = document.getElementById('profile-name-input');
+  const phoneInput = document.getElementById('profile-phone-input');
+  const streetInput = document.getElementById('profile-street-input');
+  const numberInput = document.getElementById('profile-number-input');
+  const neighborhoodInput = document.getElementById('profile-neighborhood-input');
+  const referenceInput = document.getElementById('profile-reference-input');
+
+  if (nameInput) nameInput.value = data.name || '';
+  if (phoneInput) phoneInput.value = data.phone || '';
+  if (streetInput) streetInput.value = data.street || '';
+  if (numberInput) numberInput.value = data.number || '';
+  if (neighborhoodInput) neighborhoodInput.value = data.neighborhood || '';
+  if (referenceInput) referenceInput.value = data.reference || '';
+}
+
+function saveCustomerProfileData(e) {
+  if (e) e.preventDefault();
+  const name = document.getElementById('profile-name-input')?.value.trim();
+  const phone = document.getElementById('profile-phone-input')?.value.trim();
+  const street = document.getElementById('profile-street-input')?.value.trim();
+  const number = document.getElementById('profile-number-input')?.value.trim();
+  const neighborhood = document.getElementById('profile-neighborhood-input')?.value.trim();
+  const reference = document.getElementById('profile-reference-input')?.value.trim();
+
+  if (!name || !phone || !street || !number || !neighborhood) {
+    alert("⚠️ Por favor, preencha todos os campos obrigatórios (*).");
+    return;
+  }
+
+  const payload = {
+    name,
+    phone,
+    street,
+    number,
+    neighborhood,
+    reference: reference || ''
+  };
+
+  window.Store.saveCustomer(payload);
+  alert("✅ Seus dados do perfil foram salvos com sucesso!");
+}
+
+function getActive12HourNotifications() {
+  try {
+    const raw = localStorage.getItem(PROFILE_NOTIFS_STORAGE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    const now = Date.now();
+    
+    // Filtro rigoroso: manter apenas mensagens dos últimos 12 horas (43.200.000 ms)
+    const activeList = list.filter(n => (now - (n.createdAt || 0)) <= TWELVE_HOURS_MS);
+
+    if (activeList.length !== list.length) {
+      localStorage.setItem(PROFILE_NOTIFS_STORAGE_KEY, JSON.stringify(activeList));
+    }
+    return activeList;
+  } catch {
+    return [];
+  }
+}
+
+function saveStoreNotificationToFeed(notif) {
+  if (!notif || (!notif.title && !notif.message && !notif.body)) return;
+  try {
+    const activeList = getActive12HourNotifications();
+    const notifId = notif.id || (notif.createdAt ? 'notif_' + notif.createdAt : 'notif_' + Date.now());
+    const notifTitle = notif.title || 'Notificação da Rotta';
+    const notifMsg = notif.message || notif.body || '';
+
+    const exists = activeList.some(n => n.id === notifId || (n.title === notifTitle && Math.abs((n.createdAt || 0) - (notif.createdAt || 0)) < 2000));
+    
+    if (!exists) {
+      const item = {
+        id: notifId,
+        title: notifTitle,
+        message: notifMsg,
+        createdAt: notif.createdAt || Date.now(),
+        read: false
+      };
+      activeList.unshift(item);
+      localStorage.setItem(PROFILE_NOTIFS_STORAGE_KEY, JSON.stringify(activeList));
+      updateProfileNotifBadge();
+    }
+  } catch (e) {
+    console.warn('Erro ao salvar notificação:', e);
+  }
+}
+
+function markProfileNotificationsAsRead() {
+  try {
+    const activeList = getActive12HourNotifications();
+    activeList.forEach(n => n.read = true);
+    localStorage.setItem(PROFILE_NOTIFS_STORAGE_KEY, JSON.stringify(activeList));
+    updateProfileNotifBadge();
+  } catch {}
+}
+
+function updateProfileNotifBadge() {
+  const badgeNav = document.getElementById('nav-perfil-badge');
+  const badgeTab = document.getElementById('profile-notif-tab-badge');
+  const activeList = getActive12HourNotifications();
+  const unreadCount = activeList.filter(n => !n.read).length;
+
+  if (badgeNav) {
+    if (unreadCount > 0) {
+      badgeNav.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      badgeNav.classList.remove('hidden');
+    } else {
+      badgeNav.classList.add('hidden');
+    }
+  }
+
+  if (badgeTab) {
+    if (unreadCount > 0) {
+      badgeTab.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      badgeTab.classList.remove('hidden');
+    } else {
+      badgeTab.classList.add('hidden');
+    }
+  }
+}
+
+function getTimeAgoString(timestamp) {
+  if (!timestamp) return 'Recente';
+  const diffMinutes = Math.floor((Date.now() - timestamp) / 60000);
+  if (diffMinutes < 1) return 'Agora mesmo';
+  if (diffMinutes === 1) return 'Há 1 min';
+  if (diffMinutes < 60) return `Há ${diffMinutes} min`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours === 1) return 'Há 1 hora';
+  return `Há ${diffHours} h`;
+}
+
+function renderProfileNotifications() {
+  const container = document.getElementById('profile-notifications-list');
+  if (!container) return;
+
+  const list = getActive12HourNotifications();
+  if (!list || list.length === 0) {
+    container.innerHTML = `
+      <div class="bg-purple-900/20 border border-purple-800/40 p-6 rounded-2xl text-center space-y-2 text-purple-300">
+        <span class="text-3xl block">📭</span>
+        <h4 class="font-bold text-sm text-white">Nenhum aviso no momento</h4>
+        <p class="text-xs text-purple-300/80">As notificações enviadas pela loja nas últimas 12 horas aparecerão aqui!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(item => {
+    const timeAgo = getTimeAgoString(item.createdAt);
+    return `
+      <div class="bg-purple-900/40 border border-purple-700/50 p-3.5 rounded-2xl space-y-1 shadow-sm">
+        <div class="flex items-center justify-between">
+          <h4 class="font-extrabold text-xs text-gold-300 flex items-center gap-1.5">
+            <span>🟣</span> ${escapeHtml(item.title)}
+          </h4>
+          <span class="text-[10px] text-purple-300 font-semibold">${timeAgo}</span>
+        </div>
+        <p class="text-xs text-purple-100 leading-relaxed font-normal">${escapeHtml(item.message)}</p>
+      </div>
+    `;
+  }).join('');
+}
+
+function syncPromotionsFeedFromFirebase() {
+  if (window.Store && window.Store.getPromotionsList) {
+    window.Store.getPromotionsList(promos => {
+      if (Array.isArray(promos)) {
+        promos.forEach(p => {
+          saveStoreNotificationToFeed(p);
+        });
+        updateProfileNotifBadge();
+      }
+    });
+  }
+}
+
+function renderProfileFavorites() {
+  const container = document.getElementById('profile-favorites-list');
+  if (!container) return;
+
+  const favs = window.Store.getFavorites();
+  if (!favs || favs.length === 0) {
+    container.innerHTML = `
+      <div class="bg-purple-900/20 border border-purple-800/40 p-6 rounded-2xl text-center space-y-2 text-purple-300">
+        <span class="text-3xl block">⭐</span>
+        <h4 class="font-bold text-sm text-white">Nenhum açaí favoritado ainda</h4>
+        <p class="text-xs text-purple-300/80">Ao montar seu açaí no cardápio, clique no botão <strong>⭐ Salvar Favorito</strong> para guardar suas combinações preferidas!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = favs.map(fav => `
+    <div class="bg-purple-900/40 border border-purple-700/50 p-3.5 rounded-2xl space-y-2 shadow-sm">
+      <div class="flex items-start justify-between">
+        <div>
+          <h4 class="font-extrabold text-xs text-gold-300 flex items-center gap-1">
+            <span>⭐</span> ${escapeHtml(fav.customName)}
+          </h4>
+          <p class="text-[11px] text-white font-semibold mt-0.5">${escapeHtml(fav.productName)}</p>
+          ${fav.fruits && fav.fruits.length > 0 ? `<p class="text-[10px] text-purple-200 mt-0.5">🍓 ${fav.fruits.map(f => f.name).join(', ')}</p>` : ''}
+          ${fav.freeToppings && fav.freeToppings.length > 0 ? `<p class="text-[10px] text-purple-200">🥣 ${fav.freeToppings.map(t => t.name).join(', ')}</p>` : ''}
+          ${fav.calda ? `<p class="text-[10px] text-purple-200">🍯 ${escapeHtml(fav.calda.name)}</p>` : ''}
+        </div>
+        <button onclick="removeFavoriteFromProfile('${fav.id}')" class="text-rose-400 hover:text-rose-200 text-xs font-bold px-2 py-1 bg-rose-950/50 hover:bg-rose-900 border border-rose-700/50 rounded-lg transition" title="Excluir Favorito">
+          🗑️
+        </button>
+      </div>
+      
+      <div class="flex items-center justify-between pt-2 border-t border-purple-700/40">
+        <span class="text-xs font-extrabold text-gold-300">${window.Store.formatCurrency(fav.unitPrice)}</span>
+        <button onclick="addFavoriteDirectlyToCart('${fav.id}')" class="bg-gradient-to-r from-gold-500 to-amber-500 hover:from-gold-400 hover:to-amber-400 text-acai-950 font-black text-xs px-3.5 py-1.5 rounded-xl shadow transition transform active:scale-95 flex items-center gap-1">
+          <span>🛒 Pedir este Açaí</span>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function removeFavoriteFromProfile(favId) {
+  if (confirm("Remover este açaí dos seus favoritos?")) {
+    window.Store.removeFavorite(favId);
+    renderProfileFavorites();
+    renderFavorites();
+  }
+}
+
+function addFavoriteDirectlyToCart(favId) {
+  addFavoriteToCart(favId);
+  closeCustomerProfileModal();
 }
 
 function openFidelityModal() {
@@ -2429,6 +2740,12 @@ window.openFidelityModal = openFidelityModal;
 window.closeFidelityModal = closeFidelityModal;
 window.promptEditFidelityPhone = promptEditFidelityPhone;
 window.claimFidelityReward = claimFidelityReward;
+window.openCustomerProfileModal = openCustomerProfileModal;
+window.closeCustomerProfileModal = closeCustomerProfileModal;
+window.switchProfileTab = switchProfileTab;
+window.saveCustomerProfileData = saveCustomerProfileData;
+window.removeFavoriteFromProfile = removeFavoriteFromProfile;
+window.addFavoriteDirectlyToCart = addFavoriteDirectlyToCart;
 
 window.setupRatingReplyListener = function() {
   const db = window.Store && window.Store.getDB ? window.Store.getDB() : null;

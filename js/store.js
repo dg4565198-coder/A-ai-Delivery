@@ -407,6 +407,25 @@ window.Store = {
     });
   },
 
+  getPromotionsList(callback) {
+    const db = getDB();
+    if (!db) {
+      if (callback) callback([]);
+      return;
+    }
+    db.ref('promotions').once('value').then(snapshot => {
+      const promos = [];
+      if (snapshot.exists()) {
+        snapshot.forEach(child => {
+          promos.push(child.val());
+        });
+      }
+      if (callback) callback(promos);
+    }).catch(() => {
+      if (callback) callback([]);
+    });
+  },
+
   saveConfig(config) {
     _currentConfig = { ...DEFAULT_CONFIG, ...config };
     try { localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(_currentConfig)); } catch {}

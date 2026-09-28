@@ -861,6 +861,125 @@
   </div>
 
   <!-- =====================================================================
+       11.5 MODAL DE PERFIL DO CLIENTE
+       ===================================================================== -->
+  <div id="customer-profile-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 hidden">
+    <div class="bg-gradient-to-b from-acai-900 via-acai-950 to-purple-950 text-white rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl border border-purple-600/40 overflow-hidden">
+      
+      <!-- Cabeçalho do Modal -->
+      <div class="p-4 bg-acai-900/90 border-b border-purple-700/40 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-10 h-10 rounded-full bg-gold-500/20 border border-gold-500/50 flex items-center justify-center text-xl text-gold-300 shadow">
+            👤
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base text-white tracking-wide">Meu Perfil</h3>
+            <p class="text-[11px] text-purple-200">Seus dados, favoritos e avisos da loja</p>
+          </div>
+        </div>
+        <button onclick="closeCustomerProfileModal()" class="w-8 h-8 rounded-full bg-purple-900/60 hover:bg-purple-800 text-purple-200 hover:text-white flex items-center justify-center text-lg transition font-bold">
+          &times;
+        </button>
+      </div>
+
+      <!-- Abas Internas do Perfil -->
+      <div class="bg-acai-950 border-b border-purple-800/50 flex items-center justify-around px-2 py-1.5 shrink-0 text-xs font-bold">
+        <button onclick="switchProfileTab('dados')" id="profile-tab-btn-dados" class="flex-1 py-2 px-1 text-center rounded-xl bg-purple-800/80 text-gold-300 shadow transition flex items-center justify-center gap-1 font-bold">
+          <span>📋</span> Dados
+        </button>
+        <button onclick="switchProfileTab('notificacoes')" id="profile-tab-btn-notificacoes" class="flex-1 py-2 px-1 text-center rounded-xl text-purple-300 hover:text-white transition flex items-center justify-center gap-1 relative">
+          <span>🔔</span> Avisos
+          <span id="profile-notif-tab-badge" class="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full hidden">!</span>
+        </button>
+        <button onclick="switchProfileTab('favoritos')" id="profile-tab-btn-favoritos" class="flex-1 py-2 px-1 text-center rounded-xl text-purple-300 hover:text-white transition flex items-center justify-center gap-1">
+          <span>⭐</span> Favoritos
+        </button>
+      </div>
+
+      <!-- Conteúdo das Abas (Scrollable) -->
+      <div class="overflow-y-auto p-4 flex-1 text-sm space-y-4 no-scrollbar">
+
+        <!-- ABA 1: DADOS DO CLIENTE -->
+        <div id="profile-tab-content-dados" class="space-y-4">
+          <div class="bg-purple-900/30 border border-purple-700/40 rounded-2xl p-3.5 text-xs text-purple-200 space-y-1">
+            <span class="font-bold text-gold-300 block">👤 Suas Informações de Entrega:</span>
+            <p>Mantenha seus dados atualizados para agilizar o preenchimento automático dos seus pedidos!</p>
+          </div>
+
+          <form id="profile-data-form" onsubmit="saveCustomerProfileData(event)" class="space-y-3 text-xs">
+            <div>
+              <label class="block text-purple-200 font-bold mb-1">Seu Nome Completo *</label>
+              <input type="text" id="profile-name-input" required placeholder="Ex: João da Silva" class="w-full bg-acai-900 border border-purple-700/60 rounded-xl px-3 py-2.5 text-white placeholder-purple-400 focus:outline-none focus:border-gold-400">
+            </div>
+
+            <div>
+              <label class="block text-purple-200 font-bold mb-1">WhatsApp / Celular *</label>
+              <input type="tel" id="profile-phone-input" required placeholder="Ex: (11) 99999-9999" class="w-full bg-acai-900 border border-purple-700/60 rounded-xl px-3 py-2.5 text-white placeholder-purple-400 focus:outline-none focus:border-gold-400">
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <div class="col-span-2">
+                <label class="block text-purple-200 font-bold mb-1">Rua / Avenida *</label>
+                <input type="text" id="profile-street-input" required placeholder="Ex: Rua das Flores" class="w-full bg-acai-900 border border-purple-700/60 rounded-xl px-3 py-2.5 text-white placeholder-purple-400 focus:outline-none focus:border-gold-400">
+              </div>
+              <div>
+                <label class="block text-purple-200 font-bold mb-1">Número *</label>
+                <input type="text" id="profile-number-input" required placeholder="Ex: 123" class="w-full bg-acai-900 border border-purple-700/60 rounded-xl px-3 py-2.5 text-white placeholder-purple-400 focus:outline-none focus:border-gold-400">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-purple-200 font-bold mb-1">Bairro *</label>
+              <input type="text" id="profile-neighborhood-input" required placeholder="Ex: Centro" class="w-full bg-acai-900 border border-purple-700/60 rounded-xl px-3 py-2.5 text-white placeholder-purple-400 focus:outline-none focus:border-gold-400">
+            </div>
+
+            <div>
+              <label class="block text-purple-200 font-bold mb-1">Ponto de Referência (Opcional)</label>
+              <input type="text" id="profile-reference-input" placeholder="Ex: Próximo à padaria" class="w-full bg-acai-900 border border-purple-700/60 rounded-xl px-3 py-2.5 text-white placeholder-purple-400 focus:outline-none focus:border-gold-400">
+            </div>
+
+            <button type="submit" class="w-full bg-gradient-to-r from-gold-500 to-amber-500 hover:from-gold-400 hover:to-amber-400 text-acai-950 font-black py-3 rounded-2xl shadow-lg transition transform active:scale-95 text-sm flex items-center justify-center gap-2 mt-2">
+              <span>💾</span> Salvar Dados do Perfil
+            </button>
+          </form>
+        </div>
+
+        <!-- ABA 2: NOTIFICAÇÕES DA ROTTA (REGRA DE 12 HORAS) -->
+        <div id="profile-tab-content-notificacoes" class="space-y-3 hidden">
+          <div class="bg-gradient-to-r from-purple-900/40 via-acai-800/40 to-purple-900/40 border border-purple-700/40 rounded-2xl p-3 text-xs text-purple-200 flex items-start gap-2">
+            <span class="text-base shrink-0">🔔</span>
+            <div>
+              <span class="font-extrabold text-gold-300 block">Notificações da Rotta:</span>
+              <p class="text-[11px] leading-tight text-purple-200/90">Avisos e promoções da loja ficam salvos no seu histórico por até <strong>12 horas</strong> e são excluídos automaticamente após esse período.</p>
+            </div>
+          </div>
+
+          <div id="profile-notifications-list" class="space-y-2.5 pt-1">
+            <!-- Renderizado dinamicamente pelo app.js -->
+          </div>
+        </div>
+
+        <!-- ABA 3: MEUS FAVORITOS -->
+        <div id="profile-tab-content-favoritos" class="space-y-3 hidden">
+          <div class="bg-purple-900/30 border border-purple-700/40 rounded-2xl p-3 text-xs text-purple-200 flex items-center gap-2">
+            <span class="text-base shrink-0">⭐</span>
+            <div>
+              <span class="font-extrabold text-gold-300 block">Seus Açaís Favoritos:</span>
+              <p class="text-[11px] leading-tight">Peça seus açaís preferidos com apenas 1 clique!</p>
+            </div>
+          </div>
+
+          <div id="profile-favorites-list" class="space-y-2.5 pt-1">
+            <!-- Renderizado dinamicamente pelo app.js -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =====================================================================
        12. BARRA DE NAVEGAÇÃO INFERIOR FIXA (MOBILE & DESKTOP)
        ===================================================================== -->
   <nav id="bottom-navigation-bar" class="fixed bottom-0 left-0 right-0 z-40 bg-acai-950/95 backdrop-blur-md border-t border-acai-800 text-purple-200 px-4 py-2 shadow-2xl">
@@ -880,20 +999,22 @@
         <span class="text-xl">🛍️</span>
         <span class="text-[10px] tracking-tight">Meus Pedidos</span>
       </button>
+
+      <button onclick="switchAppTab('perfil')" id="nav-btn-perfil" class="nav-tab-btn flex flex-col items-center space-y-1 hover:text-gold-300 font-bold transition relative">
+        <span class="text-xl">👤</span>
+        <span class="text-[10px] tracking-tight">Perfil</span>
+        <span id="nav-perfil-badge" class="absolute -top-1 right-2 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full hidden">!</span>
+      </button>
     </div>
   </nav>
-
-  <!-- =====================================================================
-       13. MODAL DE CHAT AO VIVO (SAC / ATENDIMENTO)
-
 
   <!-- Firebase SDK (Realtime Database) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- Scripts da Aplicação & Service Worker PWA -->
-  <script src="js/store.js?v=112"></script>
-  <script src="js/app.js?v=112"></script>
+  <script src="js/store.js?v=113"></script>
+  <script src="js/app.js?v=113"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
