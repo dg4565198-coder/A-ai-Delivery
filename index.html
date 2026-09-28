@@ -320,6 +320,25 @@
           </div>
         </div>
 
+        <!-- Passo 4: Adicionais Pagos (Nutella, Cremes Extra, Doce de Leite...) -->
+        <div id="builder-paid-addons-section" class="space-y-2">
+          <div class="flex items-center justify-between border-b border-gray-100 pb-1.5">
+            <div>
+              <span class="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-rose-100 text-rose-800 text-xs flex items-center justify-center font-bold">4</span>
+                Adicionais Pagos (Opcional)
+              </span>
+              <span id="builder-paid-limit-label" class="text-xs text-gray-500">Turbine seu açaí com Nutella Pura, Cremes Extra...</span>
+            </div>
+            <span id="builder-paid-counter" class="text-xs font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+              0 selecionados
+            </span>
+          </div>
+          <div id="builder-paid-addons-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <!-- Inserido dinamicamente -->
+          </div>
+        </div>
+
         <!-- Observações e Opções Extras -->
         <div class="space-y-3 pt-2">
           <div>
@@ -864,8 +883,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- Scripts da Aplicação & Service Worker PWA -->
-  <script src="js/store.js?v=110"></script>
-  <script src="js/app.js?v=110"></script>
+  <script src="js/store.js?v=111"></script>
+  <script src="js/app.js?v=111"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {

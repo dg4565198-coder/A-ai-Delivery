@@ -21,6 +21,7 @@ const STORAGE_KEYS = {
   FREE_TOPPINGS: 'rotta_free_toppings_v5',
   FRUITS: 'rotta_fruits_v5',
   CALDAS: 'rotta_caldas_v5',
+  PAID_ADDONS: 'rotta_paid_addons_v1',
   CUSTOMER: 'rotta_customer_data',
   MY_ORDERS: 'rotta_my_orders_v1',
   FAVORITES: 'rotta_favorites_v1',
@@ -102,6 +103,10 @@ const DEFAULT_CALDAS = [
   { id: 'calda-mel', name: 'Mel de Abelha', available: true, icon: '🐝', image: '' }
 ];
 
+const DEFAULT_PAID_ADDONS = [
+  { id: 'addon_nutella', name: 'Nutella Pura (50g)', price: 4.50, available: true, icon: '🍫', image: '' }
+];
+
 let _db = null;
 let _ordersCache = {};
 let _chatsCache = {};
@@ -112,7 +117,8 @@ let _stockCache = {
   bases: null,
   toppings: null,
   fruits: null,
-  caldas: null
+  caldas: null,
+  paidAddons: null
 };
 
 function getDB() {
@@ -236,6 +242,9 @@ async function sendTelegramBotNotification(order) {
         if (Array.isArray(i.freeToppings) && i.freeToppings.length > 0) {
           line += `\n   🥣 Complementos: ${escapeTelegramHtml(i.freeToppings.map(t => t.name || t).join(', '))}`;
         }
+        if (Array.isArray(i.paidAddons) && i.paidAddons.length > 0) {
+          line += `\n   🍫 Adicionais Pagos: ${escapeTelegramHtml(i.paidAddons.map(a => (a.name || a) + (a.price ? ` (+R$ ${Number(a.price).toFixed(2).replace('.', ',')})` : '')).join(', '))}`;
+        }
         if (i.notes) {
           line += `\n   📝 Obs: ${escapeTelegramHtml(i.notes)}`;
         }
@@ -310,6 +319,7 @@ window.Store = {
       if (!localStorage.getItem(STORAGE_KEYS.FREE_TOPPINGS)) localStorage.setItem(STORAGE_KEYS.FREE_TOPPINGS, JSON.stringify(DEFAULT_FREE_TOPPINGS));
       if (!localStorage.getItem(STORAGE_KEYS.FRUITS)) localStorage.setItem(STORAGE_KEYS.FRUITS, JSON.stringify(DEFAULT_FRUITS));
       if (!localStorage.getItem(STORAGE_KEYS.CALDAS)) localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(DEFAULT_CALDAS));
+      if (!localStorage.getItem(STORAGE_KEYS.PAID_ADDONS)) localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(DEFAULT_PAID_ADDONS));
 
       // Purgar os dois complementos de leite condensado indesejados
       try {
@@ -337,8 +347,14 @@ window.Store = {
             products: DEFAULT_PRODUCTS,
             toppings: DEFAULT_FREE_TOPPINGS,
             fruits: DEFAULT_FRUITS,
-            caldas: DEFAULT_CALDAS
+            caldas: DEFAULT_CALDAS,
+            paidAddons: DEFAULT_PAID_ADDONS
           });
+        } else {
+          const val = snapshot.val();
+          if (val && val.paidAddons === undefined) {
+            db.ref('stock/paidAddons').set(DEFAULT_PAID_ADDONS);
+          }
         }
       }).catch(e => console.warn('Erro ao verificar estoque Firebase:', e));
     }
@@ -616,11 +632,33 @@ window.Store = {
   },
 
   getPaidAddons() {
-    return this.getFruits();
+    if (_stockCache.paidAddons !== null && _stockCache.paidAddons !== undefined) {
+      return _stockCache.paidAddons.map(item => ({ ...item, available: item.available !== false }));
+    }
+    try {
+      const a = localStorage.getItem(STORAGE_KEYS.PAID_ADDONS);
+      if (a !== null) {
+        const parsed = JSON.parse(a);
+        if (Array.isArray(parsed)) {
+          _stockCache.paidAddons = parsed;
+          return parsed.map(item => ({ ...item, available: item.available !== false }));
+        }
+      }
+    } catch {}
+    return DEFAULT_PAID_ADDONS.map(item => ({ ...item, available: item.available !== false }));
   },
 
   savePaidAddons(addons) {
-    return this.saveFruits(addons);
+    _stockCache.paidAddons = addons || [];
+    try { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(_stockCache.paidAddons)); } catch {}
+    const db = getDB();
+    if (db) return db.ref('stock/paidAddons').set(_stockCache.paidAddons).catch(e => console.warn('Firebase set stock/paidAddons:', e));
+    return Promise.resolve();
+  },
+
+  deletePaidAddon(id) {
+    const list = this.getPaidAddons().filter(item => item.id !== id);
+    return this.savePaidAddons(list);
   },
 
   listenToStock(callback) {
@@ -686,6 +724,20 @@ window.Store = {
             return c;
           });
           try { localStorage.setItem(STORAGE_KEYS.CALDAS, JSON.stringify(_stockCache.caldas)); } catch {}
+        }
+        if (data.paidAddons !== undefined) {
+          let list = Array.isArray(data.paidAddons) ? data.paidAddons : (data.paidAddons ? Object.values(data.paidAddons) : []);
+          const localAddons = _stockCache.paidAddons || [];
+          list = list.map(a => {
+            if (!a.image) {
+              const match = localAddons.find(l => l.id === a.id || (l.name || '').toLowerCase() === (a.name || '').toLowerCase());
+              if (match && match.image) a.image = match.image;
+            }
+            return a;
+          });
+
+          _stockCache.paidAddons = list;
+          try { localStorage.setItem(STORAGE_KEYS.PAID_ADDONS, JSON.stringify(_stockCache.paidAddons)); } catch {}
         }
         if (callback) callback();
       }

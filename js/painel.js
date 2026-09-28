@@ -500,6 +500,7 @@ function createOrderCardElement(order, currentStatus) {
           ${item.calda ? `<div class="text-[9px] text-amber-800 font-bold">🍯 Calda: ${item.calda}</div>` : ''}
           ${item.fruits && item.fruits.length > 0 ? `<div class="text-[9px] text-emerald-700 font-semibold">🍓 Frutas: ${item.fruits.map(f => typeof f === 'object' ? f.name : f).join(', ')}</div>` : ''}
           ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="text-[9px] text-gray-600">✓ Complementos: ${item.freeToppings.map(t => typeof t === 'object' ? t.name : t).join(', ')}</div>` : ''}
+          ${item.paidAddons && item.paidAddons.length > 0 ? `<div class="text-[9px] text-rose-700 font-bold">🍫 Adicionais Pagos: ${item.paidAddons.map(a => typeof a === 'object' ? (a.name + ' (+R$ ' + (Number(a.price) || 0).toFixed(2).replace('.', ',') + ')') : a).join(', ')}</div>` : ''}
           ${item.notes ? `<div class="text-[9px] italic text-purple-600 bg-purple-50 p-0.5 rounded mt-0.5">Obs: "${item.notes}"</div>` : ''}
         </div>`).join('')}
     </div>`;
@@ -681,6 +682,11 @@ function openViewOrderModal(orderId) {
       ${item.freeToppings && item.freeToppings.length > 0 ? `
         <div class="bg-purple-50/80 text-purple-950 p-2.5 rounded-xl text-xs font-bold flex items-start gap-1.5 border border-purple-200/60">
           <span class="text-base shrink-0">🥣</span> <span>Complementos: ${item.freeToppings.map(t => typeof t === 'object' ? t.name : t).join(', ')}</span>
+        </div>` : ''}
+      
+      ${item.paidAddons && item.paidAddons.length > 0 ? `
+        <div class="bg-rose-50/80 text-rose-950 p-2.5 rounded-xl text-xs font-bold flex items-start gap-1.5 border border-rose-200/60">
+          <span class="text-base shrink-0">🍫</span> <span>Adicionais Pagos: ${item.paidAddons.map(a => typeof a === 'object' ? (a.name + ' (+R$ ' + (Number(a.price) || 0).toFixed(2).replace('.', ',') + ')') : a).join(', ')}</span>
         </div>` : ''}
       
       ${item.notes ? `
@@ -1147,7 +1153,8 @@ function openReceiptModal(orderId) {
           <div class="flex justify-between font-extrabold"><span>[${item.quantity}x] ${item.name}</span><span>${window.Store.formatCurrency(item.unitPrice * item.quantity)}</span></div>
           ${item.calda ? `<div class="font-extrabold ml-2 text-amber-900">» Calda: ${item.calda}</div>` : ''}
           ${item.fruits && item.fruits.length > 0 ? `<div class="font-semibold ml-2">» Frutas: ${item.fruits.map(f => f.name).join(' + ')}</div>` : ''}
-          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="ml-2">» Complementos: ${item.freeToppings.map(t => t.name).join(' + ')}</div>` : ''}
+          ${item.freeToppings && item.freeToppings.length > 0 ? `<div class="ml-2">» Complementos: ${item.freeToppings.map(t => typeof t === 'object' ? t.name : t).join(' + ')}</div>` : ''}
+          ${item.paidAddons && item.paidAddons.length > 0 ? `<div class="font-bold ml-2 text-rose-900">» Adicionais Pagos: ${item.paidAddons.map(a => typeof a === 'object' ? (a.name + ' (+$' + (Number(a.price) || 0).toFixed(2).replace('.', ',') + ')') : a).join(' + ')}</div>` : ''}
           ${item.notes ? `<div class="italic ml-2 bg-yellow-50 p-0.5">OBS: "${item.notes}"</div>` : ''}
         </div>`).join('')}
     </div>
@@ -1175,6 +1182,7 @@ function renderStockManagement() {
   renderStockAddons();
   renderStockToppings();
   renderStockCaldas();
+  renderStockPaidAddons();
 }
 
 function renderStockProducts() {
@@ -1326,6 +1334,44 @@ function handleDeleteCalda(id) {
   }
 }
 
+function renderStockPaidAddons() {
+  const container = document.getElementById('stock-paid-addons-list');
+  if (!container) return;
+  const addons = window.Store.getPaidAddons();
+  container.innerHTML = addons.map(addon => `
+    <div class="p-3 bg-rose-50/70 rounded-xl border border-rose-200 flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        ${addon.image ? `<img src="${addon.image}" class="w-10 h-10 object-cover rounded-lg border border-rose-200">` : `<span class="text-xl">${addon.icon || '🍫'}</span>`}
+        <div>
+          <h4 class="font-bold text-xs text-gray-800">${addon.name}</h4>
+          <span class="text-[11px] text-rose-800 font-extrabold">+ ${window.Store.formatCurrency(addon.price || 0)}</span>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="openEditModal('paidAddon', '${addon.id}')" title="Editar item" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-900 text-xs font-bold transition">✏️</button>
+        <button onclick="handleDeletePaidAddon('${addon.id}')" title="Excluir adicional pago definitivamente" class="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold transition">🗑️</button>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" ${addon.available !== false ? 'checked' : ''} onchange="togglePaidAddonAvailability('${addon.id}')" class="sr-only peer">
+          <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+        </label>
+      </div>
+    </div>`).join('');
+}
+
+function togglePaidAddonAvailability(id) {
+  const addons = window.Store.getPaidAddons();
+  const addon = addons.find(a => a.id === id);
+  if (addon) { addon.available = !(addon.available !== false); window.Store.savePaidAddons(addons); renderStockPaidAddons(); }
+}
+
+function handleDeletePaidAddon(id) {
+  if (confirm("Deseja realmente excluir este adicional pago definitivamente do cardápio?")) {
+    window.Store.deletePaidAddon(id);
+    renderStockPaidAddons();
+    alert("✅ Adicional pago excluído com sucesso!");
+  }
+}
+
 let currentEditItem = null;
 
 function openEditModal(type, id) {
@@ -1338,6 +1384,8 @@ function openEditModal(type, id) {
     item = window.Store.getFreeToppings().find(t => t.id === id);
   } else if (type === 'calda') {
     item = window.Store.getCaldas().find(c => c.id === id);
+  } else if (type === 'paidAddon') {
+    item = window.Store.getPaidAddons().find(a => a.id === id);
   }
 
   if (!item) return;
@@ -1493,6 +1541,15 @@ async function handleSaveItemEdit(e) {
       calda.image = base64Image;
       window.Store.saveCaldas(caldas);
     }
+  } else if (type === 'paidAddon') {
+    const addons = window.Store.getPaidAddons();
+    const addon = addons.find(a => a.id === id);
+    if (addon) {
+      addon.name = newName;
+      addon.price = newPrice;
+      addon.image = base64Image;
+      window.Store.savePaidAddons(addons);
+    }
   }
 
   closeEditModal();
@@ -1526,10 +1583,16 @@ function toggleNewItemFields() {
   const catContainer = document.getElementById('new-item-category-container');
   const limitsContainer = document.getElementById('new-item-limits-container');
 
-  if (type === 'product') {
+  if (type === 'product' || type === 'paidAddon') {
     if (priceContainer) priceContainer.classList.remove('hidden');
-    if (catContainer) catContainer.classList.remove('hidden');
-    if (limitsContainer) limitsContainer.classList.remove('hidden');
+    if (catContainer) {
+      if (type === 'product') catContainer.classList.remove('hidden');
+      else catContainer.classList.add('hidden');
+    }
+    if (limitsContainer) {
+      if (type === 'product') limitsContainer.classList.remove('hidden');
+      else limitsContainer.classList.add('hidden');
+    }
   } else {
     if (priceContainer) priceContainer.classList.add('hidden');
     if (catContainer) catContainer.classList.add('hidden');
@@ -1601,6 +1664,17 @@ async function handleCreateNewItem(e) {
       image: base64Image,
       icon: '🍯'
     });
+  } else if (type === 'paidAddon') {
+    const addons = window.Store.getPaidAddons();
+    addons.push({
+      id: 'addon_' + Date.now(),
+      name,
+      price,
+      available: true,
+      image: base64Image,
+      icon: '🍫'
+    });
+    window.Store.savePaidAddons(addons);
   }
 
   closeAddNewItemModal();

@@ -309,6 +309,7 @@ function handleProductClick(productId) {
   state.selectedBase = null;
   state.selectedFreeToppings = [];
   state.selectedFruits = [];
+  state.selectedPaidAddons = [];
   const caldas = window.Store.getCaldas();
   const defaultCalda = caldas.find(c => c.available !== false && c.id === 'calda-leite-cond') || caldas.find(c => c.available !== false) || { id: 'calda-leite-cond', name: 'Leite Condensado' };
   state.selectedCalda = defaultCalda;
@@ -333,6 +334,7 @@ function handleProductClick(productId) {
   renderBuilderFruits();
   renderBuilderFreeToppings();
   renderBuilderCaldas();
+  renderBuilderPaidAddons();
   updateBuilderTotal();
 
   const modal = document.getElementById('builder-modal');
@@ -464,6 +466,54 @@ function selectCalda(caldaId) {
   renderBuilderCaldas();
 }
 
+function renderBuilderPaidAddons() {
+  const container = document.getElementById('builder-paid-addons-list');
+  if (!container) return;
+
+  const addons = window.Store.getPaidAddons().filter(a => a.available !== false);
+
+  const counterElem = document.getElementById('builder-paid-counter');
+  if (counterElem) counterElem.textContent = `${(state.selectedPaidAddons || []).length} selecionados`;
+
+  if (addons.length === 0) {
+    container.innerHTML = `<p class="text-xs text-gray-400 col-span-full">Nenhum adicional pago cadastrado no momento.</p>`;
+    return;
+  }
+
+  container.innerHTML = addons.map(addon => {
+    const isSelected = (state.selectedPaidAddons || []).some(a => a.id === addon.id);
+    const priceFormatted = window.Store.formatCurrency(addon.price || 0);
+    return `
+      <label class="selectable-item flex items-center justify-between p-2.5 rounded-xl border transition text-xs cursor-pointer ${isSelected ? 'border-rose-500 bg-rose-50/70 font-semibold' : 'border-gray-200 bg-white'}">
+        <div class="flex items-center space-x-2.5">
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="togglePaidAddon('${addon.id}')" class="rounded text-rose-600 focus:ring-rose-500 h-3.5 w-3.5">
+          ${addon.image ? `<img src="${addon.image}" class="w-8 h-8 object-cover rounded-lg border border-purple-100 shadow-sm shrink-0">` : `<span class="text-base">${addon.icon || '🍫'}</span>`}
+          <div class="flex flex-col">
+            <span class="text-gray-800 font-bold">${addon.name}</span>
+            <span class="text-[11px] text-rose-700 font-extrabold">+ ${priceFormatted}</span>
+          </div>
+        </div>
+      </label>
+    `;
+  }).join('');
+}
+
+function togglePaidAddon(addonId) {
+  const addon = window.Store.getPaidAddons().find(a => a.id === addonId);
+  if (!addon) return;
+
+  if (!Array.isArray(state.selectedPaidAddons)) state.selectedPaidAddons = [];
+  const index = state.selectedPaidAddons.findIndex(a => a.id === addonId);
+  if (index !== -1) {
+    state.selectedPaidAddons.splice(index, 1);
+  } else {
+    state.selectedPaidAddons.push(addon);
+  }
+
+  renderBuilderPaidAddons();
+  updateBuilderTotal();
+}
+
 function changeBuilderQuantity(delta) {
   let newQty = (state.builderQuantity || 1) + delta;
   if (newQty < 1) newQty = 1;
@@ -481,6 +531,10 @@ function updateBuilderTotal() {
   if (!state.currentBuildingProduct) return;
 
   let unitPrice = state.currentBuildingProduct.price;
+  if (Array.isArray(state.selectedPaidAddons)) {
+    const extraPrice = state.selectedPaidAddons.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    unitPrice += extraPrice;
+  }
   let total = unitPrice * (state.builderQuantity || 1);
 
   const priceElem = document.getElementById('builder-total-price');
@@ -493,6 +547,9 @@ function confirmAddItemToCart() {
   if (!state.currentBuildingProduct) return;
 
   let unitPrice = state.currentBuildingProduct.price;
+  const paidAddons = [...(state.selectedPaidAddons || [])];
+  const extraPrice = paidAddons.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+  unitPrice += extraPrice;
   const notes = document.getElementById('builder-notes').value.trim();
 
   const cartItem = {
@@ -504,6 +561,7 @@ function confirmAddItemToCart() {
     base: null,
     freeToppings: [...state.selectedFreeToppings],
     fruits: [...state.selectedFruits],
+    paidAddons,
     calda: state.selectedCalda ? state.selectedCalda.name : 'Sem Calda',
     notes,
     quantity: state.builderQuantity || 1
@@ -596,6 +654,12 @@ function renderCartModalContent() {
         ${item.freeToppings && item.freeToppings.length > 0 ? `
           <p class="text-[10px] text-gray-500 mt-0.5">
             <strong>Complementos:</strong> ${item.freeToppings.map(t => t.name).join(', ')}
+          </p>
+        ` : ''}
+
+        ${item.paidAddons && item.paidAddons.length > 0 ? `
+          <p class="text-[10px] text-rose-700 font-bold mt-0.5">
+            <strong>Adicionais Pagos:</strong> ${item.paidAddons.map(a => `${a.name || a} (+${window.Store.formatCurrency(a.price || 0)})`).join(', ')}
           </p>
         ` : ''}
 
